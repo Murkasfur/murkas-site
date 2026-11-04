@@ -1,0 +1,20 @@
+---
+// Применяет сохранённую тему ещё до отрисовки страницы, чтобы не было «мигания».
+// Ставится в <head> каждой страницы.
+---
+
+<script is:inline>
+  (function () {
+    var saved = {};
+    try {
+      saved = JSON.parse(localStorage.getItem('murkas-theme') || '{}') || {};
+    } catch (e) {}
+    var character = saved.character === 'watermelon' ? 'watermelon' : 'redpanda';
+    var mode = saved.mode === 'light' || saved.mode === 'dark' ? saved.mode : 'auto';
+    var dark = mode === 'dark' || (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    var root = document.documentElement;
+    root.dataset.theme = character;
+    root.dataset.mode = dark ? 'dark' : 'light';
+    root.dataset.modePref = mode;
+  })();
+</script>

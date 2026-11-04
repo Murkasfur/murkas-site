@@ -1,0 +1,220 @@
+---
+import '@fontsource-variable/rubik';
+import '../styles/theme.css';
+import ThemeInit from './ThemeInit.astro';
+import { useTranslations, localizePath, type Lang } from '../i18n/ui';
+
+// Одна страница 404 на оба языка: сервер всегда отдаёт английскую версию,
+// а скрипт ниже переключает тексты на русский для /ru/... и ru.murkas.net.
+const { lang = 'en' } = Astro.props as { lang?: Lang };
+const t = useTranslations(lang);
+const tRu = useTranslations('ru');
+const ru = {
+  title: tRu('notFound.title'),
+  text: tRu('notFound.text'),
+  home: tRu('notFound.home'),
+  homeHref: localizePath('/', 'ru'),
+};
+---
+
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>{t('notFound.title')}</title>
+    <ThemeInit />
+  </head>
+  <body>
+    <div class="cursor" aria-hidden="true"></div>
+
+    <main class="not-found">
+      <h1 class="not-found__code">404 :o</h1>
+      <p class="not-found__text">{t('notFound.text')}</p>
+      <a href={localizePath('/', lang)} class="btn-outline" data-cursor-morph>{t('notFound.home')}</a>
+    </main>
+
+    <!-- Выполняется сразу, до отрисовки, поэтому английский текст не «мигает» -->
+    <script is:inline define:vars={{ ru }}>
+      (function () {
+        var isRu = /^\/ru(\/|$)/.test(location.pathname) || location.hostname.indexOf('ru.') === 0;
+        if (!isRu || document.documentElement.lang === 'ru') return;
+        document.documentElement.lang = 'ru';
+        document.title = ru.title;
+        var text = document.querySelector('.not-found__text');
+        if (text) text.textContent = ru.text;
+        var home = document.querySelector('.btn-outline');
+        if (home) {
+          home.textContent = ru.home;
+          home.setAttribute('href', ru.homeHref);
+        }
+      })();
+    </script>
+
+    <script>
+      const cursor = document.querySelector<HTMLElement>('.cursor');
+      const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+      if (cursor && finePointer) {
+        const SIZE = 20;
+        let target: HTMLElement | null = null;
+
+        const moveTo = (x: number, y: number, w: number, h: number, radius: string) => {
+          cursor.style.width = `${w}px`;
+          cursor.style.height = `${h}px`;
+          cursor.style.borderRadius = radius;
+          cursor.style.transform = `translate(${x}px, ${y}px)`;
+        };
+
+        const snapToTarget = () => {
+          if (!target) return;
+          const r = target.getBoundingClientRect();
+          moveTo(r.left, r.top, r.width, r.height, getComputedStyle(target).borderRadius);
+        };
+
+        window.addEventListener('mousemove', (e) => {
+          cursor.classList.add('is-visible');
+          if (target) return; // курсор «прилип» к кнопке
+          moveTo(e.clientX - SIZE / 2, e.clientY - SIZE / 2, SIZE, SIZE, '999px');
+        });
+
+        document.addEventListener('mouseleave', () => cursor.classList.remove('is-visible'));
+        window.addEventListener('scroll', snapToTarget, { passive: true });
+        window.addEventListener('resize', snapToTarget);
+
+        document.querySelectorAll<HTMLElement>('[data-cursor-morph]').forEach((el) => {
+          el.addEventListener('mouseenter', () => {
+            target = el;
+            el.classList.add('is-hovered');
+            snapToTarget();
+          });
+          el.addEventListener('mouseleave', (e) => {
+            target = null;
+            el.classList.remove('is-hovered');
+            moveTo(e.clientX - SIZE / 2, e.clientY - SIZE / 2, SIZE, SIZE, '999px');
+          });
+        });
+      }
+    </script>
+  </body>
+</html>
+
+<style>
+  .not-found {
+    position: relative;
+    z-index: 1;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 1440px;
+    min-height: 100vh;
+    min-height: 100dvh;
+    margin: 0 auto;
+    padding: 50px clamp(16px, 9vw, 130px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .not-found__code {
+    margin: 0;
+    font-family: var(--font-brand);
+    font-weight: 700;
+    font-size: clamp(64px, 12vw, 117px);
+    line-height: 0.9;
+    letter-spacing: -0.0044em;
+  }
+
+  .not-found__text {
+    margin: 0;
+    font-family: var(--font-brand);
+    font-weight: 500;
+    font-size: clamp(22px, 3vw, 32px);
+    line-height: 1.25;
+  }
+
+  /* M3 Outlined button */
+  .btn-outline {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px 24px;
+    border: 1px solid var(--md-outline-variant);
+    border-radius: 100px;
+    color: var(--md-on-surface-variant);
+    font-family: var(--font-plain);
+    font-weight: 400;
+    font-size: 22px;
+    line-height: 28px;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color 0.3s, border-color 0.3s, background-color 0.3s;
+  }
+
+  .btn-outline.is-hovered {
+    color: var(--md-on-primary);
+    border-color: transparent;
+  }
+
+  .btn-outline:focus-visible {
+    outline: 3px solid var(--md-primary);
+    outline-offset: 3px;
+  }
+
+  /* Без кастомного курсора (телефоны, планшеты) — обычная заливка при нажатии */
+  @media not ((hover: hover) and (pointer: fine)) {
+    .btn-outline:active {
+      background: var(--md-primary);
+      color: var(--md-on-primary);
+      border-color: transparent;
+    }
+  }
+
+  /* Кастомный курсор */
+  .cursor {
+    display: none;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    :global(html),
+    :global(body),
+    :global(a),
+    :global(button) {
+      cursor: none;
+    }
+
+    .cursor {
+      display: block;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 0;
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      background: var(--md-primary);
+      pointer-events: none;
+      opacity: 0;
+      transition:
+        width 0.3s cubic-bezier(0.2, 0, 0, 1),
+        height 0.3s cubic-bezier(0.2, 0, 0, 1),
+        border-radius 0.3s cubic-bezier(0.2, 0, 0, 1),
+        transform 0.12s ease-out,
+        opacity 0.2s;
+    }
+
+    .cursor.is-visible {
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cursor,
+    .btn-outline {
+      transition: none;
+    }
+  }
+</style>

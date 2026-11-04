@@ -1,0 +1,476 @@
+---
+// Локальная «админка»: переключатели темы, режима и языка + образцы элементов.
+// Временная страница — потом удалим (см. pages/admin.astro и pages/ru/admin.astro).
+import '@fontsource-variable/rubik';
+import '../styles/theme.css';
+import ThemeInit from './ThemeInit.astro';
+import { languages, useTranslations, localizePath, type Lang } from '../i18n/ui';
+
+const { lang = 'en' } = Astro.props as { lang?: Lang };
+const t = useTranslations(lang);
+
+const typeScale = [
+  'display-large', 'display-medium', 'display-small',
+  'headline-large', 'headline-medium', 'headline-small',
+  'title-large', 'title-medium', 'title-small',
+  'body-large', 'body-medium', 'body-small',
+  'label-large', 'label-medium', 'label-small',
+];
+
+const colorGroups = [
+  ['primary', 'on-primary', 'primary-container', 'on-primary-container'],
+  ['secondary', 'on-secondary', 'secondary-container', 'on-secondary-container'],
+  ['tertiary', 'on-tertiary', 'tertiary-container', 'on-tertiary-container'],
+  ['seed', 'on-seed', 'seed-container', 'on-seed-container'],
+  ['error', 'on-error', 'error-container', 'on-error-container'],
+  ['surface', 'on-surface', 'surface-variant', 'on-surface-variant'],
+  ['surface-container-lowest', 'surface-container-low', 'surface-container', 'surface-container-high', 'surface-container-highest'],
+  ['outline', 'outline-variant', 'inverse-surface', 'inverse-on-surface', 'inverse-primary'],
+];
+
+// Пара «фон → цвет текста» для подписи на плашке
+const onColor = (name: string) => {
+  if (name.startsWith('on-')) return name.slice(3);
+  if (name.startsWith('surface') || name.startsWith('outline')) return 'on-surface';
+  if (name === 'inverse-surface') return 'inverse-on-surface';
+  if (name === 'inverse-on-surface') return 'inverse-surface';
+  if (name === 'inverse-primary') return 'on-primary-container';
+  return `on-${name}`;
+};
+---
+
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{t('admin.title')} · Murkas</title>
+    <ThemeInit />
+  </head>
+  <body>
+    <header class="toolbar">
+      <div class="toolbar__inner">
+        <div class="toolbar__brand">
+          <span class="md-title-large">{t('admin.title')}</span>
+          <span class="badge md-label-small">admin</span>
+        </div>
+
+        <div class="toolbar__controls">
+          <fieldset class="segmented" aria-label={t('admin.character')}>
+            <legend class="md-label-medium">{t('admin.character')}</legend>
+            <button type="button" class="md-btn md-btn--outlined" data-set-character="redpanda">🐼 {t('admin.redpanda')}</button>
+            <button type="button" class="md-btn md-btn--outlined" data-set-character="watermelon">🍉 {t('admin.watermelon')}</button>
+          </fieldset>
+
+          <fieldset class="segmented" aria-label={t('admin.mode')}>
+            <legend class="md-label-medium">{t('admin.mode')}</legend>
+            <button type="button" class="md-btn md-btn--outlined" data-set-mode="light">☀️ {t('admin.light')}</button>
+            <button type="button" class="md-btn md-btn--outlined" data-set-mode="dark">🌙 {t('admin.dark')}</button>
+            <button type="button" class="md-btn md-btn--outlined" data-set-mode="auto">🖥️ {t('admin.auto')}</button>
+          </fieldset>
+
+          <fieldset class="segmented" aria-label={t('admin.language')}>
+            <legend class="md-label-medium">{t('admin.language')}</legend>
+            {
+              (Object.keys(languages) as Lang[]).map((l) => (
+                <a
+                  class:list={['md-btn', 'md-btn--outlined', { 'is-selected': l === lang }]}
+                  href={localizePath(Astro.url.pathname, l)}
+                  aria-current={l === lang ? 'page' : undefined}
+                >
+                  {l.toUpperCase()}
+                </a>
+              ))
+            }
+          </fieldset>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      <p class="md-body-large muted">{t('admin.subtitle')}</p>
+
+      <section class="panel">
+        <h2 class="md-headline-small">{t('admin.colors')}</h2>
+        <p class="md-body-medium muted">{t('admin.colorsHint')}</p>
+        <div class="swatch-groups">
+          {
+            colorGroups.map((group) => (
+              <div class="swatch-group">
+                {group.map((name) => (
+                  <button
+                    type="button"
+                    class="swatch"
+                    data-token={name}
+                    style={`background: var(--md-${name}); color: var(--md-${onColor(name)});`}
+                  >
+                    <span class="md-label-medium">{name}</span>
+                    <span class="md-label-small swatch__hex" />
+                  </button>
+                ))}
+              </div>
+            ))
+          }
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2 class="md-headline-small">{t('admin.buttons')}</h2>
+        <div class="row">
+          <button type="button" class="md-btn md-btn--filled">Filled</button>
+          <button type="button" class="md-btn md-btn--tonal">Tonal</button>
+          <button type="button" class="md-btn md-btn--tertiary">Tertiary</button>
+          <button type="button" class="md-btn md-btn--outlined">Outlined</button>
+          <button type="button" class="md-btn md-btn--text">Text</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2 class="md-headline-small">{t('admin.card')}</h2>
+        <article class="card">
+          <div class="card__media" aria-hidden="true"></div>
+          <div class="card__body">
+            <h3 class="md-title-large">{t('admin.cardTitle')}</h3>
+            <p class="md-body-medium muted">{t('admin.cardText')}</p>
+            <div class="row">
+              <span class="chip md-label-large">#furry</span>
+              <span class="chip md-label-large">#design</span>
+              <span class="chip chip--seed md-label-large">🐾 / 🍉</span>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel">
+        <h2 class="md-headline-small">{t('admin.typography')}</h2>
+        <div class="type-list">
+          {
+            typeScale.map((name) => (
+              <div class="type-row">
+                <span class="md-label-small muted type-row__name">{name}</span>
+                <span class={`md-${name}`}>{t('admin.sample')}</span>
+              </div>
+            ))
+          }
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2 class="md-headline-small">{t('admin.pages')}</h2>
+        <div class="row">
+          <a class="md-btn md-btn--outlined" href={localizePath('/404', lang)}>{t('admin.open404')}</a>
+        </div>
+      </section>
+    </main>
+
+    <div class="toast md-label-large" role="status" aria-live="polite"></div>
+
+    <script>
+      const KEY = 'murkas-theme';
+      const root = document.documentElement;
+      const media = window.matchMedia('(prefers-color-scheme: dark)');
+
+      type Prefs = { character: 'redpanda' | 'watermelon'; mode: 'light' | 'dark' | 'auto' };
+
+      const read = (): Prefs => {
+        try {
+          const saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {};
+          return {
+            character: saved.character === 'watermelon' ? 'watermelon' : 'redpanda',
+            mode: saved.mode === 'light' || saved.mode === 'dark' ? saved.mode : 'auto',
+          };
+        } catch {
+          return { character: 'redpanda', mode: 'auto' };
+        }
+      };
+
+      let prefs = read();
+
+      const updateHexLabels = () => {
+        const styles = getComputedStyle(root);
+        document.querySelectorAll<HTMLElement>('.swatch').forEach((el) => {
+          const value = styles.getPropertyValue(`--md-${el.dataset.token}`).trim().toUpperCase();
+          const label = el.querySelector('.swatch__hex');
+          if (label) label.textContent = value;
+          el.dataset.hex = value;
+        });
+      };
+
+      const apply = () => {
+        const dark = prefs.mode === 'dark' || (prefs.mode === 'auto' && media.matches);
+        root.dataset.theme = prefs.character;
+        root.dataset.mode = dark ? 'dark' : 'light';
+        root.dataset.modePref = prefs.mode;
+
+        document.querySelectorAll<HTMLElement>('[data-set-character]').forEach((b) => {
+          const on = b.dataset.setCharacter === prefs.character;
+          b.classList.toggle('is-selected', on);
+          b.setAttribute('aria-pressed', String(on));
+        });
+        document.querySelectorAll<HTMLElement>('[data-set-mode]').forEach((b) => {
+          const on = b.dataset.setMode === prefs.mode;
+          b.classList.toggle('is-selected', on);
+          b.setAttribute('aria-pressed', String(on));
+        });
+
+        updateHexLabels();
+      };
+
+      const save = () => {
+        try {
+          localStorage.setItem(KEY, JSON.stringify(prefs));
+        } catch {}
+        apply();
+      };
+
+      document.querySelectorAll<HTMLElement>('[data-set-character]').forEach((b) =>
+        b.addEventListener('click', () => {
+          prefs.character = b.dataset.setCharacter as Prefs['character'];
+          save();
+        }),
+      );
+      document.querySelectorAll<HTMLElement>('[data-set-mode]').forEach((b) =>
+        b.addEventListener('click', () => {
+          prefs.mode = b.dataset.setMode as Prefs['mode'];
+          save();
+        }),
+      );
+      media.addEventListener('change', () => prefs.mode === 'auto' && apply());
+
+      // Копирование HEX по клику
+      const toast = document.querySelector<HTMLElement>('.toast');
+      const copiedText = document.documentElement.lang === 'ru' ? 'Скопировано' : 'Copied';
+      let toastTimer: number | undefined;
+      document.querySelectorAll<HTMLElement>('.swatch').forEach((el) =>
+        el.addEventListener('click', async () => {
+          const text = `${el.dataset.hex}`;
+          try {
+            await navigator.clipboard.writeText(text);
+          } catch {}
+          if (toast) {
+            toast.textContent = `${copiedText}: --md-${el.dataset.token} ${text}`;
+            toast.classList.add('is-visible');
+            clearTimeout(toastTimer);
+            toastTimer = window.setTimeout(() => toast.classList.remove('is-visible'), 1600);
+          }
+        }),
+      );
+
+      apply();
+    </script>
+  </body>
+</html>
+
+<style>
+  .toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--md-surface-container);
+    border-bottom: 1px solid var(--md-outline-variant);
+  }
+
+  .toolbar__inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 12px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px 24px;
+  }
+
+  .toolbar__brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .badge {
+    padding: 2px 8px;
+    border-radius: 100px;
+    background: var(--md-tertiary-container);
+    color: var(--md-on-tertiary-container);
+    text-transform: uppercase;
+  }
+
+  .toolbar__controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+  }
+
+  .segmented {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .segmented legend {
+    width: 100%;
+    margin-bottom: 4px;
+    padding: 0;
+    color: var(--md-on-surface-variant);
+  }
+
+  .content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px 16px 64px;
+    display: grid;
+    gap: 24px;
+  }
+
+  .muted {
+    color: var(--md-on-surface-variant);
+    margin: 0;
+  }
+
+  .panel {
+    padding: 24px;
+    border-radius: 28px;
+    background: var(--md-surface-container-low);
+  }
+
+  .panel h2 {
+    margin: 0 0 8px;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .swatch-groups {
+    display: grid;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .swatch-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 8px;
+  }
+
+  .swatch {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 76px;
+    padding: 12px;
+    border: 1px solid var(--md-outline-variant);
+    border-radius: 16px;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+  }
+
+  .swatch:focus-visible {
+    outline: 3px solid var(--md-primary);
+    outline-offset: 2px;
+  }
+
+  .swatch__hex {
+    opacity: 0.85;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .card {
+    display: grid;
+    grid-template-columns: minmax(0, 160px) 1fr;
+    gap: 16px;
+    max-width: 560px;
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 24px;
+    background: var(--md-surface-container-highest);
+  }
+
+  .card__media {
+    aspect-ratio: 1;
+    border-radius: 16px;
+    background:
+      radial-gradient(circle at 30% 30%, var(--md-tertiary-container) 0 22%, transparent 23%),
+      var(--md-primary-container);
+  }
+
+  .card__body h3 {
+    margin: 0 0 4px;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--md-outline-variant);
+    border-radius: 8px;
+    color: var(--md-on-surface-variant);
+  }
+
+  .chip--seed {
+    background: var(--md-seed-container);
+    color: var(--md-on-seed-container);
+    border-color: transparent;
+  }
+
+  .type-list {
+    display: grid;
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .type-row {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    align-items: baseline;
+    gap: 16px;
+    min-width: 0;
+  }
+
+  .type-row > :last-child {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    z-index: 20;
+    max-width: calc(100vw - 32px);
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: var(--md-inverse-surface);
+    color: var(--md-inverse-on-surface);
+    transform: translate(-50%, 16px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+  }
+
+  .toast:global(.is-visible) {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  @media (max-width: 600px) {
+    .card {
+      grid-template-columns: 1fr;
+    }
+
+    .type-row {
+      grid-template-columns: 1fr;
+      gap: 2px;
+    }
+  }
+</style>

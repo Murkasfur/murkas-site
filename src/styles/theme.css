@@ -1,12 +1,7 @@
-/* Цвета из Murkas M3 Kit (тема красной панды, режим Light). */
-:root {
-  --md-surface: #f8fafb;
-  --md-on-surface: #000000;
-  --md-on-surface-variant: #53433f;
-  --md-outline-variant: #d8c2bb;
-  --md-primary: #9e3a18;
-  --md-on-primary: #ffffff;
+/* Общие стили сайта: цвета тем, шрифты, шкала текста M3 и кнопки. */
+@import './tokens.css';
 
+:root {
   --font-brand: 'Rubik Variable', system-ui, sans-serif;
   --font-plain: 'Rubik Variable', system-ui, sans-serif;
 }
@@ -23,4 +18,80 @@ body {
   background: var(--md-surface);
   color: var(--md-on-surface);
   font-family: var(--font-plain);
+  transition: background-color 0.25s, color 0.25s;
+}
+
+/* ---------- Шкала текста M3 ---------- */
+.md-display-large   { font: 400 57px/64px var(--font-brand); letter-spacing: -0.25px; }
+.md-display-medium  { font: 400 45px/52px var(--font-brand); }
+.md-display-small   { font: 400 36px/44px var(--font-brand); }
+.md-headline-large  { font: 400 32px/40px var(--font-brand); }
+.md-headline-medium { font: 400 28px/36px var(--font-brand); }
+.md-headline-small  { font: 400 24px/32px var(--font-brand); }
+.md-title-large     { font: 400 22px/28px var(--font-brand); }
+.md-title-medium    { font: 500 16px/24px var(--font-plain); letter-spacing: 0.15px; }
+.md-title-small     { font: 500 14px/20px var(--font-plain); letter-spacing: 0.1px; }
+.md-body-large      { font: 400 16px/24px var(--font-plain); letter-spacing: 0.5px; }
+.md-body-medium     { font: 400 14px/20px var(--font-plain); letter-spacing: 0.25px; }
+.md-body-small      { font: 400 12px/16px var(--font-plain); letter-spacing: 0.4px; }
+.md-label-large     { font: 500 14px/20px var(--font-plain); letter-spacing: 0.1px; }
+.md-label-medium    { font: 500 12px/16px var(--font-plain); letter-spacing: 0.5px; }
+.md-label-small     { font: 500 11px/16px var(--font-plain); letter-spacing: 0.5px; }
+
+/* ---------- Кнопки M3 ---------- */
+.md-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 24px;
+  border: 1px solid transparent;
+  border-radius: 100px;
+  font: 500 14px/20px var(--font-plain);
+  letter-spacing: 0.1px;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  overflow: hidden;
+  background: none;
+  isolation: isolate;
+}
+
+/* Слой состояния (hover / pressed), как в M3 */
+.md-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: currentColor;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.md-btn:hover::before { opacity: 0.08; }
+.md-btn:active::before { opacity: 0.12; }
+.md-btn:focus-visible {
+  outline: 3px solid var(--md-primary);
+  outline-offset: 2px;
+}
+
+.md-btn--filled   { background: var(--md-primary); color: var(--md-on-primary); }
+.md-btn--tonal    { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+.md-btn--outlined { border-color: var(--md-outline-variant); color: var(--md-on-surface-variant); }
+.md-btn--text     { color: var(--md-primary); padding: 0 12px; }
+.md-btn--tertiary { background: var(--md-tertiary-container); color: var(--md-on-tertiary-container); }
+
+.md-btn.is-selected {
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+  border-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html,
+  body,
+  .md-btn::before {
+    transition: none;
+  }
 }
