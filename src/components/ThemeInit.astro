@@ -9,7 +9,8 @@
     try {
       saved = JSON.parse(localStorage.getItem('murkas-theme') || '{}') || {};
     } catch (e) {}
-    var character = saved.character === 'watermelon' ? 'watermelon' : 'redpanda';
+    // Пока на сайте только арбузная тема; цвета красной панды лежат в tokens.css про запас
+    var character = 'watermelon';
     var mode = saved.mode === 'light' || saved.mode === 'dark' ? saved.mode : 'auto';
     var dark = mode === 'dark' || (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     var root = document.documentElement;

@@ -56,12 +56,6 @@ const onColor = (name: string) => {
         </div>
 
         <div class="toolbar__controls">
-          <fieldset class="segmented" aria-label={t('admin.character')}>
-            <legend class="md-label-medium">{t('admin.character')}</legend>
-            <button type="button" class="md-btn md-btn--outlined" data-set-character="redpanda">🐼 {t('admin.redpanda')}</button>
-            <button type="button" class="md-btn md-btn--outlined" data-set-character="watermelon">🍉 {t('admin.watermelon')}</button>
-          </fieldset>
-
           <fieldset class="segmented" aria-label={t('admin.mode')}>
             <legend class="md-label-medium">{t('admin.mode')}</legend>
             <button type="button" class="md-btn md-btn--outlined" data-set-mode="light">☀️ {t('admin.light')}</button>
@@ -170,17 +164,17 @@ const onColor = (name: string) => {
       const root = document.documentElement;
       const media = window.matchMedia('(prefers-color-scheme: dark)');
 
-      type Prefs = { character: 'redpanda' | 'watermelon'; mode: 'light' | 'dark' | 'auto' };
+      type Prefs = { character: 'watermelon'; mode: 'light' | 'dark' | 'auto' };
 
       const read = (): Prefs => {
         try {
           const saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {};
           return {
-            character: saved.character === 'watermelon' ? 'watermelon' : 'redpanda',
+            character: 'watermelon',
             mode: saved.mode === 'light' || saved.mode === 'dark' ? saved.mode : 'auto',
           };
         } catch {
-          return { character: 'redpanda', mode: 'auto' };
+          return { character: 'watermelon', mode: 'auto' };
         }
       };
 
@@ -202,11 +196,6 @@ const onColor = (name: string) => {
         root.dataset.mode = dark ? 'dark' : 'light';
         root.dataset.modePref = prefs.mode;
 
-        document.querySelectorAll<HTMLElement>('[data-set-character]').forEach((b) => {
-          const on = b.dataset.setCharacter === prefs.character;
-          b.classList.toggle('is-selected', on);
-          b.setAttribute('aria-pressed', String(on));
-        });
         document.querySelectorAll<HTMLElement>('[data-set-mode]').forEach((b) => {
           const on = b.dataset.setMode === prefs.mode;
           b.classList.toggle('is-selected', on);
@@ -223,12 +212,6 @@ const onColor = (name: string) => {
         apply();
       };
 
-      document.querySelectorAll<HTMLElement>('[data-set-character]').forEach((b) =>
-        b.addEventListener('click', () => {
-          prefs.character = b.dataset.setCharacter as Prefs['character'];
-          save();
-        }),
-      );
       document.querySelectorAll<HTMLElement>('[data-set-mode]').forEach((b) =>
         b.addEventListener('click', () => {
           prefs.mode = b.dataset.setMode as Prefs['mode'];
