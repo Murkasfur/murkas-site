@@ -250,6 +250,8 @@ img { display: block; max-width: 100%; }
 .ph .pin-badge { position: absolute; top: 12px; left: 12px; }
 
 .load-more { display: flex; justify-content: center; }
+.load-more [hidden] { display: none !important; }
+.load-more__end { margin: 0; padding: 10px 0; font-size: 14px; color: var(--md-on-surface-variant, currentColor); opacity: .75; }
 .empty { padding: 48px 0; text-align: center; }
 
 /* ---------- Диалог ---------- */

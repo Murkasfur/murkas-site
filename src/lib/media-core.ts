@@ -29,6 +29,8 @@ export type BatchMeta = {
   personName?: string | null;
   personUrl?: string | null;
   createdDate?: string | null;
+  /** фото без ивента: когда снято */
+  takenDate?: string | null;
   character?: (typeof CHARACTERS)[number] | null;
   category?: string | null;
   originalUrl?: string | null;

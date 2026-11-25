@@ -9,7 +9,7 @@ import { LIMITS, CHARACTERS, PHOTO_CATEGORIES, ART_TYPES, REJECT_REASONS, storag
 
 type Row = {
   id: string; kind: 'photo' | 'art'; status: string; title_ru: string | null; title_en: string | null; caption_ru: string | null; caption_en: string | null; character: string | null; category: string | null;
-  event_id: string | null; person_name: string | null; person_url: string | null; created_date: string | null; original_url: string | null;
+  event_id: string | null; person_name: string | null; person_url: string | null; created_date: string | null; taken_date: string | null; original_url: string | null;
   pinned: number; bytes: number; mime: string; r2_key: string | null; blur_requested: number; reject_reason: string | null;
   batch_id: string | null; position: number; width: number | null; height: number | null;
 };
@@ -122,7 +122,7 @@ const editRow = (r: Row): Keyboard => [[
   { text: '✏️ Название', callback_data: `et:${r.id}:title` },
   { text: '✏️ Подпись', callback_data: `et:${r.id}:caption` },
   { text: `✏️ ${r.kind === 'art' ? 'Художник' : 'Фотограф'}`, callback_data: `et:${r.id}:author` },
-]];
+], [{ text: `✏️ ${r.kind === 'art' ? 'Дата создания' : 'Дата съёмки'}`, callback_data: `et:${r.id}:date` }]];
 
 function itemButtons(r: Row): Keyboard {
   if (r.status === 'pending')
@@ -172,6 +172,8 @@ function viewerCaption(r: Row, i: number, n: number) {
   lines.push(r.title_ru ? `📝 <b>${pair(r.title_ru, r.title_en)}</b>` : '📝 <i>без названия</i>');
   if (r.caption_ru) lines.push(`💬 ${pair(r.caption_ru, r.caption_en)}`);
   lines.push(`👤 ${r.person_name ? esc(r.person_name) : '<i>автор неизвестен</i>'}${r.person_url ? ` - ${esc(r.person_url)}` : ''}`);
+  const date = r.kind === 'art' ? r.created_date : r.taken_date;
+  lines.push(`📅 ${date ? date.split('-').reverse().join('.') : r.kind === 'art' ? '<i>дата неизвестна</i>' : '<i>дата ивента или загрузки</i>'}`);
   const tags = [r.character && `👥 ${CHAR_RU[r.character]}`, catName(r) && `🏷 ${catName(r)}`, r.pinned && '📌 закреплено'].filter(Boolean);
   if (tags.length) lines.push(tags.join(' · '));
   if (r.blur_requested && r.status === 'pending') lines.push('🫥 ждёт размытия (сделает сервер обработки)');

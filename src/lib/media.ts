@@ -40,6 +40,9 @@ const person = (r: Row) => {
 const list = (v: string | null) => (v ?? '').split(',').map((x) => x.trim()).filter(Boolean);
 const ratio = (r: Row) => (r.width && r.height ? r.height / r.width : 1);
 const day = (s: string | null) => s?.slice(0, 10) ?? null;
+/** Время из базы хранится в UTC ('2026-11-25 02:10:00') - дата нужна торонтская, иначе вечером «завтра» */
+const localDay = (s: string | null) =>
+  s ? new Date(`${s.replace(' ', 'T')}Z`).toLocaleDateString('en-CA', { timeZone: 'America/Toronto' }) : null;
 
 export async function listPhotos(): Promise<Photo[]> {
   try {
@@ -54,7 +57,8 @@ export async function listPhotos(): Promise<Photo[]> {
         event,
         eventId: r.event_id ?? undefined,
         photographer: person(r),
-        date: day(r.taken_date) ?? r.ev_start ?? day(r.published_at) ?? day(r.uploaded_at)!,
+        date: day(r.taken_date) ?? r.ev_start ?? localDay(r.uploaded_at)!,
+        added: r.published_at ?? r.uploaded_at,
         pinned: !!r.pinned,
         caption: r.title_ru ? pair(r.caption_ru, r.caption_en) : undefined,
         city: pair(r.city_ru, r.city_en) ?? pair(r.ev_city_ru, r.ev_city_en),
@@ -81,7 +85,8 @@ export async function listArts(): Promise<Art[]> {
       types: list(r.category) as ArtType[],
       artist: person(r) ?? { name: '?' },
       created: day(r.created_date),
-      uploaded: day(r.published_at) ?? undefined,
+      uploaded: localDay(r.published_at) ?? undefined,
+      added: r.published_at ?? r.uploaded_at,
       original: r.original_url ?? undefined,
       pinned: !!r.pinned,
       ratio: ratio(r),

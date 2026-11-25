@@ -7,7 +7,7 @@ import { computeNow, type NowSource } from '../../src/lib/now-core';
 import { mediaCallback, pendingCommand, rejectedCommand, storageLine, navRows, scopeOf, showViewer, refreshViewerText } from './media';
 import { sniff, shortId } from '../../src/lib/media-core';
 import {
-  STATUSES, statusLabel, parsePair, parseDate, parseUrl, dateText,
+  STATUSES, statusLabel, parsePair, parseDate, parseDay, parseUrl, dateText,
   listEvents, getEvent, insertEvent, updateEvent, deleteEvent, toNowEvent, KINDS, kindLabel, type Kind,
   type EventDraft, type EventRow, type Status,
 } from './events';
@@ -21,7 +21,7 @@ type State =
   | { flow: 'now' }
   | { flow: 'homeLabel'; id: string; slot: number }
   | { flow: 'hero' }
-  | { flow: 'mediaEdit'; id: string; field: 'title' | 'caption' | 'author'; msgId: number; scope: string | null }
+  | { flow: 'mediaEdit'; id: string; field: 'title' | 'caption' | 'author' | 'date'; msgId: number; scope: string | null }
   | { flow: 'default' };
 
 const getState = async (env: Env, chat: number) => {
@@ -433,13 +433,20 @@ const MEDIA_ASK = {
   title: 'Название (на сайте - заголовок под картинкой):\n<i>Русское | English</i>, например <code>Скетч на коне | Con sketch</code>',
   caption: 'Подпись (текст в окне просмотра):\n<i>Русская | English</i>',
   author: 'Автор: ник и ссылка через пробел, например\n<code>@artist_two https://x.com/artist_two</code>\nСсылка необязательна, но только https://',
+  date: 'Дата: <code>14.11.2026</code> или <code>2026-11-14</code>',
 };
 
 async function saveMediaText(env: Env, chat: number, st: Extract<State, { flow: 'mediaEdit' }>, text: string) {
   const clear = text.trim() === '-';
   let sql: string;
   let args: (string | null)[];
-  if (st.field === 'author') {
+  if (st.field === 'date') {
+    const d = clear ? null : parseDay(text.trim());
+    if (!clear && (!d || d > new Date(Date.now() + 864e5).toISOString().slice(0, 10))) return send(env, chat, 'Не понял дату (и она не может быть в будущем). Ещё раз:', [[CANCEL_BTN]]);
+    const kind = await env.DB.prepare(`SELECT kind FROM media WHERE id = ?`).bind(st.id).first<string>('kind');
+    sql = `UPDATE media SET ${kind === 'art' ? 'created_date' : 'taken_date'} = ? WHERE id = ?`;
+    args = [d];
+  } else if (st.field === 'author') {
     const parts = text.trim().split(/\s+/);
     const url = parts.length > 1 ? parseUrl(parts[parts.length - 1]) : null;
     if (parts.length > 1 && !url && /^\w+:\/\//.test(parts[parts.length - 1])) return send(env, chat, 'Ссылка должна начинаться с https://. Ещё раз:', [[CANCEL_BTN]]);
@@ -614,13 +621,15 @@ async function onCallback(env: Env, cb: CallbackQuery) {
     }
 
     case 'et': {
-      const field = b as 'title' | 'caption' | 'author';
-      const row = await env.DB.prepare(`SELECT title_ru, title_en, caption_ru, caption_en, person_name, person_url, batch_id FROM media WHERE id = ?`).bind(a).first<Record<string, string | null>>();
+      const field = b as 'title' | 'caption' | 'author' | 'date';
+      const row = await env.DB.prepare(`SELECT kind, title_ru, title_en, caption_ru, caption_en, person_name, person_url, taken_date, created_date, batch_id FROM media WHERE id = ?`).bind(a).first<Record<string, string | null>>();
       if (!row) return answer(env, cb, 'Файл не найден');
       await answer(env, cb);
       const inViewer = !!(msg.photo || msg.document);
       await setState(env, chat, { flow: 'mediaEdit', id: a, field, msgId: msg.message_id, scope: inViewer ? scopeOf(msg, row.batch_id) : null });
-      const cur = field === 'author'
+      const cur = field === 'date'
+        ? (row.kind === 'art' ? row.created_date : row.taken_date)?.split('-').reverse().join('.') ?? ''
+        : field === 'author'
         ? [row.person_name, row.person_url].filter(Boolean).join(' ')
         : [row[`${field}_ru`], row[`${field}_en`]].filter(Boolean).join(' | ');
       return send(env, chat, `${MEDIA_ASK[field]}\n\nСейчас: ${cur ? `<code>${esc(cur)}</code>` : '<i>пусто</i>'}\n<code>-</code> - очистить`, [[CANCEL_BTN]]);

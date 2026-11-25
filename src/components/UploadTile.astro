@@ -103,6 +103,18 @@ const charName = (c: string) => (c === 'both' ? (lang === 'ru' ? 'Оба' : 'Bot
           </div>
           <p class="field__error" />
         </div>
+        <div class="field" data-field="takenDate" data-taken hidden>
+          <span class="field__label">{t('up.taken')}</span>
+          <div class="datepick" data-datepick>
+            <input type="hidden" name="takenDate" />
+            <button type="button" class="field__box datepick__btn" aria-haspopup="dialog" aria-expanded="false" data-date-btn>
+              <span class="datepick__label" data-date-label />
+              <Icon name="calendar_today" size={20} />
+            </button>
+            <div class="dp" role="dialog" hidden data-date-pop />
+          </div>
+          <p class="field__hint">{t('up.takenHint')}</p>
+        </div>
         <div class="field" data-field="personName">
           <label class="field__label" for="up-person">{t('up.photographer')}<span class="req" aria-hidden="true"> *</span></label>
           <div class="field__row">
@@ -443,6 +455,7 @@ const charName = (c: string) => (c === 'both' ? (lang === 'ru' ? 'Оба' : 'Bot
   .picker__menu li[aria-selected='true'] .picker__meta { color: var(--md-on-tertiary-container); opacity: 0.8; }
   .picker__menu li[aria-selected='true'] :global(svg) { visibility: visible; }
   .picker__other { margin-top: 4px; border-top: 1px solid var(--md-outline-variant); border-radius: 0 0 10px 10px !important; }
+  .field__hint { margin: 0; font: 400 12px/16px var(--font-plain); color: var(--md-on-surface-variant); }
   .field__error { display: none; margin: 0; font: 400 12px/16px var(--font-plain); color: var(--md-error); }
   .field.is-invalid .field__box { border-color: var(--md-error); }
   .upload .picker__menu[hidden] { display: none !important; }

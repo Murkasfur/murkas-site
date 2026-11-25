@@ -7,7 +7,7 @@
 import { openDialog, closeDialog, bindDialog } from './dialog';
 import { showSnackbar } from './snackbar';
 
-type Item = { id: number; file: File; blob?: Blob; w?: number; h?: number; sha?: string; caption: string; thumb?: string; busy: boolean };
+type Item = { id: number; file: File; blob?: Blob; w?: number; h?: number; sha?: string; caption: string; thumb?: string; busy: boolean; taken?: string };
 type Turnstile = {
   render(el: HTMLElement, opts: Record<string, unknown>): string;
   reset(id: string): void;
@@ -17,6 +17,40 @@ const MAX_FILES = 50;
 const MB = 1024 * 1024;
 
 const hex = (buf: ArrayBuffer) => Array.from(new Uint8Array(buf), (x) => x.toString(16).padStart(2, '0')).join('');
+
+/** Дата съёмки из EXIF (DateTimeOriginal, иначе DateTime) - читаем до того, как метаданные пропадут */
+function exifDate(b: Uint8Array): string | undefined {
+  if (b[0] !== 0xff || b[1] !== 0xd8) return;
+  let i = 2;
+  while (i + 4 < b.length && b[i] === 0xff) {
+    const marker = b[i + 1];
+    const len = (b[i + 2] << 8) | b[i + 3];
+    if (marker === 0xe1 && String.fromCharCode(...b.subarray(i + 4, i + 8)) === 'Exif') {
+      const t = i + 10; // начало TIFF
+      const le = b[t] === 0x49;
+      const u16 = (o: number) => (le ? b[t + o] | (b[t + o + 1] << 8) : (b[t + o] << 8) | b[t + o + 1]);
+      const u32 = (o: number) => (le ? (u16(o) | (u16(o + 2) << 16)) >>> 0 : ((u16(o) << 16) | u16(o + 2)) >>> 0);
+      const read = (ifd: number, want: number[]): Record<number, number> => {
+        const out: Record<number, number> = {};
+        const n = u16(ifd);
+        for (let k = 0; k < n && t + ifd + 2 + k * 12 + 12 <= b.length; k++) {
+          const e = ifd + 2 + k * 12;
+          if (want.includes(u16(e))) out[u16(e)] = u32(e + 8);
+        }
+        return out;
+      };
+      const ifd0 = read(u32(4), [0x0132, 0x8769]);
+      const sub = ifd0[0x8769] ? read(ifd0[0x8769], [0x9003]) : {};
+      const off = sub[0x9003] ?? ifd0[0x0132];
+      if (!off) return;
+      const m = String.fromCharCode(...b.subarray(t + off, t + off + 10)).match(/^(\d{4}):(\d{2}):(\d{2})$/);
+      if (!m || m[1] === '0000') return;
+      const d = `${m[1]}-${m[2]}-${m[3]}`;
+      return d <= new Date().toISOString().slice(0, 10) ? d : undefined;
+    }
+    i += 2 + len;
+  }
+}
 
 /** Вырезать из JPEG метаданные (EXIF/GPS, XMP, IPTC), не трогая сами пиксели */
 function stripJpeg(buf: ArrayBuffer): Blob {
@@ -89,7 +123,10 @@ export function initUpload() {
     it.busy = true;
     render();
     try {
-      const head = new Uint8Array(await it.file.slice(0, 12).arrayBuffer());
+      const head = new Uint8Array(await it.file.slice(0, 256 * 1024).arrayBuffer());
+      try {
+        it.taken = exifDate(head);
+      } catch {}
       const isJpeg = head[0] === 0xff && head[1] === 0xd8;
       const isPlain = isJpeg || (head[0] === 0x89 && head[1] === 0x50) || (head[0] === 0x47 && head[1] === 0x49) ||
         String.fromCharCode(...head.slice(8, 12)) === 'WEBP';
@@ -266,6 +303,8 @@ export function initUpload() {
     const choose = (li: HTMLLIElement) => {
       options().forEach((o) => o.setAttribute('aria-selected', String(o === li)));
       hiddenInput.value = li.dataset.value ?? '';
+      const taken = dialog!.querySelector<HTMLElement>('[data-taken]');
+      if (taken) taken.hidden = hiddenInput.value !== 'none';
       valueBox.innerHTML = li.querySelector('.picker__text')!.innerHTML;
       picker.closest('.field')?.classList.remove('is-invalid');
       setOpen(false);
@@ -375,7 +414,10 @@ export function initUpload() {
   function meta() {
     const val = (n: string) => (form.elements.namedItem(n) as HTMLInputElement | null)?.value.trim() || null;
     return kind === 'photo'
-      ? { eventId: val('eventId'), personName: val('personName'), personUrl: val('personUrl'), caption: captionEach ? null : val('caption') }
+      ? {
+          eventId: val('eventId'), personName: val('personName'), personUrl: val('personUrl'),
+          caption: captionEach ? null : val('caption'), takenDate: val('eventId') === 'none' ? val('takenDate') : null,
+        }
       : {
           personName: val('personName'), personUrl: val('personUrl'), createdDate: val('createdDate'),
           character: choice('character'), category: choices('category'), originalUrl: val('originalUrl'), caption: val('caption'),
@@ -435,6 +477,7 @@ export function initUpload() {
             'x-width': String(it.w ?? ''),
             'x-height': String(it.h ?? ''),
             'x-caption': captionEach ? encodeURIComponent(it.caption.trim()) : '',
+            'x-taken': it.taken ?? '',
           },
         });
         if (r.duplicate) dupes++;

@@ -58,7 +58,7 @@ const MONTHS_RU = ['январь', 'февраль', 'март', 'апрель',
 const MONTHS_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 /** 2026-12-12 или 12.12.2026 -> '2026-12-12' (с проверкой, что такая дата есть) */
-function parseDay(s: string): string | null {
+export function parseDay(s: string): string | null {
   let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
   let y: number, mo: number, d: number;
   if (m) [y, mo, d] = [+m[1], +m[2], +m[3]];

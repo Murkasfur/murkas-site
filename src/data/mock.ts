@@ -69,6 +69,8 @@ export type Photo = {
   event?: L;
   photographer?: { name: string; url?: string };
   date: string;
+  /** Когда добавлено на сайт (полная метка времени) - для сортировки */
+  added?: string;
   pinned?: boolean;
   caption?: L;
   city?: L;
@@ -118,6 +120,8 @@ export type Art = {
   created: string | null;
   /** Когда загружен на сайт */
   uploaded?: string;
+  /** Когда добавлено на сайт (полная метка времени) - для сортировки */
+  added?: string;
   /** Ссылка на оригинал (пост художника) */
   original?: string;
   caption?: L;

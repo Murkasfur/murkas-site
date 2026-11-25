@@ -3,13 +3,15 @@
 
 import { enhanceSelect } from './select-menu';
 
-const PAGE = 8;
+// Сколько карточек показывать сразу и сколько добавлять по кнопке
+const PAGE = 24;
 
 export function initGallery(root: HTMLElement) {
   const items = Array.from(root.querySelectorAll<HTMLElement>('[data-item]'));
   const grid = root.querySelector<HTMLElement>('[data-grid]');
   const empty = root.querySelector<HTMLElement>('[data-empty]');
   const more = root.querySelector<HTMLElement>('[data-more]');
+  const end = root.querySelector<HTMLElement>('[data-more-end]');
   const state = { q: '', character: 'all', cat: 'all', person: 'all', year: 'all', sort: 'new', limit: PAGE };
   if (!grid) return;
 
@@ -61,7 +63,10 @@ export function initGallery(root: HTMLElement) {
     for (const el of items) if (!visible.includes(el)) el.remove();
 
     if (empty) empty.hidden = list.length > 0;
-    if (more) more.hidden = list.length <= state.limit;
+    const all = list.length <= state.limit;
+    if (more) more.hidden = all;
+    // «Больше нет» - только когда что-то найдено и всё уже показано
+    if (end) end.hidden = !all || list.length === 0;
   };
 
   const rerender = (resetLimit = true) => {

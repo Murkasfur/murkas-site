@@ -151,7 +151,7 @@ const viewer: ViewerItem[] = photos.map((p) => ({
       }
     </div>
     <p class="empty md-body-large muted" hidden data-empty>{t('common.empty')}</p>
-    <div class="load-more"><button type="button" class="md-btn md-btn--outlined" data-more>{t('common.loadMore')}</button></div>
+    <div class="load-more"><button type="button" class="md-btn md-btn--outlined" data-more>{t('common.loadMore')}</button><p class="load-more__end" data-more-end hidden>{t('common.noMore')}</p></div>
   </div>
   <Lightbox lang={lang} items={viewer} />
 </Page>
