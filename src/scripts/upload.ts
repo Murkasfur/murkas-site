@@ -219,6 +219,9 @@ export function initUpload() {
       chip.setAttribute('aria-pressed', String(on));
       field.disabled = on;
       if (on) field.value = '';
+      // своё поле (календарь) - тоже выключаем и обновляем подпись
+      chip.closest('.field__row')?.querySelectorAll<HTMLButtonElement>('[data-date-btn]').forEach((b) => (b.disabled = on));
+      field.dispatchEvent(new Event('datepick:sync'));
       field.closest('.field')?.classList.remove('is-invalid');
     });
   });
@@ -227,12 +230,14 @@ export function initUpload() {
       const chip = (e.target as Element).closest<HTMLButtonElement>('.chip');
       if (!chip) return;
       const on = chip.getAttribute('aria-pressed') !== 'true';
-      row.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-pressed', 'false'));
+      // data-multi: можно выбрать несколько (теги арта), иначе - один (персонаж)
+      if (!row.hasAttribute('data-multi')) row.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-pressed', 'false'));
       chip.setAttribute('aria-pressed', String(on));
       row.closest('.field')?.classList.remove('is-invalid');
     });
   });
   const choice = (name: string) => dialog.querySelector<HTMLElement>(`[data-choice="${name}"] [aria-pressed="true"]`)?.dataset.value ?? null;
+  const choices = (name: string) => Array.from(dialog.querySelectorAll<HTMLElement>(`[data-choice="${name}"] [aria-pressed="true"]`), (c) => c.dataset.value!);
   dialog.querySelector('[data-caption-mode]')?.addEventListener('click', (e) => {
     const chip = (e.target as Element).closest<HTMLButtonElement>('.chip');
     if (!chip) return;
@@ -373,7 +378,7 @@ export function initUpload() {
       ? { eventId: val('eventId'), personName: val('personName'), personUrl: val('personUrl'), caption: captionEach ? null : val('caption') }
       : {
           personName: val('personName'), personUrl: val('personUrl'), createdDate: val('createdDate'),
-          character: choice('character'), category: choice('category'), originalUrl: val('originalUrl'), caption: val('caption'),
+          character: choice('character'), category: choices('category'), originalUrl: val('originalUrl'), caption: val('caption'),
         };
   }
 

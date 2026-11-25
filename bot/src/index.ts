@@ -17,6 +17,8 @@ const COMMANDS = [
   { command: 'pages', description: 'Готовые и «в работе» страницы' },
   { command: 'maintenance', description: 'Закрыть / открыть сайт' },
   { command: 'pending', description: 'Ждут проверки' },
+  { command: 'photos', description: 'Фото на сайте' },
+  { command: 'arts', description: 'Арты на сайте' },
   { command: 'home', description: 'Фото на главной' },
   { command: 'hero', description: 'Картинка в «Привет, это»' },
   { command: 'rejected', description: 'Отклонённые' },

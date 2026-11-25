@@ -4,7 +4,7 @@ import { api, downloadFile, send, edit, answer, esc, type Update, type Message, 
 import { SETTINGS_KEY, mergeSettings, type Settings } from '../../src/lib/settings-core';
 import { pages, type PageKey } from '../../src/data/site';
 import { computeNow, type NowSource } from '../../src/lib/now-core';
-import { mediaCallback, pendingCommand, rejectedCommand, storageLine } from './media';
+import { mediaCallback, pendingCommand, rejectedCommand, storageLine, navRows, scopeOf, showViewer, refreshViewerText } from './media';
 import { sniff, shortId } from '../../src/lib/media-core';
 import {
   STATUSES, statusLabel, parsePair, parseDate, parseUrl, dateText,
@@ -21,6 +21,7 @@ type State =
   | { flow: 'now' }
   | { flow: 'homeLabel'; id: string; slot: number }
   | { flow: 'hero' }
+  | { flow: 'mediaEdit'; id: string; field: 'title' | 'caption' | 'author'; msgId: number; scope: string | null }
   | { flow: 'default' };
 
 const getState = async (env: Env, chat: number) => {
@@ -63,6 +64,7 @@ const HELP = `<b>Бот murkas.net</b> 🐾
 /pending - что ждёт проверки
 /rejected - отклонённые (вернуть или удалить)
 /limit - сколько файлов в сутки можно загрузить с одного IP
+/photos, /arts - листать всё, что уже на сайте, и править
 /home - три фото в карточке «Фурсьюты» на главной
 /hero - картинка в карточке «Привет, это» на главной
 
@@ -309,6 +311,10 @@ async function onText(env: Env, msg: Message) {
         const [t, kb] = await eventsList(env);
         return send(env, chat, t, kb);
       }
+      case 'photos':
+      case 'arts':
+        await showViewer(env, chat, cmd === 'photos' ? 'P' : 'A', 0);
+        return;
       case 'hero': {
         const sets = await getSettings(env);
         await setState(env, chat, { flow: 'hero' });
@@ -354,6 +360,7 @@ async function onText(env: Env, msg: Message) {
     return saveHomeSlot(env, chat, st.id, st.slot, p[0], p[1] ?? p[0]);
   }
   if (st.flow === 'hero') return send(env, chat, 'Жду картинку: пришли фото или файл. /cancel - отменить');
+  if (st.flow === 'mediaEdit') return saveMediaText(env, chat, st, text);
 
   // разбираем ответ на текущий шаг
   const field = st.flow === 'add' ? st.step : st.field;
@@ -418,6 +425,37 @@ async function saveHomeSlot(env: Env, chat: number, id: string, slot: number, ru
   await saveSettings(env, s);
   await clearState(env, chat);
   return send(env, chat, `Готово ✅ Плитка ${slot + 1}${ru ? `: <b>${esc(ru)}</b>` : ' без подписи'}. На главной - в течение минуты.\n/home - все три`);
+}
+
+// ---------- название / подпись / автор у фото и арта ----------
+
+const MEDIA_ASK = {
+  title: 'Название (на сайте - заголовок под картинкой):\n<i>Русское | English</i>, например <code>Скетч на коне | Con sketch</code>',
+  caption: 'Подпись (текст в окне просмотра):\n<i>Русская | English</i>',
+  author: 'Автор: ник и ссылка через пробел, например\n<code>@artist_two https://x.com/artist_two</code>\nСсылка необязательна, но только https://',
+};
+
+async function saveMediaText(env: Env, chat: number, st: Extract<State, { flow: 'mediaEdit' }>, text: string) {
+  const clear = text.trim() === '-';
+  let sql: string;
+  let args: (string | null)[];
+  if (st.field === 'author') {
+    const parts = text.trim().split(/\s+/);
+    const url = parts.length > 1 ? parseUrl(parts[parts.length - 1]) : null;
+    if (parts.length > 1 && !url && /^\w+:\/\//.test(parts[parts.length - 1])) return send(env, chat, 'Ссылка должна начинаться с https://. Ещё раз:', [[CANCEL_BTN]]);
+    const name = (url ? parts.slice(0, -1) : parts).join(' ').slice(0, 80);
+    sql = `UPDATE media SET person_name = ?, person_url = ?, person_id = NULL WHERE id = ?`;
+    args = clear ? [null, null] : [name, url];
+  } else {
+    const p = clear ? null : parsePair(text);
+    if (!clear && !p) return send(env, chat, 'Пусто или слишком длинно (до 120 символов). Ещё раз:', [[CANCEL_BTN]]);
+    sql = `UPDATE media SET ${st.field}_ru = ?, ${st.field}_en = ? WHERE id = ?`;
+    args = p ? [p[0], p[1]] : [null, null];
+  }
+  await env.DB.prepare(sql).bind(...args, st.id).run();
+  await clearState(env, chat);
+  if (st.scope) await refreshViewerText(env, chat, st.msgId, st.scope, st.id).catch(() => {});
+  return send(env, chat, `Сохранило ✅${clear ? ' (очищено)' : ''} На сайте - в течение минуты.`);
 }
 
 async function saveManual(env: Env, chat: number, text: string) {
@@ -575,6 +613,19 @@ async function onCallback(env: Env, cb: CallbackQuery) {
       return e && edit(env, msg, eventCard(e), eventKb(e.id));
     }
 
+    case 'et': {
+      const field = b as 'title' | 'caption' | 'author';
+      const row = await env.DB.prepare(`SELECT title_ru, title_en, caption_ru, caption_en, person_name, person_url, batch_id FROM media WHERE id = ?`).bind(a).first<Record<string, string | null>>();
+      if (!row) return answer(env, cb, 'Файл не найден');
+      await answer(env, cb);
+      const inViewer = !!(msg.photo || msg.document);
+      await setState(env, chat, { flow: 'mediaEdit', id: a, field, msgId: msg.message_id, scope: inViewer ? scopeOf(msg, row.batch_id) : null });
+      const cur = field === 'author'
+        ? [row.person_name, row.person_url].filter(Boolean).join(' ')
+        : [row[`${field}_ru`], row[`${field}_en`]].filter(Boolean).join(' | ');
+      return send(env, chat, `${MEDIA_ASK[field]}\n\nСейчас: ${cur ? `<code>${esc(cur)}</code>` : '<i>пусто</i>'}\n<code>-</code> - очистить`, [[CANCEL_BTN]]);
+    }
+
     case 'hh': {
       const row = await env.DB.prepare(`SELECT r2_key FROM media WHERE id = ? AND status = 'published'`).bind(a).first<{ r2_key: string | null }>();
       if (!row?.r2_key) return answer(env, cb, 'Сначала прими фото');
@@ -592,6 +643,7 @@ async function onCallback(env: Env, cb: CallbackQuery) {
       return api(env, 'editMessageReplyMarkup', {
         chat_id: chat, message_id: msg.message_id,
         reply_markup: { inline_keyboard: [
+          ...navRows(msg),
           sets.home.map((x, i) => ({ text: `${SLOT[i]} ${x ? (x.ru || 'фото').slice(0, 14) : 'пусто'}`, callback_data: `hms:${a}:${i}` })),
           [{ text: '← Назад', callback_data: `ivb:${a}` }],
         ] },

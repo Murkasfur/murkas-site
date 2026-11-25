@@ -61,8 +61,9 @@ export async function validateMeta(kind: Kind, raw: Record<string, unknown>): Pr
     if (m.createdDate && !/^\d{4}-\d{2}-\d{2}$/.test(m.createdDate)) throw new UploadError(400, 'bad_field');
     m.character = str(raw.character, 10) as BatchMeta['character'];
     if (!m.character || !CHARACTERS.includes(m.character)) throw new UploadError(400, 'no_character');
-    m.category = str(raw.category, 20);
-    if (m.category && !(ART_TYPES as readonly string[]).includes(m.category)) m.category = null;
+    // несколько тегов сразу: ['ref', 'full'] -> 'ref,full' (лишнее отбрасываем)
+    const cats = (Array.isArray(raw.category) ? raw.category : [raw.category]).filter((c): c is string => (ART_TYPES as readonly string[]).includes(String(c)));
+    m.category = cats.length ? [...new Set(cats)].join(',') : null;
     m.originalUrl = url(raw.originalUrl);
   }
   if (kind === 'photo' && m.category && !(PHOTO_CATEGORIES as readonly string[]).includes(m.category)) m.category = null;

@@ -36,6 +36,8 @@ const person = (r: Row) => {
   const name = r.p_name ?? r.person_name;
   return name ? { name, url: r.p_url ?? r.person_url ?? undefined } : undefined;
 };
+/** «ref,full» -> ['ref', 'full'] */
+const list = (v: string | null) => (v ?? '').split(',').map((x) => x.trim()).filter(Boolean);
 const ratio = (r: Row) => (r.width && r.height ? r.height / r.width : 1);
 const day = (s: string | null) => s?.slice(0, 10) ?? null;
 
@@ -48,7 +50,7 @@ export async function listPhotos(): Promise<Photo[]> {
         // у загрузок нет отдельного названия: название = подпись, иначе ивент
         title: pair(r.title_ru, r.title_en) ?? pair(r.caption_ru, r.caption_en) ?? event ?? { ru: 'Фото', en: 'Photo' },
         character: (r.character ?? undefined) as Character | undefined,
-        category: (r.category ?? undefined) as PhotoCategory | undefined,
+        cats: list(r.category) as PhotoCategory[],
         event,
         eventId: r.event_id ?? undefined,
         photographer: person(r),
@@ -73,10 +75,10 @@ export async function listArts(): Promise<Art[]> {
     return (await rows('art')).map((r) => ({
       id: r.id,
       // у загрузок нет отдельного названия: подпись и есть название
-      title: pair(r.title_ru, r.title_en) ?? pair(r.caption_ru, r.caption_en) ?? { ru: 'Арт', en: 'Art' },
+      title: pair(r.title_ru, r.title_en) ?? pair(r.caption_ru, r.caption_en) ?? r.p_name ?? r.person_name ?? { ru: 'Арт', en: 'Art' },
       caption: r.title_ru ? pair(r.caption_ru, r.caption_en) : undefined,
       character: (r.character ?? 'arbyss') as Art['character'],
-      type: (r.category ?? undefined) as ArtType | undefined,
+      types: list(r.category) as ArtType[],
       artist: person(r) ?? { name: '?' },
       created: day(r.created_date),
       uploaded: day(r.published_at) ?? undefined,

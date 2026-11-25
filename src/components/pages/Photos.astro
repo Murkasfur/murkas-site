@@ -4,7 +4,7 @@ import Icon from '../Icon.astro';
 import UploadTile from '../UploadTile.astro';
 import Lightbox, { type ViewerItem } from '../Lightbox.astro';
 import { useTranslations, localizePath, type Lang, type UiKey } from '../../i18n/ui';
-import { loc, locAll, type PhotoCategory } from '../../data/mock';
+import { loc, locAll, photoCats, type PhotoCategory } from '../../data/mock';
 import { listPhotos } from '../../lib/media';
 
 const { lang } = Astro.props as { lang: Lang };
@@ -12,7 +12,7 @@ const t = useTranslations(lang);
 const photos = await listPhotos();
 
 const cats: PhotoCategory[] = ['group', 'full', 'partial', 'walks', 'backstage', 'parties'];
-const count = (c: PhotoCategory) => photos.filter((p) => p.category === c).length;
+const count = (c: PhotoCategory) => photos.filter((p) => photoCats(p).includes(c)).length;
 const photographers = [...new Set(photos.flatMap((p) => (p.photographer ? [p.photographer.name] : [])))];
 const years = [...new Set(photos.map((p) => p.date.slice(0, 4)))].sort().reverse();
 const locale = lang === 'ru' ? 'ru-RU' : 'en-CA';
@@ -24,7 +24,7 @@ const viewer: ViewerItem[] = photos.map((p) => ({
   caption: p.caption ? loc(p.caption, lang) : undefined,
   chips: [
     ...(p.character ? [{ label: charName(p.character), strong: true }] : []),
-    ...(p.category ? [{ label: t(`cat.${p.category}` as UiKey) }] : []),
+    ...photoCats(p).map((c) => ({ label: t(`cat.${c}` as UiKey) })),
   ],
   fields: [
     ...(p.event ? [{ label: t('viewer.event'), value: loc(p.event, lang), href: localizePath('/events', lang) + (p.eventId ? `#${p.eventId}` : '') }] : []),
@@ -119,7 +119,7 @@ const viewer: ViewerItem[] = photos.map((p) => ({
             role="button"
             aria-label={loc(p.title, lang)}
             data-character={p.character ?? ''}
-            data-cat={p.category ?? ''}
+            data-cat={photoCats(p).join(' ')}
             data-person={p.photographer?.name ?? ''}
             data-year={p.date.slice(0, 4)}
             data-date={p.date}

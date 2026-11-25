@@ -4,7 +4,7 @@ import Icon from '../Icon.astro';
 import UploadTile from '../UploadTile.astro';
 import Lightbox, { type ViewerItem } from '../Lightbox.astro';
 import { useTranslations, type Lang, type UiKey } from '../../i18n/ui';
-import { loc, locAll, type ArtType } from '../../data/mock';
+import { loc, locAll, artTypes, type ArtType } from '../../data/mock';
 import { listArts } from '../../lib/media';
 
 const { lang } = Astro.props as { lang: Lang };
@@ -13,7 +13,7 @@ const arts = await listArts();
 const locale = lang === 'ru' ? 'ru-RU' : 'en-CA';
 
 const types: ArtType[] = ['full', 'sketch', 'ref', 'stickers', 'comic', 'ych'];
-const count = (c: ArtType) => arts.filter((a) => a.type === c).length;
+const count = (c: ArtType) => arts.filter((a) => artTypes(a).includes(c)).length;
 const artists = [...new Set(arts.map((a) => a.artist.name))];
 const years = [...new Set(arts.flatMap((a) => (a.created ? [a.created.slice(0, 4)] : [])))].sort().reverse();
 const fullDate = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' }).replace(/\s?г\.$/, '');
@@ -22,7 +22,7 @@ const viewer: ViewerItem[] = arts.map((a) => ({
   id: a.id,
   title: loc(a.title, lang),
   caption: a.caption ? loc(a.caption, lang) : undefined,
-  chips: [{ label: charName(a.character), strong: true }, ...(a.type ? [{ label: t(`art.${a.type}` as UiKey) }] : [])],
+  chips: [{ label: charName(a.character), strong: true }, ...artTypes(a).map((c) => ({ label: t(`art.${c}` as UiKey) }))],
   fields: [
     { label: t('viewer.artist'), value: a.artist.name, href: a.artist.url, external: true },
     { label: t('viewer.drawn'), value: a.created ? fullDate(a.created) : t('viewer.unknown') },
@@ -118,7 +118,7 @@ const fmt = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(locale, 
             role="button"
             aria-label={loc(a.title, lang)}
             data-character={a.character}
-            data-cat={a.type ?? ''}
+            data-cat={artTypes(a).join(' ')}
             data-person={a.artist.name}
             data-year={a.created?.slice(0, 4) ?? ''}
             data-date={a.created ?? ''}

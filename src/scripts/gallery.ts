@@ -25,7 +25,7 @@ export function initGallery(root: HTMLElement) {
     return (
       (!state.q || (d.search || '').includes(state.q)) &&
       (state.character === 'all' || d.character === state.character || d.character === 'both') &&
-      (state.cat === 'all' || d.cat === state.cat) &&
+      (state.cat === 'all' || ` ${d.cat ?? ''} `.includes(` ${state.cat} `)) &&
       (state.person === 'all' || d.person === state.person) &&
       (state.year === 'all' || d.year === state.year)
     );

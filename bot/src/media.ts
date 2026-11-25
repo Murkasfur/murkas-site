@@ -8,7 +8,7 @@ import { api, apiForm, send, edit, answer, esc, type Keyboard, type CallbackQuer
 import { LIMITS, CHARACTERS, PHOTO_CATEGORIES, ART_TYPES, REJECT_REASONS, storageUsed } from '../../src/lib/media-core';
 
 type Row = {
-  id: string; kind: 'photo' | 'art'; status: string; caption_ru: string | null; character: string | null; category: string | null;
+  id: string; kind: 'photo' | 'art'; status: string; title_ru: string | null; title_en: string | null; caption_ru: string | null; caption_en: string | null; character: string | null; category: string | null;
   event_id: string | null; person_name: string | null; person_url: string | null; created_date: string | null; original_url: string | null;
   pinned: number; bytes: number; mime: string; r2_key: string | null; blur_requested: number; reject_reason: string | null;
   batch_id: string | null; position: number; width: number | null; height: number | null;
@@ -20,7 +20,16 @@ const CAT_RU: Record<string, string> = { group: 'Общее фото', full: 'Ф
 const ART_RU: Record<string, string> = { full: 'Полноцвет', sketch: 'Скетч', ref: 'Рефшит', stickers: 'Стикеры', comic: 'Комикс', ych: 'YCH' };
 const REASON_RU: Record<string, string> = { off_topic: 'Не по теме', quality: 'Плохое качество', duplicate: 'Дубль', not_theirs: 'Чужое / без разрешения', other: 'Другое' };
 const STATUS_RU: Record<string, string> = { pending: '⏳ ждёт', published: '✅ на сайте', rejected: '❌ отклонено', deleted: '🗑 удалено', uploading: '… грузится' };
-const catName = (r: { kind: string; category: string | null }) => (r.category ? ((r.kind === 'art' ? ART_RU : CAT_RU)[r.category] ?? r.category) : null);
+/** Категории хранятся строкой «ref,full» - у арта и фото может быть несколько */
+export const catList = (v: string | null) => (v ?? '').split(',').map((x) => x.trim()).filter(Boolean);
+const catName = (r: { kind: string; category: string | null }) => {
+  const names = r.kind === 'art' ? ART_RU : CAT_RU;
+  return catList(r.category).map((c) => names[c] ?? c).join(' + ') || null;
+};
+const toggle = (v: string | null, c: string) => {
+  const l = catList(v);
+  return (l.includes(c) ? l.filter((x) => x !== c) : [...l, c]).join(',') || null;
+};
 const gb = (b: number) => `${(b / 1024 ** 3).toFixed(b < 1024 ** 3 ? 2 : 1)} ГБ`;
 const mb = (b: number) => (b < 1024 ** 2 ? `${Math.max(1, Math.round(b / 1024))} КБ` : `${(b / 1024 ** 2).toFixed(1)} МБ`);
 const ref = (batchId: string) => batchId.slice(0, 6).toUpperCase();
@@ -109,12 +118,20 @@ async function batchText(env: Env, b: Batch, rows: Row[]) {
   return lines.join('\n');
 }
 
+const editRow = (r: Row): Keyboard => [[
+  { text: '✏️ Название', callback_data: `et:${r.id}:title` },
+  { text: '✏️ Подпись', callback_data: `et:${r.id}:caption` },
+  { text: `✏️ ${r.kind === 'art' ? 'Художник' : 'Фотограф'}`, callback_data: `et:${r.id}:author` },
+]];
+
 function itemButtons(r: Row): Keyboard {
   if (r.status === 'pending')
     return [[{ text: '✅ Принять', callback_data: `ia:${r.id}` }, { text: '🫥 Размыть', callback_data: `ib:${r.id}` }],
-      [{ text: '❌ Отклонить', callback_data: `ir:${r.id}` }, { text: '🗑 Удалить', callback_data: `id:${r.id}` }]];
+      [{ text: '❌ Отклонить', callback_data: `ir:${r.id}` }, { text: '🗑 Удалить', callback_data: `id:${r.id}` }],
+      [{ text: '👥 Персонаж / категория', callback_data: `icp:${r.id}` }], ...editRow(r)];
   if (r.status === 'published')
     return [[{ text: '👥 Персонаж / категория', callback_data: `icp:${r.id}` }, ...(r.kind === 'photo' ? [{ text: '🏠 На главную', callback_data: `hm:${r.id}` }] : [])],
+      ...editRow(r),
       [{ text: r.pinned ? '📍 Открепить' : '📌 Закрепить', callback_data: `ip:${r.id}` }, { text: '👋 В «Привет»', callback_data: `hh:${r.id}` }],
       [{ text: '↩️ Снять', callback_data: `iu:${r.id}` }, { text: '🗑 Удалить', callback_data: `id:${r.id}` }]];
   if (r.status === 'rejected')
@@ -133,13 +150,14 @@ function batchKb(b: Batch, rows: Row[]): Keyboard {
   return kb;
 }
 
-function pickerKb(kind: string, prefix: string, target: string, back: string): Keyboard {
-  const cats = (kind === 'art' ? ART_TYPES : PHOTO_CATEGORIES) as readonly string[];
+/** Персонаж - один, категории - сколько угодно (✅ = стоит, нажми ещё раз - снимется) */
+function pickerKb(kind: string, prefix: string, target: string, back: string, character: string | null, cats: string[]): Keyboard {
+  const all = (kind === 'art' ? ART_TYPES : PHOTO_CATEGORIES) as readonly string[];
   const names = kind === 'art' ? ART_RU : CAT_RU;
-  const kb: Keyboard = [CHARACTERS.map((c) => ({ text: `👥 ${CHAR_RU[c]}`, callback_data: `${prefix}c:${target}:${c}` }))];
-  for (let i = 0; i < cats.length; i += 3)
-    kb.push(cats.slice(i, i + 3).map((c) => ({ text: names[c], callback_data: `${prefix}k:${target}:${c}` })));
-  kb.push([{ text: '← Назад', callback_data: back }]);
+  const kb: Keyboard = [CHARACTERS.map((c) => ({ text: `${c === character ? '✅' : '👥'} ${CHAR_RU[c]}`, callback_data: `${prefix}c:${target}:${c}` }))];
+  for (let i = 0; i < all.length; i += 3)
+    kb.push(all.slice(i, i + 3).map((c) => ({ text: `${cats.includes(c) ? '✅ ' : ''}${names[c]}`, callback_data: `${prefix}k:${target}:${c}` })));
+  kb.push([{ text: '✓ Готово', callback_data: back }]);
   return kb;
 }
 
@@ -150,8 +168,10 @@ const reasonsKb = (prefix: string, target: string, back: string): Keyboard => [
 
 function viewerCaption(r: Row, i: number, n: number) {
   const lines = [`<b>${i + 1}/${n}</b> · ${STATUS_RU[r.status] ?? r.status} · ${mb(r.bytes)}${r.width ? ` · ${r.width}×${r.height}` : ''}`];
-  if (r.person_name) lines.push(`👤 ${esc(r.person_name)}`);
-  if (r.caption_ru) lines.push(`💬 ${esc(r.caption_ru)}`);
+  const pair = (ru: string | null, en: string | null) => esc(ru ?? '') + (en && en !== ru ? ` <i>/ ${esc(en)}</i>` : '');
+  lines.push(r.title_ru ? `📝 <b>${pair(r.title_ru, r.title_en)}</b>` : '📝 <i>без названия</i>');
+  if (r.caption_ru) lines.push(`💬 ${pair(r.caption_ru, r.caption_en)}`);
+  lines.push(`👤 ${r.person_name ? esc(r.person_name) : '<i>автор неизвестен</i>'}${r.person_url ? ` - ${esc(r.person_url)}` : ''}`);
   const tags = [r.character && `👥 ${CHAR_RU[r.character]}`, catName(r) && `🏷 ${catName(r)}`, r.pinned && '📌 закреплено'].filter(Boolean);
   if (tags.length) lines.push(tags.join(' · '));
   if (r.blur_requested && r.status === 'pending') lines.push('🫥 ждёт размытия (сделает сервер обработки)');
@@ -159,10 +179,29 @@ function viewerCaption(r: Row, i: number, n: number) {
   return lines.join('\n');
 }
 
-function viewerKb(b: Batch, r: Row, i: number, n: number): Keyboard {
+/** Что листает просмотрщик: id заявки, P - все фото на сайте, A - все арты */
+async function scopeRows(env: Env, scope: string): Promise<Row[]> {
+  if (scope === 'P' || scope === 'A') {
+    const { results } = await env.DB.prepare(
+      `SELECT * FROM media WHERE kind = ? AND status = 'published' ORDER BY pinned DESC, coalesce(published_at, uploaded_at) DESC LIMIT 300`,
+    ).bind(scope === 'P' ? 'photo' : 'art').all<Row>();
+    return results;
+  }
+  return batchRows(env, scope);
+}
+/** Область просмотрщика по кнопкам ◀️ ▶️ в сообщении (vn:<область>:<номер>) */
+/** Строка ◀️ 1/3 ▶️ из сообщения - её оставляем сверху, когда показываем выбор (персонаж, причина...), чтобы не потерять, что листаем */
+export const navRows = (msg: Message): Keyboard => (msg.reply_markup?.inline_keyboard ?? []).filter((row) => row.some((b) => b.callback_data?.startsWith('vn:')));
+export const scopeOf = (msg: Message, fallback: string | null) => {
+  const nav = msg.reply_markup?.inline_keyboard?.flat().find((b) => b.callback_data?.startsWith('vn:'));
+  return nav?.callback_data?.split(':')[1] ?? fallback;
+};
+
+function viewerKb(scope: string, r: Row, i: number, n: number): Keyboard {
+  // если листать нечего, прячем область в «noop», чтобы потом знать, что перерисовывать
   const nav: Keyboard = n > 1
-    ? [[{ text: '◀️', callback_data: `vn:${b.id}:${(i - 1 + n) % n}` }, { text: `${i + 1}/${n}`, callback_data: 'noop' }, { text: '▶️', callback_data: `vn:${b.id}:${(i + 1) % n}` }]]
-    : [];
+    ? [[{ text: '◀️', callback_data: `vn:${scope}:${(i - 1 + n) % n}` }, { text: `${i + 1}/${n}`, callback_data: 'noop' }, { text: '▶️', callback_data: `vn:${scope}:${(i + 1) % n}` }]]
+    : [[{ text: '1/1', callback_data: `vn:${scope}:0` }]];
   return [...nav, ...itemButtons(r), [{ text: '✖️ Закрыть', callback_data: 'vx' }]];
 }
 
@@ -208,14 +247,16 @@ async function refreshBatch(env: Env, batchId: string | null) {
   });
 }
 
-async function showViewer(env: Env, chat: number, batchId: string, i: number, msg?: Message) {
-  const b = await getBatch(env, batchId);
-  const rows = b ? await batchRows(env, batchId) : [];
-  if (!b || !rows.length) return send(env, chat, 'Заявка не найдена');
+export async function showViewer(env: Env, chat: number, scope: string, i: number, msg?: Message) {
+  const rows = await scopeRows(env, scope);
+  if (!rows.length) {
+    const empty = scope === 'P' ? 'На сайте пока нет фото' : scope === 'A' ? 'На сайте пока нет артов' : 'Заявка не найдена';
+    return msg ? edit(env, msg, empty) : send(env, chat, empty);
+  }
   i = Math.max(0, Math.min(i, rows.length - 1));
   const r = rows[i];
   const caption = viewerCaption(r, i, rows.length);
-  const kb = viewerKb(b, r, i, rows.length);
+  const kb = viewerKb(scope, r, i, rows.length);
   const blob = await fileBlob(env, r);
   const type = asPhoto(r) ? 'photo' : 'document';
   if (!blob) {
@@ -233,6 +274,18 @@ async function showViewer(env: Env, chat: number, batchId: string, i: number, ms
   return apiForm(env, type === 'photo' ? 'sendPhoto' : 'sendDocument', {
     chat_id: String(chat), caption, parse_mode: 'HTML', reply_markup: { inline_keyboard: kb },
   }, { [type]: blob });
+}
+
+/** После правки названия/подписи/автора: обновить подпись и кнопки просмотрщика */
+export async function refreshViewerText(env: Env, chat: number, messageId: number, scope: string, id: string) {
+  const rows = await scopeRows(env, scope);
+  const i = rows.findIndex((r) => r.id === id);
+  if (i < 0) return;
+  await api(env, 'editMessageCaption', {
+    chat_id: chat, message_id: messageId, caption: viewerCaption(rows[i], i, rows.length), parse_mode: 'HTML',
+    reply_markup: { inline_keyboard: viewerKb(scope, rows[i], i, rows.length) },
+  });
+  if (rows[i].batch_id) await refreshBatch(env, rows[i].batch_id);
 }
 
 // ---------- команды ----------
@@ -280,9 +333,13 @@ export async function mediaCallback(env: Env, cb: CallbackQuery, kind: string, a
 
   // перерисовать то, откуда нажали: просмотрщик или сообщение заявки
   const rerender = async (row: Row) => {
-    if (inViewer && row.batch_id) {
-      const rows = await batchRows(env, row.batch_id);
-      await showViewer(env, chat, row.batch_id, Math.max(0, rows.findIndex((r) => r.id === row.id)), msg);
+    const scope = scopeOf(msg, row.batch_id);
+    if (inViewer && scope) {
+      const rows = await scopeRows(env, scope);
+      const i = rows.findIndex((r) => r.id === row.id);
+      // файл ушёл из области (сняли с сайта в «все фото») - показываем соседний
+      const cur = Number(msg.reply_markup?.inline_keyboard?.flat().find((b) => b.text?.includes('/'))?.text?.split('/')[0] ?? 1) - 1;
+      await showViewer(env, chat, scope, i >= 0 ? i : cur, msg);
     }
     await refreshBatch(env, row.batch_id);
   };
@@ -324,23 +381,37 @@ export async function mediaCallback(env: Env, cb: CallbackQuery, kind: string, a
       await answer(env, cb);
       await refreshBatch(env, a);
       return true;
-    case 'bcp': {
-      const b = await getBatch(env, a);
-      await answer(env, cb);
-      await edit(env, msg, `${msg.text ? esc(msg.text) : ''}\n\n<b>Для всех принятых:</b>`, pickerKb(b?.kind ?? 'photo', 'b', a, `bb:${a}`));
-      return true;
-    }
+    case 'bcp':
     case 'bc':
     case 'bk': {
-      const col = kind === 'bc' ? 'character' : 'category';
-      await env.DB.prepare(`UPDATE media SET ${col} = ? WHERE batch_id = ? AND status = 'published'`).bind(c, a).run();
-      await answer(env, cb, kind === 'bc' ? CHAR_RU[c] : 'Категория поставлена');
-      await refreshBatch(env, a);
+      const b = await getBatch(env, a);
+      const pub = (await batchRows(env, a)).filter((r) => r.status === 'published');
+      if (kind === 'bc') {
+        await env.DB.prepare(`UPDATE media SET character = ? WHERE batch_id = ? AND status = 'published'`).bind(c, a).run();
+      } else if (kind === 'bk') {
+        // у всех уже стоит - снимаем у всех, иначе добавляем всем
+        const has = pub.every((r) => catList(r.category).includes(c));
+        for (const r of pub) {
+          const l = catList(r.category).filter((x) => x !== c);
+          await env.DB.prepare(`UPDATE media SET category = ? WHERE id = ?`).bind((has ? l : [...l, c]).join(',') || null, r.id).run();
+        }
+      }
+      const now = (await batchRows(env, a)).filter((r) => r.status === 'published');
+      const chars = [...new Set(now.map((r) => r.character))];
+      const common = (b?.kind === 'art' ? ART_TYPES : PHOTO_CATEGORIES).filter((x) => now.length && now.every((r) => catList(r.category).includes(x)));
+      await answer(env, cb, kind === 'bc' ? CHAR_RU[c] : kind === 'bk' ? 'Готово' : undefined);
+      await edit(env, msg, `${await batchText(env, b!, await batchRows(env, a))}\n\n<b>Для всех принятых (${now.length}):</b>`,
+        pickerKb(b?.kind ?? 'photo', 'b', a, `bb:${a}`, chars.length === 1 ? chars[0] : null, common as string[]));
       return true;
     }
     case 'bv':
       await answer(env, cb);
       await showViewer(env, chat, a, +c);
+      return true;
+    case 'gv':
+      // «Все фото / арты на сайте»: gv:P или gv:A
+      await answer(env, cb);
+      await showViewer(env, chat, a, 0);
       return true;
     case 'bo':
       await answer(env, cb, 'Присылаю…');
@@ -376,8 +447,8 @@ export async function mediaCallback(env: Env, cb: CallbackQuery, kind: string, a
         ? reasonsKb('irr', a, `ivb:${a}`)
         : kind === 'id'
           ? [[{ text: '🗑 Да, удалить навсегда', callback_data: `idok:${a}` }, { text: 'Нет', callback_data: `ivb:${a}` }]]
-          : pickerKb(r.kind, 'i', a, `ivb:${a}`);
-      await api(env, 'editMessageReplyMarkup', { chat_id: chat, message_id: msg.message_id, reply_markup: { inline_keyboard: kb } });
+          : pickerKb(r.kind, 'i', a, `ivb:${a}`, r.character, catList(r.category));
+      await api(env, 'editMessageReplyMarkup', { chat_id: chat, message_id: msg.message_id, reply_markup: { inline_keyboard: [...navRows(msg), ...kb] } });
       return true;
     }
     case 'irr':
@@ -386,11 +457,34 @@ export async function mediaCallback(env: Env, cb: CallbackQuery, kind: string, a
       return withRow((r) => destroy(env, r), 'Удалено 🗑');
     case 'ic':
     case 'ik': {
-      const col = kind === 'ic' ? 'character' : 'category';
-      return withRow((r) => env.DB.prepare(`UPDATE media SET ${col} = ? WHERE id = ?`).bind(c, r.id).run(), 'Готово');
+      // остаёмся в выборе: можно отметить несколько категорий подряд
+      const r = await getRow(env, a);
+      if (!r) return answer(env, cb, 'Файл не найден').then(() => true);
+      const value = kind === 'ic' ? c : toggle(r.category, c);
+      await env.DB.prepare(`UPDATE media SET ${kind === 'ic' ? 'character' : 'category'} = ? WHERE id = ?`).bind(value, a).run();
+      const next = (await getRow(env, a))!;
+      await answer(env, cb, kind === 'ic' ? CHAR_RU[c] : catName(next) ?? 'Без категории');
+      const kb = [...navRows(msg), ...pickerKb(next.kind, 'i', a, `ivb:${a}`, next.character, catList(next.category))];
+      const scope = inViewer ? scopeOf(msg, next.batch_id) : null;
+      const rows = scope ? await scopeRows(env, scope) : [];
+      const i = rows.findIndex((x) => x.id === a);
+      if (i >= 0) {
+        await api(env, 'editMessageCaption', { chat_id: chat, message_id: msg.message_id, caption: viewerCaption(next, i, rows.length), parse_mode: 'HTML', reply_markup: { inline_keyboard: kb } });
+      } else {
+        await api(env, 'editMessageReplyMarkup', { chat_id: chat, message_id: msg.message_id, reply_markup: { inline_keyboard: kb } });
+      }
+      await refreshBatch(env, next.batch_id);
+      return true;
     }
-    case 'ivb':
-      return withRow(async () => {}, '');
+    case 'ivb': {
+      // «Готово» / «Назад» из выбора: вернуть обычные кнопки, не перезаливая картинку
+      const r = await getRow(env, a);
+      await answer(env, cb);
+      const scope = scopeOf(msg, r?.batch_id ?? null);
+      if (inViewer && scope && r) await refreshViewerText(env, chat, msg.message_id, scope, a);
+      else await refreshBatch(env, r?.batch_id ?? null);
+      return true;
+    }
 
     // ----- отклонённые -----
     case 'rv': {

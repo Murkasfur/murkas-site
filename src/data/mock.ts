@@ -64,6 +64,8 @@ export type Photo = {
   /** Модератор ставит в боте; пока не поставил - нет */
   character?: Character;
   category?: PhotoCategory;
+  /** Несколько категорий сразу (из базы). Если нет - берётся category */
+  cats?: PhotoCategory[];
   event?: L;
   photographer?: { name: string; url?: string };
   date: string;
@@ -109,6 +111,8 @@ export type Art = {
   title: L;
   character: Character | 'both';
   type?: ArtType;
+  /** Несколько тегов сразу (рефшит + полноцвет). Если нет - берётся type */
+  types?: ArtType[];
   artist: { name: string; url?: string };
   /** Когда арт нарисован (не когда загружен). null = неизвестно */
   created: string | null;
@@ -135,3 +139,7 @@ export const arts: Art[] = [
   { id: 'a7', title: { ru: 'Муркас спит', en: 'Murkas sleeping' }, character: 'murkas', type: 'full', artist: { name: '@artist_two', url: 'https://x.com/' }, created: '2026-08-11', ratio: 1.5 },
   { id: 'a8', title: { ru: 'Скетч лапок', en: 'Paw sketch' }, character: 'murkas', type: 'sketch', artist: { name: '@artist_six', url: 'https://t.me/' }, created: null, ratio: 0.9 },
 ];
+
+/** Все категории фото / теги арта (из базы - списком, у заглушек - одной) */
+export const photoCats = (p: Photo): PhotoCategory[] => p.cats ?? (p.category ? [p.category] : []);
+export const artTypes = (a: Art): ArtType[] => a.types ?? (a.type ? [a.type] : []);
