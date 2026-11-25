@@ -224,7 +224,7 @@ const themes = ['watermelon', 'light'] as const;
                 <span class="muted">→</span>
               </a>
               <p class="pf-cmd__group">{t.cmdSections}</p>
-              {[...nav, { id: 'contact', label: t.contact }].map((n) => (
+              {[...nav, { id: 'prices', label: t.prices }, { id: 'contact', label: t.contact }].map((n) => (
                 <a class="pf-cmd__item" href={anchor(n.id)} data-cmd-item data-key={`${n.id} ${n.label}`}>
                   <span>{n.label}</span>
                   <span class="muted">#</span>

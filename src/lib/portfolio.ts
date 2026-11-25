@@ -14,6 +14,8 @@ export type Portfolio = {
   process: typeof data.process;
   services: typeof data.services;
   stackFilters: string[];
+  pricing: typeof data.pricing;
+  finder: typeof data.finder;
   projects: Project[];
 };
 
@@ -26,6 +28,8 @@ export async function getPortfolio(): Promise<Portfolio> {
     process: data.process,
     services: data.services,
     stackFilters: data.stackFilters,
+    pricing: data.pricing,
+    finder: data.finder,
     projects,
   };
 }
@@ -101,6 +105,13 @@ export const ui = {
     figmaL: 'Figma', liveCode: 'Live code', dragHint: 'Drag to compare',
     vibe: 'My vibe now', tap: 'Tap',
     close: 'Close', prev: 'Previous', next: 'Next',
+    prices: 'Prices', pricesTitle: 'What I do & prices', pricesSub: 'Starting prices in USD and usual timelines - the final quote depends on scope',
+    hourly: 'Hourly', from: 'from', notForMe: 'Not for me', howItWorks: 'How it works',
+    finderTitle: 'Not sure what you need?', finderSub: 'Answer 4 quick questions - I’ll suggest the best option and a price',
+    bestFit: 'Best fit for you', discussTg: 'Discuss this in Telegram', orEmail: 'or email →',
+    answersNote: 'Your answers are added to the message, so you don’t have to explain twice',
+    fallbackA: 'Didn’t find your case?', fallbackB: 'Just write me - I’ll figure it out with you →',
+    msgHello: 'Hi Roma! I found you on your portfolio.', msgPick: 'Your finder suggested', msgAnswers: 'My answers', mailSubject: 'Project request',
   },
   ru: {
     about: 'Обо мне', skills: 'Навыки', work: 'Работы', process: 'Процесс', contact: 'Связаться',
@@ -147,6 +158,13 @@ export const ui = {
     figmaL: 'Figma', liveCode: 'Живой код', dragHint: 'Потяни, чтобы сравнить',
     vibe: 'Мой вайб сейчас', tap: 'Нажми',
     close: 'Закрыть', prev: 'Назад', next: 'Дальше',
+    prices: 'Цены', pricesTitle: 'Что я делаю и сколько стоит', pricesSub: 'Стартовые цены в USD и обычные сроки - итоговая оценка зависит от объёма',
+    hourly: 'В час', from: 'от', notForMe: 'Не беру', howItWorks: 'Как я работаю с заказами',
+    finderTitle: 'Не знаете, что нужно?', finderSub: 'Ответьте на 4 вопроса - подскажу лучший вариант и цену',
+    bestFit: 'Вам подойдёт', discussTg: 'Обсудить в Telegram', orEmail: 'или почтой →',
+    answersNote: 'Ваши ответы сразу попадут в сообщение - не нужно объяснять заново',
+    fallbackA: 'Не нашли свой случай?', fallbackB: 'Просто напишите - разберёмся вместе →',
+    msgHello: 'Привет, Рома! Нашёл тебя через портфолио.', msgPick: 'Подборщик предложил', msgAnswers: 'Мои ответы', mailSubject: 'Заявка на проект',
   },
 };
 export type UI = (typeof ui)['en'];

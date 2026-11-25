@@ -218,6 +218,116 @@ export const services = [
   },
 ] as { key: string; best?: boolean; title: L; text: L; tags: string[] }[];
 
+/* ---------------- Цены и условия (блок «What I do & prices») ---------------- */
+// from - крупная цена, range - вилка и обычный срок под ней
+export type PriceRow = { key: string; title: L; note: L; from: string; range: L };
+export const pricing = {
+  hourly: '$25–35',
+  rows: [
+    { key: 'landing-design', title: { en: 'Landing page design', ru: 'Дизайн лендинга' }, note: { en: 'One page, desktop + mobile, in Figma', ru: 'Одна страница, десктоп + телефон, в Figma' }, from: '$200', range: { en: '$200–450 · 1–2 weeks', ru: '$200–450 · 1–2 недели' } },
+    { key: 'landing', title: { en: 'Landing page, turnkey', ru: 'Лендинг под ключ' }, note: { en: 'Design, code and launch', ru: 'Дизайн, вёрстка и запуск' }, from: '$500', range: { en: '$500–900 · 3–4 weeks', ru: '$500–900 · 3–4 недели' } },
+    { key: 'website', title: { en: 'Website, 3–7 pages', ru: 'Сайт на 3–7 страниц' }, note: { en: 'Design, frontend, backend when needed', ru: 'Дизайн, фронтенд, бэкенд если нужен' }, from: '$1,000', range: { en: '$1,000–2,200 · 5–8 weeks', ru: '$1 000–2 200 · 5–8 недель' } },
+    { key: 'screens', title: { en: 'App or web service screens', ru: 'Экраны приложения или сервиса' }, note: { en: 'Per screen, in Figma', ru: 'За экран, в Figma' }, from: '$35', range: { en: '$35–80 / screen · 5–8 a week', ru: '$35–80 за экран · 5–8 в неделю' } },
+    { key: 'uikit', title: { en: 'UI kit / design system', ru: 'UI-кит / дизайн-система' }, note: { en: 'Colors, type, buttons, forms, variants', ru: 'Цвета, шрифты, кнопки, формы, варианты' }, from: '$350', range: { en: '$350–800 · 2–4 weeks', ru: '$350–800 · 2–4 недели' } },
+    { key: 'frontend', title: { en: 'Frontend from your Figma', ru: 'Вёрстка по вашему макету' }, note: { en: 'Per page, responsive', ru: 'За страницу, адаптивно' }, from: '$100', range: { en: '$100–250 / page · ~1 week per 1–2', ru: '$100–250 за страницу · ~неделя на 1–2' } },
+    { key: 'cms', title: { en: 'Webflow or WordPress', ru: 'Webflow или WordPress' }, note: { en: 'New sites, or existing ones with a clear structure', ru: 'Новые сайты или готовые с понятной структурой' }, from: '$500', range: { en: '$500–1,200 · 3–5 weeks', ru: '$500–1 200 · 3–5 недель' } },
+    { key: 'hourly', title: { en: 'Hourly work', ru: 'Почасовая работа' }, note: { en: 'Design or frontend, when the scope is open', ru: 'Дизайн или фронтенд, когда объём не определён' }, from: '$25–35', range: { en: 'per hour', ru: 'в час' } },
+    { key: 'changes', title: { en: 'Changes and fixes', ru: 'Изменения и правки' }, note: { en: 'My work after the included revisions, or a site I’ve taken over', ru: 'Мои работы после включённых правок или сайт, который я принял' }, from: '$20', range: { en: 'per hour', ru: 'в час' } },
+  ] as PriceRow[],
+  /** «Не беру». title - жирное начало, note - пояснение после тире (необязательно) */
+  notForMe: [
+    { title: { en: 'Backend-only work', ru: 'Только бэкенд' }, note: { en: 'backend comes as part of a whole project', ru: 'бэкенд делаю в составе проекта целиком' } },
+    { title: { en: 'Messy legacy sites', ru: 'Запутанные чужие сайты' }, note: { en: 'I take over other sites only with a clear structure and a design I can build on', ru: 'чужой сайт беру, только если там понятная структура и дизайн, с которым можно работать дальше' } },
+    { title: { en: 'NSFW and gambling', ru: 'NSFW и азартные игры' } },
+    { title: { en: 'Crypto token launches, presales and NFT mints', ru: 'Запуски токенов, пресейлы и NFT-минты' } },
+    { title: { en: 'Logos and brand identity', ru: 'Логотипы и фирменный стиль' }, note: { en: 'I pick fonts and colors for the interface, but don’t create a brand from scratch', ru: 'шрифты и цвета для интерфейса подбираю, но бренд с нуля не создаю' } },
+    { title: { en: 'Native iOS / Android apps', ru: 'Нативные приложения iOS / Android' } },
+    { title: { en: 'Telegram bots', ru: 'Telegram-боты' } },
+    { title: { en: 'SEO, ads, social media', ru: 'SEO, реклама, соцсети' } },
+    { title: 'Tilda' },
+  ] as { title: L; note?: L }[],
+  howItWorks: [
+    { en: '30–50% upfront, the rest by milestones', ru: '30–50% предоплата, остальное по этапам' },
+    { en: 'While the design is in Figma, big changes within the agreed scope are free - that’s what this stage is for', ru: 'Пока дизайн в Figma, крупные изменения в рамках согласованного объёма бесплатны - этот этап для того и нужен' },
+    { en: 'Once the prototype is approved, 3 rounds of small and medium edits are included. Big changes get a new estimate, extra rounds from $20/h', ru: 'После утверждения прототипа включены 3 круга мелких и средних правок. Крупные изменения - новая оценка, дополнительные круги от $20/ч' },
+    { en: 'Other people’s sites - after a quick look at the code and design, so I can say honestly if I can build on it', ru: 'Чужие сайты - после быстрого просмотра кода и дизайна, чтобы честно сказать, смогу ли с ними работать' },
+    { en: 'Source files and rights after full payment', ru: 'Исходники и права - после полной оплаты' },
+    { en: 'I reply within 24 hours whenever I can', ru: 'Отвечаю в течение 24 часов, когда могу' },
+    { en: 'Rush jobs are possible at 2–3× the usual rate', ru: 'Срочные заказы - по ставке ×2–3' },
+    { en: 'Web3 only with established companies, paid in USD - never in tokens', ru: 'Web3 - только с состоявшимися компаниями и оплатой в USD, не токенами' },
+  ] as L[],
+};
+
+/* ---------------- Подборщик «Not sure what you need?» ---------------- */
+export const finder = {
+  questions: [
+    { key: 'design', q: { en: 'Do you have a design?', ru: 'Есть ли у вас дизайн?' }, options: [
+      { v: 'figma', l: { en: 'Yes, in Figma', ru: 'Да, в Figma' } },
+      { v: 'sketch', l: { en: 'Just a sketch', ru: 'Только набросок' } },
+      { v: 'none', l: { en: 'No design yet', ru: 'Дизайна нет' } },
+    ] },
+    { key: 'need', q: { en: 'What do you need?', ru: 'Что нужно?' }, options: [
+      { v: 'one', l: { en: 'One page', ru: 'Одна страница' } },
+      { v: 'site', l: { en: 'Site, several pages', ru: 'Сайт на несколько страниц' } },
+      { v: 'app', l: { en: 'App or web service', ru: 'Приложение или сервис' } },
+    ] },
+    { key: 'edit', q: { en: 'Who will update the texts?', ru: 'Кто будет обновлять тексты?' }, options: [
+      { v: 'self', l: { en: 'I will', ru: 'Я сам' } },
+      { v: 'dev', l: { en: 'A developer', ru: 'Разработчик' } },
+    ] },
+    { key: 'when', q: { en: 'How soon do you need it?', ru: 'Как быстро нужно?' }, options: [
+      { v: 'flex', l: { en: 'Flexible', ru: 'Без спешки' } },
+      { v: 'date', l: { en: 'By a date', ru: 'К определённой дате' } },
+      { v: 'rush', l: { en: 'Rush · faster than usual · 2–3× rate', ru: 'Срочно · быстрее обычного · ставка ×2–3' } },
+    ] },
+  ],
+  /** Первый вариант в каждом вопросе, который выбран при загрузке */
+  defaults: { design: 'none', need: 'one', edit: 'self', when: 'flex' } as Record<string, string>,
+  results: {
+    frontend: {
+      title: { en: 'Frontend from your Figma', ru: 'Вёрстка по вашему макету' },
+      why: { en: 'You already have the design - I turn it into a fast, responsive site that matches it 1:1.', ru: 'Дизайн уже есть - я превращаю его в быстрый адаптивный сайт, один в один с макетом.' },
+      from: '$100', range: { en: '$100–250 / page · ~1 week per 1–2 pages', ru: '$100–250 за страницу · ~неделя на 1–2 страницы' },
+      includes: [{ en: 'Desktop, tablet and mobile', ru: 'Десктоп, планшет и телефон' }, { en: 'Animations and states from the design', ru: 'Анимации и состояния из макета' }, { en: 'Launch on your hosting or mine', ru: 'Запуск на вашем хостинге или моём' }],
+    },
+    screens: {
+      title: { en: 'App or web service screens', ru: 'Экраны приложения или сервиса' },
+      why: { en: 'For an app, it’s best to start with flows and screens in Figma - then any developer can build it.', ru: 'Приложение лучше начинать со сценариев и экранов в Figma - потом его соберёт любой разработчик.' },
+      from: '$35', range: { en: '$35–80 / screen · 5–8 screens a week', ru: '$35–80 за экран · 5–8 экранов в неделю' },
+      includes: [{ en: 'User flows and all states', ru: 'Сценарии и все состояния' }, { en: 'Components your devs can reuse', ru: 'Компоненты для разработчиков' }, { en: 'Clickable prototype', ru: 'Кликабельный прототип' }],
+    },
+    'landing-cms': {
+      title: { en: 'Landing page, turnkey on Webflow', ru: 'Лендинг под ключ на Webflow' },
+      why: { en: 'I design it in Figma, build it in Webflow and launch it. You change texts and photos yourself in the Webflow Editor - no developer needed.', ru: 'Рисую в Figma, собираю в Webflow и запускаю. Тексты и фото вы меняете сами в Webflow Editor - без разработчика.' },
+      from: '$500', range: { en: '$500–900 · usually 3–4 weeks', ru: '$500–900 · обычно 3–4 недели' },
+      includes: [{ en: 'Design for desktop and mobile', ru: 'Дизайн для десктопа и телефона' }, { en: 'Webflow build, animations, CMS if needed', ru: 'Сборка в Webflow, анимации, CMS если нужна' }, { en: '3 rounds of edits after the prototype', ru: '3 круга правок после прототипа' }],
+    },
+    landing: {
+      title: { en: 'Landing page, turnkey', ru: 'Лендинг под ключ' },
+      why: { en: 'Design and hand-written code: fast, light and easy for your developer to extend later.', ru: 'Дизайн и код вручную: быстро, легко и удобно для вашего разработчика потом.' },
+      from: '$500', range: { en: '$500–900 · usually 3–4 weeks', ru: '$500–900 · обычно 3–4 недели' },
+      includes: [{ en: 'Design for desktop and mobile', ru: 'Дизайн для десктопа и телефона' }, { en: 'Clean code and launch', ru: 'Чистый код и запуск' }, { en: '3 rounds of edits after the prototype', ru: '3 круга правок после прототипа' }],
+    },
+    'site-cms': {
+      title: { en: 'Website on Webflow or WordPress', ru: 'Сайт на Webflow или WordPress' },
+      why: { en: 'Several pages you can edit yourself: blog, catalog or news through the CMS.', ru: 'Несколько страниц, которые вы правите сами: блог, каталог или новости через CMS.' },
+      from: '$1,000', range: { en: '$1,000–2,200 · usually 5–8 weeks', ru: '$1 000–2 200 · обычно 5–8 недель' },
+      includes: [{ en: 'Design system and all pages', ru: 'Дизайн-система и все страницы' }, { en: 'CMS set up for your content', ru: 'CMS под ваш контент' }, { en: 'A short guide on editing', ru: 'Короткая инструкция по редактированию' }],
+    },
+    website: {
+      title: { en: 'Website, 3–7 pages', ru: 'Сайт на 3–7 страниц' },
+      why: { en: 'The whole site from one person: design, frontend and backend when it needs one.', ru: 'Весь сайт от одного человека: дизайн, фронтенд и бэкенд, если он нужен.' },
+      from: '$1,000', range: { en: '$1,000–2,200 · usually 5–8 weeks', ru: '$1 000–2 200 · обычно 5–8 недель' },
+      includes: [{ en: 'Design system and all pages', ru: 'Дизайн-система и все страницы' }, { en: 'Frontend, backend if needed, launch', ru: 'Фронтенд, бэкенд если нужен, запуск' }, { en: '3 rounds of edits after the prototype', ru: '3 круга правок после прототипа' }],
+    },
+  } as Record<string, { title: L; why: L; from: string; range: L; includes: L[] }>,
+  /** Подпись по сроку */
+  when: {
+    date: { en: 'Tell me the date - I’ll confirm if it fits', ru: 'Напишите дату - скажу, успеваю ли' },
+    rush: { en: 'Rush: the price ×2–3, the timeline about half', ru: 'Срочно: цена ×2–3, срок примерно вдвое короче' },
+  } as Record<string, L>,
+};
+
 export const projects: Project[] = [
   {
     slug: 'murkas-net',

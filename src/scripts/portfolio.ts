@@ -572,7 +572,7 @@ if (!reduce() && 'IntersectionObserver' in window) {
   const groups = [
     '.pf-hero__text > *', '.pf-compare', '.pf-about__text > *', '.pf-learn',
     '.pf-section > .pf-h2', '.pf-section > .pf-sub', '.pf-skills__group', '.pf-work__head', '.pf-slides', '.pf-strip__item',
-    '.pf-step', '.pf-hire__head', '.pf-service', '.pf-contact', '.pf-footer__cols > *',
+    '.pf-step', '.pf-hire__head', '.pf-service', '.pf-prices__head', '.pf-pricelist li', '.pf-terms', '.pf-finder', '.pf-contact', '.pf-footer__cols > *',
     '.pf-all > *:not(.pf-grid)', '.pf-card', '.pf-case__head > *', '.pf-gal', '.pf-block', '.pf-more__head', '.pf-results li', '.pf-proc li',
   ];
   const els = $$(groups.join(','));
@@ -639,4 +639,49 @@ if (!reduce() && 'IntersectionObserver' in window) {
     }, { threshold: 0.6 });
     sio.observe(c);
   });
+}
+
+/* ---------------- Подборщик услуги ---------------- */
+const finderEl = $('[data-finder]');
+if (finderEl) {
+  type R = { title: string; why: string; from: string; range: string; includes: string[] };
+  const F: {
+    results: Record<string, R>; when: Record<string, string>;
+    labels: Record<string, { q: string; o: Record<string, string> }>;
+    msg: Record<string, string>; tg: string; email: string;
+  } = JSON.parse(finderEl.dataset.finder!);
+  const answers = () => Object.fromEntries($$<HTMLInputElement>('input[data-q]:checked', finderEl).map((i) => [i.dataset.q!, i.value]));
+  const pick = (a: Record<string, string>) =>
+    a.design === 'figma' ? 'frontend' : a.need === 'app' ? 'screens' : a.need === 'one' ? (a.edit === 'self' ? 'landing-cms' : 'landing') : a.edit === 'self' ? 'site-cms' : 'website';
+  const set = (sel: string, v: string) => {
+    const el = $(sel, finderEl);
+    if (el) el.textContent = v;
+  };
+  const render = () => {
+    const a = answers();
+    const r = F.results[pick(a)];
+    const box = $('.pf-finder__result', finderEl)!;
+    box.classList.remove('is-swap');
+    void box.offsetWidth; // перезапуск анимации
+    box.classList.add('is-swap');
+    set('[data-f-title]', r.title);
+    set('[data-f-why]', r.why);
+    set('[data-f-from]', `${F.msg.from} ${r.from}`);
+    set('[data-f-range]', r.range);
+    const when = $('[data-f-when]', finderEl)!;
+    when.textContent = F.when[a.when] ?? '';
+    when.hidden = !F.when[a.when];
+    when.classList.toggle('is-rush', a.when === 'rush');
+    const inc = $('[data-f-inc]', finderEl)!;
+    const tick = inc.querySelector('svg')?.outerHTML ?? '';
+    inc.innerHTML = r.includes.map((i) => `<li>${tick}<span></span></li>`).join('');
+    inc.querySelectorAll('span').forEach((s, i) => (s.textContent = r.includes[i]));
+    // Сообщение с ответами - для Telegram и почты
+    const lines = Object.entries(a).map(([k, v]) => `- ${F.labels[k].q} ${F.labels[k].o[v]}`);
+    const text = `${F.msg.hello}\n${F.msg.pick}: ${r.title} (${F.msg.from} ${r.from}).\n${F.msg.answers}:\n${lines.join('\n')}`;
+    $<HTMLAnchorElement>('[data-f-tg]', finderEl)!.href = `${F.tg}?text=${encodeURIComponent(text)}`;
+    $<HTMLAnchorElement>('[data-f-mail]', finderEl)!.href = `mailto:${F.email}?subject=${encodeURIComponent(`${F.msg.subject}: ${r.title}`)}&body=${encodeURIComponent(text)}`;
+  };
+  finderEl.addEventListener('change', render);
+  render();
 }

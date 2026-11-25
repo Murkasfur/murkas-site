@@ -6,6 +6,7 @@ import PfGlyph from './PfGlyph.astro';
 import PfViewer from './PfViewer.astro';
 import PfContact from './PfContact.astro';
 import PfVibe from './PfVibe.astro';
+import PfPricing from './PfPricing.astro';
 import Icon from '../Icon.astro';
 import { getPortfolio, pfPath, roleLabel, tx, ui, visibleRoles, type Lang } from '../../lib/portfolio';
 
@@ -303,6 +304,9 @@ const learningKinds = [
     </div>
     <p class="pf-note-line muted">{t.noBackend}</p>
   </section>
+
+  <!-- ============ Цены и подборщик ============ -->
+  <PfPricing lang={lang} />
 
   <PfContact lang={lang} />
 

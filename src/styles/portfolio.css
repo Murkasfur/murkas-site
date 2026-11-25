@@ -711,3 +711,77 @@ html.is-inspecting .site-cursor { display: none !important; }
 .pf-ldetails__body { animation: pf-rise 0.3s var(--ease); }
 .pf-strip__item { transition: border-color 0.15s, opacity 0.25s, background-color 0.15s, transform 0.2s var(--ease); }
 .pf-strip__item:hover { transform: translateY(-2px); }
+
+/* Без системных полос прокрутки внутри меню и лент (прокрутка колесом/свайпом остаётся) */
+.pf-cmd__list, .pf-ldetails, .pf-gal__thumbs, .pf-viewer__thumbs, .pf-dialog, .pf-insp-panel { scrollbar-width: none; }
+.pf-cmd__list::-webkit-scrollbar, .pf-ldetails::-webkit-scrollbar, .pf-gal__thumbs::-webkit-scrollbar,
+.pf-viewer__thumbs::-webkit-scrollbar, .pf-dialog::-webkit-scrollbar, .pf-insp-panel::-webkit-scrollbar { display: none; }
+
+/* ---------- Цены, условия и подборщик ---------- */
+.pf-prices { gap: 24px; }
+.pf-prices__head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+.pf-prices__head .pf-rate-chip span { color: var(--md-on-surface-variant); font-size: 13px; }
+.pf-prices__head .pf-rate-chip b { color: var(--md-primary); font: 500 16px/20px var(--font-plain); }
+.pf-prices__body { display: grid; grid-template-columns: minmax(0, 1fr) 392px; gap: 24px; align-items: start; }
+.pf-pricelist { padding: 12px 28px; border: 1px solid var(--line); border-radius: 28px; }
+.pf-pricelist li { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--line); transition: background-color 0.2s; }
+.pf-pricelist li:last-child { border-bottom: 0; }
+.pf-pricelist li.is-hit b { color: var(--md-primary); }
+.pf-pricelist__name { display: grid; gap: 2px; }
+.pf-pricelist__name b { font: 500 17px/24px var(--font-plain); }
+.pf-pricelist__name .muted { font-size: 13px; line-height: 18px; }
+.pf-pricelist__price { display: grid; justify-items: end; gap: 2px; text-align: right; }
+.pf-pricelist__price b { font: 500 20px/26px var(--font-plain); color: var(--md-primary); white-space: nowrap; }
+.pf-pricelist__price .muted { font-size: 12px; line-height: 16px; }
+.pf-prices__side { display: grid; gap: 24px; }
+.pf-terms { display: grid; gap: 12px; padding: 24px; border-radius: 28px; background: var(--chip); font-size: 14px; line-height: 20px; }
+.pf-terms h3 { font: 400 22px/28px var(--font-brand); }
+.pf-terms--no h3, .pf-terms--no .icon { color: var(--md-primary); }
+.pf-terms--how h3, .pf-terms__n { color: var(--md-tertiary); }
+.pf-terms ul, .pf-terms ol { display: grid; gap: 10px; }
+.pf-terms li { display: flex; gap: 12px; align-items: flex-start; }
+.pf-terms li .icon { flex: none; margin-top: 2px; }
+.pf-terms b { font-weight: 500; }
+.pf-terms__n { flex: none; min-width: 18px; font: 500 13px/20px var(--font-plain); }
+
+.pf-finder { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 32px; padding: 32px; border: 1px solid var(--line); border-radius: 32px; background: var(--md-surface-container); }
+.pf-finder__qs { display: grid; gap: 22px; align-content: start; }
+.pf-finder__title { font: 400 28px/36px var(--font-brand); }
+.pf-finder__q { margin: 0; padding: 0; border: 0; min-width: 0; }
+.pf-finder__q legend { display: flex; align-items: center; gap: 10px; padding: 0; margin-bottom: 10px; font: 500 16px/22px var(--font-plain); }
+.pf-finder__opts { display: flex; flex-wrap: wrap; gap: 8px; }
+.pf-finder__opt { position: relative; cursor: pointer; }
+.pf-finder__opt input { position: absolute; opacity: 0; pointer-events: none; }
+.pf-finder__opt > span { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 14px; border-radius: 10px; background: var(--chip); font: 500 14px/20px var(--font-plain); transition: background-color 0.15s, color 0.15s, transform 0.15s var(--ease); }
+.pf-finder__opt > span .icon { display: none; }
+.pf-finder__opt:hover > span { background: var(--chip-2); }
+.pf-finder__opt:active > span { transform: scale(0.96); }
+.pf-finder__opt input:checked + span { background: var(--md-primary); color: var(--md-on-primary); }
+.pf-finder__opt input:checked + span .icon { display: block; }
+.pf-finder__opt input:focus-visible + span { outline: 3px solid var(--md-primary); outline-offset: 2px; }
+.pf-finder__result { display: grid; gap: 14px; align-content: start; padding: 28px; border-radius: 24px; background: var(--chip); font-size: 14px; line-height: 20px; }
+.pf-finder__result.is-swap > * { animation: pf-rise 0.35s var(--ease) backwards; }
+.pf-finder__result.is-swap > *:nth-child(2) { animation-delay: 30ms; }
+.pf-finder__result.is-swap > *:nth-child(4) { animation-delay: 60ms; }
+.pf-finder__kicker { color: var(--md-tertiary); font: 500 13px/18px var(--font-plain); }
+.pf-finder__name { font: 400 26px/32px var(--font-brand); }
+.pf-finder__price { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; }
+.pf-finder__price b { font: 500 32px/40px var(--font-brand); color: var(--md-primary); }
+.pf-finder__price .muted { font-size: 13px; }
+.pf-finder__when { padding: 8px 12px; border-radius: 10px; background: var(--chip-2); font-size: 13px; }
+.pf-finder__when.is-rush { background: color-mix(in srgb, var(--md-primary) 18%, transparent); color: var(--md-primary); }
+.pf-finder__inc { display: grid; gap: 6px; }
+.pf-finder__inc li { display: flex; gap: 8px; align-items: flex-start; }
+.pf-finder__inc .icon { flex: none; margin-top: 2px; color: var(--md-tertiary); }
+.pf-finder__actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 4px; }
+.pf-finder__note { font-size: 12px; line-height: 16px; }
+.pf-finder__fallback { font-size: 14px; }
+@media (max-width: 1100px) {
+  .pf-prices__body, .pf-finder { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .pf-pricelist { padding: 4px 18px; }
+  .pf-pricelist li { align-items: flex-start; }
+  .pf-finder { padding: 20px; border-radius: 24px; }
+  .pf-finder__result { padding: 20px; }
+}

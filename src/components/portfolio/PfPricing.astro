@@ -1,0 +1,120 @@
+---
+// «Что я делаю и сколько стоит»: прайс, «не беру», условия и подборщик услуги.
+// Все тексты и цены - src/data/portfolio.ts (pricing и finder).
+import Icon from '../Icon.astro';
+import { getPortfolio, tx, ui, type Lang } from '../../lib/portfolio';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const t = ui[lang];
+const { pricing, finder, profile } = await getPortfolio();
+const def = finder.defaults;
+// $1,000 -> $1 000 в русской версии
+const money = (v: string) => (lang === 'ru' ? v.replace(/(\d),(\d{3})/g, '$1 $2') : v);
+const pick = (a: Record<string, string>) => {
+  if (a.design === 'figma') return 'frontend';
+  if (a.need === 'app') return 'screens';
+  if (a.need === 'one') return a.edit === 'self' ? 'landing-cms' : 'landing';
+  return a.edit === 'self' ? 'site-cms' : 'website';
+};
+const first = finder.results[pick(def)];
+// Всё, что нужно скрипту подборщика, - на нужном языке
+const finderData = {
+  results: Object.fromEntries(
+    Object.entries(finder.results).map(([k, r]) => [k, { title: tx(r.title, lang), why: tx(r.why, lang), from: money(r.from), range: tx(r.range, lang), includes: r.includes.map((i) => tx(i, lang)) }]),
+  ),
+  when: Object.fromEntries(Object.entries(finder.when).map(([k, v]) => [k, tx(v, lang)])),
+  labels: Object.fromEntries(finder.questions.map((q) => [q.key, { q: tx(q.q, lang), o: Object.fromEntries(q.options.map((o) => [o.v, tx(o.l, lang)])) }])),
+  msg: { hello: t.msgHello, pick: t.msgPick, answers: t.msgAnswers, subject: t.mailSubject, from: t.from },
+  tg: profile.telegram.href,
+  email: profile.email,
+};
+---
+
+<section id="prices" class="pf-section pf-prices" aria-labelledby="prices-title">
+  <div class="pf-prices__head">
+    <div>
+      <h2 id="prices-title" class="pf-h2">{t.pricesTitle}</h2>
+      <p class="pf-sub muted">{t.pricesSub}</p>
+    </div>
+    <p class="pf-rate-chip"><span>{t.hourly}</span> <b>{pricing.hourly}</b></p>
+  </div>
+
+  <div class="pf-prices__body">
+    <ul class="pf-pricelist">
+      {pricing.rows.map((r) => (
+        <li data-price={r.key}>
+          <span class="pf-pricelist__name"><b>{tx(r.title, lang)}</b><span class="muted">{tx(r.note, lang)}</span></span>
+          <span class="pf-pricelist__price">
+            <b>{r.from.includes('–') ? money(r.from) : `${t.from} ${money(r.from)}`}</b>
+            <span class="muted">{tx(r.range, lang)}</span>
+          </span>
+        </li>
+      ))}
+    </ul>
+
+    <div class="pf-prices__side">
+      <div class="pf-terms pf-terms--no">
+        <h3>{t.notForMe}</h3>
+        <ul>
+          {pricing.notForMe.map((n) => (
+            <li>
+              <Icon name="close" size={16} />
+              <span>
+                {n.note ? <b>{tx(n.title, lang)}</b> : tx(n.title, lang)}
+                {n.note && <span class="muted"> - {tx(n.note, lang)}</span>}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div class="pf-terms pf-terms--how">
+        <h3>{t.howItWorks}</h3>
+        <ol>
+          {pricing.howItWorks.map((h, i) => (
+            <li><span class="pf-terms__n">{String(i + 1).padStart(2, '0')}</span><span>{tx(h, lang)}</span></li>
+          ))}
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <div class="pf-finder" data-finder={JSON.stringify(finderData)}>
+    <div class="pf-finder__qs">
+      <div>
+        <h3 class="pf-finder__title">{t.finderTitle}</h3>
+        <p class="muted">{t.finderSub}</p>
+      </div>
+      {finder.questions.map((q, qi) => (
+        <fieldset class="pf-finder__q">
+          <legend><span class="pf-terms__n">{String(qi + 1).padStart(2, '0')}</span> {tx(q.q, lang)}</legend>
+          <div class="pf-finder__opts">
+            {q.options.map((o) => (
+              <label class="pf-finder__opt" data-cursor>
+                <input type="radio" name={`f-${q.key}`} value={o.v} checked={def[q.key] === o.v} data-q={q.key} />
+                <span><Icon name="check" size={16} />{tx(o.l, lang)}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      ))}
+    </div>
+
+    <div class="pf-finder__result" aria-live="polite">
+      <p class="pf-finder__kicker">{t.bestFit}</p>
+      <h3 class="pf-finder__name" data-f-title>{tx(first.title, lang)}</h3>
+      <p class="muted" data-f-why>{tx(first.why, lang)}</p>
+      <p class="pf-finder__price"><b data-f-from>{t.from} {money(first.from)}</b><span class="muted" data-f-range>{tx(first.range, lang)}</span></p>
+      <p class="pf-finder__when" data-f-when hidden></p>
+      <ul class="pf-finder__inc" data-f-inc>
+        {first.includes.map((i) => <li><Icon name="check" size={16} />{tx(i, lang)}</li>)}
+      </ul>
+      <p class="pf-finder__actions">
+        <a class="pf-btn pf-btn--filled" data-f-tg href={profile.telegram.href} target="_blank" rel="noopener"><Icon name="telegram" size={18} />{t.discussTg}</a>
+        <a class="pf-link" data-f-mail href={`mailto:${profile.email}`}>{t.orEmail}</a>
+      </p>
+      <p class="pf-finder__note muted">{t.answersNote}</p>
+    </div>
+  </div>
+  <p class="pf-finder__fallback"><span class="muted">{t.fallbackA}</span> <a class="pf-link" href="#contact">{t.fallbackB}</a></p>
+</section>
