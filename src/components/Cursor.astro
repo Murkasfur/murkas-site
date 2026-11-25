@@ -67,6 +67,8 @@
     let next = overText ? null : (el?.closest<HTMLElement>(TARGETS) ?? null);
     // Элемент внутри оформленной рамки (выпадающий список в поле формы) - обводим рамку целиком
     if (next) next = next.closest<HTMLElement>('[data-cursor-box]') ?? next;
+    // Большие картинки-кнопки (галерея) не обводим целиком - курсор остаётся кружком
+    if (next?.hasAttribute('data-cursor-dot')) next = null;
     if (next !== target) {
       target = next;
       root.classList.toggle('cursor-morph', !!target);

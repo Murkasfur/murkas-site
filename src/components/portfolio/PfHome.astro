@@ -203,7 +203,7 @@ const learningKinds = [
         return (
           <article class="pf-slide" data-slide hidden={i !== 0} aria-roledescription="slide" aria-label={`${i + 1} / ${featured.length}: ${p.title}`} data-gallery={gallery(p)}>
             <div class="pf-slide__gallery">
-              <button type="button" class="pf-slide__main" data-open-photo="0" data-main>
+              <button type="button" class="pf-slide__main" data-open-photo="0" data-main data-cursor-dot>
                 <PfShot photo={shots[0]} alt={tx(shots[0].title, lang) || p.title} eager={i === 0} />
                 <span class="pf-pill pf-slide__full">{t.fullSize}</span>
               </button>

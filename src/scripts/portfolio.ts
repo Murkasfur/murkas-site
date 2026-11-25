@@ -419,18 +419,32 @@ if (gal) {
     cur = Math.max(0, Math.min(i, slides.length - 1));
     track.scrollTo({ left: slides[cur].offsetLeft - track.offsetLeft, behavior: reduce() ? 'auto' : 'smooth' });
   };
-  track.addEventListener(
-    'scroll',
-    () => {
-      const w = slides[0]?.offsetWidth || 1;
-      cur = Math.round(track.scrollLeft / (w + 16));
-      if (now) now.textContent = String(cur + 1);
-      $$('[data-gal-thumb]', gal).forEach((t, j) => t.classList.toggle('on', j === cur));
-    },
-    { passive: true },
-  );
+  const prev = $<HTMLButtonElement>('[data-gal-prev]', gal);
+  const next = $<HTMLButtonElement>('[data-gal-next]', gal);
+  const sync = () => {
+    // текущий кадр - тот, чей левый край ближе всего к левому краю ленты
+    const left = track.scrollLeft;
+    let best = 0;
+    slides.forEach((s, j) => {
+      if (Math.abs(s.offsetLeft - track.offsetLeft - left) < Math.abs(slides[best].offsetLeft - track.offsetLeft - left)) best = j;
+    });
+    cur = best;
+    if (now) now.textContent = String(cur + 1);
+    $$('[data-gal-thumb]', gal).forEach((t, j) => t.classList.toggle('on', j === cur));
+    if (prev) prev.disabled = cur === 0;
+    if (next) next.disabled = cur === slides.length - 1;
+  };
+  track.addEventListener('scroll', sync, { passive: true });
+  addEventListener('resize', sync);
+  sync();
   $('[data-gal-prev]', gal)?.addEventListener('click', () => go(cur - 1));
   $('[data-gal-next]', gal)?.addEventListener('click', () => go(cur + 1));
+  $$<HTMLElement>('[data-gal-thumb]', gal).forEach((t) =>
+    t.addEventListener('click', (e) => {
+      e.stopPropagation();
+      go(Number(t.dataset.galThumb));
+    }),
+  );
   $('[data-gal-full]', gal)?.addEventListener('click', () => {
     const host = gal.closest<HTMLElement>('[data-gallery]');
     if (host) openViewer(JSON.parse(host.dataset.gallery!), cur);

@@ -43,16 +43,24 @@ const gallery = p
       <article class="pf-case" data-gallery={gallery}>
         <header class="pf-case__head">
           <a class="pf-back pf-link" href={href('/projects')}>← {t.allWork}</a>
-          <h1 class="pf-case__title">{p.title}</h1>
+          <h1 class="pf-case__title">
+            {p.live ? (
+              <a href={p.live} target="_blank" rel="noopener" title={t.liveSite}>
+                {p.title}
+                <Icon name="arrow_outward" size={48} />
+              </a>
+            ) : (
+              p.title
+            )}
+          </h1>
           <p class="pf-case__desc muted">{tx(p.description, lang)}</p>
           <dl class="pf-case__meta">
             <div><dt>{t.roleL}</dt><dd>{tx(p.roleText, lang)}</dd></div>
             <div><dt>{t.when}</dt><dd>{tx(p.when, lang)}</dd></div>
             <div><dt>{t.stackL}</dt><dd>{p.stackShort}</dd></div>
           </dl>
-          {(p.live || p.figma || p.github) && (
+          {(p.figma || p.github) && (
             <p class="pf-case__links">
-              {p.live && <a class="pf-btn pf-btn--filled pf-btn--sm" href={p.live} target="_blank" rel="noopener">{t.liveSite} <Icon name="arrow_outward" size={18} /></a>}
               {p.figma && <a class="pf-btn pf-btn--outlined pf-btn--sm" href={p.figma} target="_blank" rel="noopener"><Icon name="figma" size={16} />Figma <Icon name="arrow_outward" size={18} /></a>}
               {p.github && <a class="pf-btn pf-btn--outlined pf-btn--sm" href={p.github} target="_blank" rel="noopener"><Icon name="github" size={16} />GitHub <Icon name="arrow_outward" size={18} /></a>}
             </p>
@@ -66,7 +74,7 @@ const gallery = p
         <section class="pf-gal" aria-label="Photos" data-gal>
           <div class="pf-gal__track" data-gal-track>
             {main.map((ph, i) => (
-              <button type="button" class="pf-gal__slide" data-open-photo={i} data-gal-slide>
+              <button type="button" class="pf-gal__slide" data-open-photo={i} data-gal-slide data-cursor-dot>
                 <PfShot photo={ph} alt={tx(ph.title, lang) || p.title} eager={i === 0} />
               </button>
             ))}
@@ -82,7 +90,7 @@ const gallery = p
           {photos.length > 1 && (
             <div class="pf-gal__thumbs">
               {main.map((ph, i) => (
-                <button type="button" class:list={['pf-gal__thumb', { on: i === 0 }]} data-open-photo={i} data-gal-thumb={i}><PfShot photo={ph} /></button>
+                <button type="button" class:list={['pf-gal__thumb', { on: i === 0 }]} data-gal-thumb={i}><PfShot photo={ph} /></button>
               ))}
               {rest.length > 0 && <span class="pf-gal__divider">{t.morePhotos}<b>+{rest.length}</b></span>}
               {rest.map((ph, i) => (

@@ -419,6 +419,10 @@ html[data-mode='light'] .pf-fpanel__light { display: inline; }
 .pf-case { display: grid; gap: 72px; }
 .pf-case__head { display: grid; gap: 16px; }
 .pf-case__title { font: 700 clamp(44px, 6vw, 72px) / 1.05 var(--font-brand); letter-spacing: -1.5px; }
+.pf-case__title a { display: inline-flex; align-items: center; gap: 12px; transition: color 0.15s; }
+.pf-case__title a .icon { flex: none; width: clamp(28px, 4vw, 48px); height: auto; color: var(--md-primary); transition: transform 0.2s var(--ease); }
+.pf-case__title a:hover { color: var(--md-primary); }
+.pf-case__title a:hover .icon { transform: translate(3px, -3px); }
 .pf-case__desc { max-width: 880px; font-size: 19px; line-height: 28px; }
 .pf-case__meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 4px; }
 .pf-case__meta div { padding: 10px 16px; border: 1px solid var(--line); border-radius: 16px; }
@@ -429,8 +433,14 @@ html[data-mode='light'] .pf-fpanel__light { display: inline; }
 .pf-gal { position: relative; display: grid; gap: 12px; }
 .pf-gal__track { display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; border-radius: 28px; }
 .pf-gal__track::-webkit-scrollbar { display: none; }
+/* пустой хвост: последний кадр тоже встаёт к левому краю, как остальные */
+.pf-gal__track::after { content: ''; flex: 0 0 calc(12% - 16px); }
+.pf-gal__track:has(> :only-child)::after { display: none; }
+.pf-gal__arrow:disabled { opacity: 0; pointer-events: none; }
+.pf-gal__arrow { transition: opacity 0.2s, background-color 0.15s, transform 0.15s var(--ease); }
 .pf-gal__slide { flex: 0 0 88%; aspect-ratio: 1040 / 540; padding: 0; border: 0; border-radius: 28px; overflow: hidden; scroll-snap-align: start; cursor: zoom-in; background: var(--chip-2); }
 .pf-gal__slide:only-child { flex-basis: 100%; }
+.pf-gal__track { scroll-padding-left: 0; overscroll-behavior-x: contain; }
 .pf-gal__count { position: absolute; top: 16px; left: 16px; }
 .pf-gal__full { position: absolute; top: 16px; right: calc(12% + 16px); cursor: pointer; }
 .pf-gal__slide:only-child ~ .pf-gal__full { right: 16px; }
