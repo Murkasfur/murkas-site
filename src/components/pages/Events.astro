@@ -1,0 +1,236 @@
+---
+import Page from '../Page.astro';
+import Icon from '../Icon.astro';
+import UploadTile from '../UploadTile.astro';
+import { useTranslations, type Lang, type UiKey } from '../../i18n/ui';
+import { loc, locAll, type EventItem } from '../../data/mock';
+import { getEvents } from '../../lib/data';
+
+const { lang } = Astro.props as { lang: Lang };
+const events = await getEvents();
+const t = useTranslations(lang);
+const locale = lang === 'ru' ? 'ru-RU' : 'en-CA';
+
+// Страница рендерится на Worker при каждом запросе, так что «сегодня» всегда актуально.
+const todayDate = new Date();
+const today = todayDate.toISOString().slice(0, 10);
+const weekAgo = new Date(todayDate.getTime() - 7 * 864e5).toISOString().slice(0, 10);
+const key = (e: EventItem) => e.start ?? e.sortKey ?? '9999';
+const sorted = [...events].sort((a, b) => key(a).localeCompare(key(b)));
+
+const earlier = sorted.filter((e) => key(e) < weekAgo).reverse();
+const recent = sorted.filter((e) => key(e) >= weekAgo && key(e) < today);
+const upcoming = sorted.filter((e) => key(e) >= today);
+
+const monthLabel = (e: EventItem) =>
+  e.start
+    ? new Date(`${e.start}T12:00:00`).toLocaleDateString(locale, { month: 'long', year: 'numeric' }).replace(/\s?г\.$/, '')
+    : loc(e.approx, lang);
+const groups = new Map<string, EventItem[]>();
+for (const e of upcoming) {
+  const k = monthLabel(e);
+  groups.set(k, [...(groups.get(k) ?? []), e]);
+}
+
+const day = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(locale, { day: 'numeric', month: 'short' });
+const dateText = (e: EventItem) =>
+  (e.start ? (e.end ? `${day(e.start)} - ${day(e.end)}` : day(e.start)) : `≈ ${loc(e.approx, lang)}`) + (e.startTime ? `, ${e.startTime}` : '');
+const statusText = (e: EventItem) => t(`status.${e.status}` as UiKey);
+const searchText = (e: EventItem) => `${locAll(e.title)} ${locAll(e.city)} ${key(e).slice(0, 4)}`.toLowerCase();
+
+const next = upcoming.find((e) => e.status !== 'cant');
+const year = String(todayDate.getFullYear());
+const stats = {
+  events: events.filter((e) => e.status === 'went' && e.start?.startsWith(year)).length,
+  photos: events.reduce((s, e) => s + (e.photos ?? 0), 0),
+  cities: new Set(events.filter((e) => e.status === 'went').map((e) => loc(e.city, 'en'))).size,
+};
+---
+
+<Page lang={lang} page="events">
+  <header class="page-header">
+    <div class="page-header__titles">
+      <h1 class="md-display-small">{t('events.title')}</h1>
+      <p class="md-body-large muted">{t('events.subtitle')}</p>
+    </div>
+    <UploadTile lang={lang} title={t('events.upload')} hint={t('upload.dropHint')} />
+  </header>
+
+  <label class="search">
+    <Icon name="search" />
+    <span class="visually-hidden">{t('events.search')}</span>
+    <input type="search" placeholder={t('events.search')} data-filter-input />
+  </label>
+
+  <div class="layout">
+    <div class="timeline" data-filter-list>
+      {
+        earlier.length > 0 && (
+          <details class="earlier">
+            <summary class="chip">
+              {t('events.earlier')} <span class="count">{earlier.length}</span>
+              <Icon name="expand_more" size={18} />
+            </summary>
+            <ul class="list">
+              {earlier.map((e) => (
+                <li class="event event--past" data-search={searchText(e)}>
+                  <span class="date md-label-large">{dateText(e)}</span>
+                  <span class="event__body">
+                    <span class="md-title-medium">{loc(e.title, lang)}</span>
+                    <span class="md-body-small muted">{loc(e.city, lang)}{e.photos ? ` · ${e.photos} ${t('events.photos')}` : ''}</span>
+                  </span>
+                  <span class:list={['status', `status--${e.status}`]}>{statusText(e)}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )
+      }
+
+      {
+        recent.length > 0 && (
+          <ul class="list">
+            {recent.map((e) => (
+              <li class="event event--past" data-search={searchText(e)}>
+                <span class="date md-label-large">{dateText(e)}</span>
+                <span class="event__body">
+                  <span class="md-title-medium">{loc(e.title, lang)}</span>
+                  <span class="md-body-small muted">{loc(e.city, lang)}{e.photos ? ` · ${e.photos} ${t('events.photos')}` : ''}</span>
+                </span>
+                <span class:list={['status', `status--${e.status}`]}>{statusText(e)}</span>
+              </li>
+            ))}
+          </ul>
+        )
+      }
+
+      <div class="today"><span class="md-label-large">{t('events.today')}</span></div>
+
+      {
+        [...groups].map(([label, items]) => (
+          <section class="month">
+            <h2 class="md-title-small muted month__title">{label}</h2>
+            <ul class="list">
+              {items.map((e) => (
+                <li class:list={['event', { 'event--tba': !e.start }]} data-search={searchText(e)}>
+                  <span class:list={['date md-label-large', { 'date--exact': !!e.start }]}>{dateText(e)}</span>
+                  <span class="event__body">
+                    <span class="md-title-medium">{loc(e.title, lang)}</span>
+                    <span class="md-body-small muted"><Icon name="place" size={14} /> {loc(e.city, lang)}</span>
+                  </span>
+                  <span class:list={['status', `status--${e.status}`]}>{statusText(e)}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))
+      }
+      <p class="empty md-body-large muted" hidden data-empty>{t('common.empty')}</p>
+    </div>
+
+    <aside class="sidebar">
+      {
+        next && (
+          <section class="card next">
+            <h2 class="md-title-small">{t('events.next')}</h2>
+            <span class:list={['date md-label-large', { 'date--exact': !!next.start }]}>{dateText(next)}</span>
+            <p class="md-headline-small">{loc(next.title, lang)}</p>
+            <p class="md-body-medium muted"><Icon name="place" size={16} /> {loc(next.city, lang)}</p>
+            <span class:list={['status', `status--${next.status}`]}>{statusText(next)}</span>
+          </section>
+        )
+      }
+      <section class="card stats">
+        <h2 class="md-title-small card__title">{t('events.stats')}</h2>
+        <dl>
+          <div><dt class="md-body-small muted">{t('events.statEvents')}</dt><dd class="md-display-small">{stats.events}</dd></div>
+          <div><dt class="md-body-small muted">{t('events.statPhotos')}</dt><dd class="md-display-small">{stats.photos}</dd></div>
+          <div><dt class="md-body-small muted">{t('events.statCities')}</dt><dd class="md-display-small">{stats.cities}</dd></div>
+        </dl>
+      </section>
+    </aside>
+  </div>
+</Page>
+
+<script>
+  const input = document.querySelector<HTMLInputElement>('[data-filter-input]');
+  const list = document.querySelector<HTMLElement>('[data-filter-list]');
+  input?.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    let shown = 0;
+    list?.querySelectorAll<HTMLElement>('[data-search]').forEach((el) => {
+      const ok = !q || (el.dataset.search || '').includes(q);
+      el.hidden = !ok;
+      if (ok) shown += 1;
+    });
+    list?.querySelectorAll<HTMLElement>('.month').forEach((m) => (m.hidden = !m.querySelector('[data-search]:not([hidden])')));
+    const earlier = list?.querySelector<HTMLDetailsElement>('.earlier');
+    if (earlier && q) earlier.open = !!earlier.querySelector('[data-search]:not([hidden])');
+    const empty = list?.querySelector<HTMLElement>('[data-empty]');
+    if (empty) empty.hidden = shown > 0;
+  });
+</script>
+
+<style>
+  .layout { display: grid; grid-template-columns: 1fr 328px; gap: 24px; align-items: start; }
+  .timeline { display: flex; flex-direction: column; gap: 20px; }
+  .list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .event {
+    display: grid;
+    grid-template-columns: 140px 1fr auto;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    border-radius: 20px;
+    background: var(--md-surface-container-low);
+  }
+  .event[hidden] { display: none; }
+  .event--past { opacity: 0.75; }
+  .event--tba { background: none; border: 1.5px dashed var(--md-outline-variant); }
+  .event__body { display: grid; gap: 2px; }
+  .event__body .icon { vertical-align: -2px; }
+  .date { color: var(--md-on-surface-variant); }
+  .date--exact {
+    width: fit-content;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: var(--md-tertiary-container);
+    color: var(--md-on-tertiary-container);
+  }
+  .status {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font: 500 12px/16px var(--font-plain);
+    white-space: nowrap;
+    background: var(--md-surface-container-highest);
+    color: var(--md-on-surface-variant);
+    width: fit-content;
+  }
+  .status--full { background: var(--md-primary); color: var(--md-on-primary); }
+  .status--partial { background: var(--md-surface-variant); color: var(--md-on-surface-variant); }
+  .status--nosuit { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+  .status--cant { background: var(--md-error-container); color: var(--md-on-error-container); }
+
+  .earlier summary { list-style: none; width: fit-content; }
+  .earlier summary::-webkit-details-marker { display: none; }
+  .earlier[open] summary .icon { transform: rotate(180deg); }
+  .earlier .list { margin-top: 12px; }
+
+  .today { display: flex; align-items: center; gap: 12px; color: var(--md-primary); }
+  .today::after { content: ''; flex: 1; height: 2px; border-radius: 2px; background: var(--md-primary); }
+  .month__title { text-transform: capitalize; margin-bottom: 8px; }
+
+  .sidebar { display: grid; gap: 24px; position: sticky; top: 24px; }
+  .next { display: grid; gap: 10px; }
+  .next .icon { vertical-align: -3px; }
+  .stats dl { display: grid; gap: 12px; margin: 0; }
+  .stats dd { margin: 0; color: var(--md-primary); }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { position: static; order: -1; }
+  }
+  @media (max-width: 600px) {
+    .event { grid-template-columns: 1fr; gap: 8px; }
+  }
+</style>

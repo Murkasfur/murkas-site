@@ -1,0 +1,39 @@
+---
+// Обёртка любой страницы сайта. Сама решает, что показать:
+// 1) maintenance включён (бот /maintenance on)  -> заглушка «Сайт ненадолго закрыт» (без навбара)
+// 2) страница в статусе wip (бот /page <key> wip)   -> заглушка «Страница ещё в работе» (с навбаром)
+// 3) иначе                     -> содержимое страницы
+import Layout from './Layout.astro';
+import Placeholder from './Placeholder.astro';
+import { useTranslations, type Lang, type UiKey } from '../i18n/ui';
+import type { PageKey } from '../data/site';
+import { defaultSettings } from '../lib/settings-core';
+
+interface Props {
+  lang: Lang;
+  page: PageKey;
+  title?: string;
+  description?: string;
+}
+const { lang, page, title, description } = Astro.props;
+const t = useTranslations(lang);
+const pageTitle = title ?? `${t(`nav.${page}` as UiKey)} · Murkas`;
+const settings = Astro.locals.settings ?? defaultSettings();
+const mode = settings.maintenance ? 'maint' : settings.pages[page] === 'wip' ? 'wip' : 'live';
+---
+
+{
+  mode === 'maint' ? (
+    <Layout lang={lang} title={`${t('maint.title')} · Murkas`} bare noindex>
+      <Placeholder lang={lang} kind="maint" />
+    </Layout>
+  ) : mode === 'wip' ? (
+    <Layout lang={lang} title={pageTitle} active={page} noindex>
+      <Placeholder lang={lang} kind="wip" />
+    </Layout>
+  ) : (
+    <Layout lang={lang} title={pageTitle} active={page} description={description}>
+      <slot />
+    </Layout>
+  )
+}

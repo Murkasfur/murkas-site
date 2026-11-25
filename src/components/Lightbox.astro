@@ -1,0 +1,385 @@
+---
+// Окно просмотра фото / арта (макеты «Просмотр фото» и «Просмотр арта» в Figma).
+// Данные приходят списком `items` (уже на нужном языке); навигация идёт по тому же
+// порядку и фильтрам, что и сетка (gallery.ts шлёт событие gallery:list).
+// Ссылка на конкретный элемент: ?view=<id>
+import Icon from './Icon.astro';
+import { useTranslations, type Lang } from '../i18n/ui';
+
+export type ViewerItem = {
+  id: string;
+  title: string;
+  caption?: string;
+  chips: { label: string; strong?: boolean }[];
+  fields: { label: string; value: string; href?: string; external?: boolean }[];
+  pinned?: boolean;
+  ratio: number;
+  src?: string;
+  icon: 'photo_camera' | 'image';
+};
+
+interface Props {
+  lang: Lang;
+  items: ViewerItem[];
+}
+const { lang, items } = Astro.props;
+const t = useTranslations(lang);
+---
+
+<dialog class="viewer" id="viewer" aria-label={t('viewer.label')} data-pinned={t('common.pinned')}>
+  <div class="viewer__top">
+    <span class="viewer__counter md-label-large" data-counter>1 / 1</span>
+    <div class="viewer__top-actions">
+      <button type="button" class="round" data-copy aria-label={t('viewer.copy')} title={t('viewer.copy')}><Icon name="link" /></button>
+      <button type="button" class="round" data-close aria-label={t('common.close')}><Icon name="close" /></button>
+    </div>
+  </div>
+
+  <div class="viewer__stage">
+    <div class="viewer__media" data-media></div>
+    <button type="button" class="arrow arrow--prev" data-prev aria-label={t('viewer.prev')}><Icon name="chevron_left" size={28} /></button>
+    <button type="button" class="arrow arrow--next" data-next aria-label={t('viewer.next')}><Icon name="chevron_right" size={28} /></button>
+  </div>
+
+  <aside class="viewer__info">
+    <div class="info__head">
+      <h2 class="md-headline-small" data-title></h2>
+      <p class="md-body-large info__caption" data-caption></p>
+    </div>
+    <div class="chip-row" data-chips></div>
+    <hr />
+    <dl class="info__fields" data-fields></dl>
+    <div class="info__actions">
+      <a class="md-btn md-btn--filled" data-download download><Icon name="download" size={18} />{t('viewer.download')}</a>
+      <button type="button" class="md-btn md-btn--outlined" data-share><Icon name="link" size={18} />{t('viewer.share')}</button>
+    </div>
+    <p class="info__toast md-label-large" role="status" aria-live="polite" data-toast data-copied={t('admin.copied')}></p>
+  </aside>
+
+  <div class="viewer__strip" data-strip></div>
+  <p class="viewer__hint md-body-small">{t('viewer.hint')}</p>
+</dialog>
+
+<script type="application/json" id="viewer-data" set:html={JSON.stringify(items)} />
+
+<script>
+  import { openDialog, closeDialog, bindDialog } from '../scripts/dialog';
+
+  type Item = {
+    id: string; title: string; caption?: string; pinned?: boolean; ratio: number; src?: string; icon: string;
+    chips: { label: string; strong?: boolean }[];
+    fields: { label: string; value: string; href?: string; external?: boolean }[];
+  };
+
+  const d = document.getElementById('viewer') as HTMLDialogElement | null;
+  const data: Item[] = JSON.parse(document.getElementById('viewer-data')?.textContent || '[]');
+  const byId = new Map(data.map((i) => [i.id, i]));
+  let order: string[] = data.map((i) => i.id);
+  let current = 0;
+
+  const $ = <T extends HTMLElement>(sel: string) => d?.querySelector<T>(sel) ?? null;
+  const iconTpl = (name: string) => document.querySelector(`[data-icon-tpl="${name}"]`)?.innerHTML ?? '';
+  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+
+  const media = (it: Item, small = false) =>
+    it.src
+      ? `<img src="${esc(it.src)}" alt="${esc(it.title)}" ${small ? 'loading="lazy"' : ''} />`
+      : `<div class="ph${small ? ' ph--thumb' : ''}" style="aspect-ratio: 1 / ${it.ratio}">${small ? '' : iconTpl(it.icon)}</div>`;
+
+  const render = () => {
+    const it = byId.get(order[current]);
+    if (!it || !d) return;
+    $('[data-counter]')!.textContent = `${current + 1} / ${order.length}`;
+    $('[data-title]')!.textContent = it.title;
+    const cap = $('[data-caption]')!;
+    cap.textContent = it.caption ?? '';
+    cap.hidden = !it.caption;
+    $('[data-chips]')!.innerHTML = it.chips
+      .map((c) => `<span class="chip ${c.strong ? 'chip--strong' : 'chip--soft'}">${esc(c.label)}</span>`)
+      .join('');
+    $('[data-fields]')!.innerHTML = it.fields
+      .map(
+        (f) =>
+          `<div><dt class="md-label-small">${esc(f.label)}</dt><dd class="md-title-small">${
+            f.href
+              ? `<a href="${esc(f.href)}"${f.external ? ' target="_blank" rel="noopener"' : ''}>${esc(f.value)}${iconTpl('arrow_outward')}</a>`
+              : esc(f.value)
+          }</dd></div>`,
+      )
+      .join('');
+    $('[data-media]')!.innerHTML =
+      `<div class="frame" data-frame data-ratio="${it.ratio}">` +
+      media(it) +
+      (it.pinned ? `<span class="pin-badge">${iconTpl('push_pin')}${esc(d.dataset.pinned || '')}</span>` : '') +
+      `</div>`;
+    fit();
+    const dl = $<HTMLAnchorElement>('[data-download]')!;
+    dl.hidden = !it.src;
+    if (it.src) dl.href = it.src;
+    // Лента миниатюр: до 4 соседей с каждой стороны
+    const from = Math.max(0, current - 4);
+    const to = Math.min(order.length, from + 9);
+    $('[data-strip]')!.innerHTML = order
+      .slice(from, to)
+      .map((id, k) => {
+        const i = from + k;
+        const x = byId.get(id)!;
+        return `<button type="button" class="thumb${i === current ? ' is-current' : ''}" data-go="${i}" aria-label="${esc(x.title)}">${media(x, true)}</button>`;
+      })
+      .join('');
+    ($('[data-prev]') as HTMLButtonElement).disabled = current === 0;
+    ($('[data-next]') as HTMLButtonElement).disabled = current === order.length - 1;
+    const url = new URL(location.href);
+    url.searchParams.set('view', it.id);
+    history.replaceState(null, '', url);
+  };
+
+  // Вписываем фото в область просмотра с сохранением пропорций
+  const fit = () => {
+    const box = $('[data-media]');
+    const frame = $('[data-frame]');
+    if (!box || !frame) return;
+    const r = Number(frame.dataset.ratio) || 1; // высота / ширина
+    const W = box.clientWidth;
+    const H = box.clientHeight || W * r;
+    const w = Math.min(W, H / r);
+    frame.style.width = `${Math.floor(w)}px`;
+    frame.style.height = `${Math.floor(w * r)}px`;
+  };
+  window.addEventListener('resize', () => d?.open && fit());
+
+  const open = (id: string) => {
+    if (!d) return;
+    const i = order.indexOf(id);
+    current = i >= 0 ? i : 0;
+    if (i < 0) order = [id, ...order];
+    document.documentElement.classList.add('viewer-open');
+    openDialog(d, { scrim: false });
+    render();
+  };
+  const go = (i: number) => {
+    if (i < 0 || i >= order.length) return;
+    current = i;
+    render();
+  };
+
+  bindDialog(d);
+  d?.addEventListener('close', () => {
+    document.documentElement.classList.remove('viewer-open');
+    const url = new URL(location.href);
+    url.searchParams.delete('view');
+    history.replaceState(null, '', url);
+  });
+
+  // Клик по пустому месту вокруг фото закрывает окно
+  d?.addEventListener('click', (e) => {
+    const t = e.target as HTMLElement;
+    if (d && (t.matches('.viewer__stage, .viewer__media') || t === d)) closeDialog(d);
+  });
+  $('[data-prev]')?.addEventListener('click', () => go(current - 1));
+  $('[data-next]')?.addEventListener('click', () => go(current + 1));
+  $('[data-strip]')?.addEventListener('click', (e) => {
+    const b = e.target instanceof Element ? e.target.closest<HTMLElement>('[data-go]') : null;
+    if (b) go(Number(b.dataset.go));
+  });
+
+  // Клавиши: ← → листать (Esc закрывает через dialog.ts)
+  document.addEventListener('keydown', (e) => {
+    if (!d?.open) return;
+    if (e.key === 'ArrowLeft') go(current - 1);
+    if (e.key === 'ArrowRight') go(current + 1);
+  });
+
+  // Свайп на телефоне
+  let x0: number | null = null;
+  $('[data-media]')?.addEventListener('touchstart', (e) => (x0 = e.touches[0].clientX), { passive: true });
+  $('[data-media]')?.addEventListener('touchend', (e) => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0;
+    if (Math.abs(dx) > 50) go(current + (dx < 0 ? 1 : -1));
+    x0 = null;
+  });
+
+  // Скопировать ссылку / поделиться
+  const toast = (msg: string) => {
+    const el = $('[data-toast]');
+    if (!el) return;
+    el.textContent = msg;
+    setTimeout(() => (el.textContent = ''), 1600);
+  };
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(location.href);
+      toast($('[data-toast]')?.dataset.copied || 'OK');
+    } catch {}
+  };
+  $('[data-copy]')?.addEventListener('click', copy);
+  $('[data-share]')?.addEventListener('click', async () => {
+    const it = byId.get(order[current]);
+    if (navigator.share && it) {
+      try {
+        await navigator.share({ title: it.title, url: location.href });
+        return;
+      } catch {}
+    }
+    copy();
+  });
+
+  // Порядок как в сетке (с учётом фильтров и сортировки)
+  document.addEventListener('gallery:list', (e) => {
+    const ids = (e as CustomEvent<string[]>).detail;
+    if (ids.length) order = ids;
+  });
+
+  // Открытие по клику на карточку (кроме ссылок внутри неё)
+  document.addEventListener('click', (e) => {
+    const el = e.target instanceof Element ? e.target : null;
+    if (!el || el.closest('a') || el.closest('#viewer')) return;
+    const item = el.closest<HTMLElement>('[data-item][data-id]');
+    if (item) open(item.dataset.id!);
+  });
+  document.addEventListener('keydown', (e) => {
+    const el = e.target instanceof HTMLElement ? e.target : null;
+    if ((e.key === 'Enter' || e.key === ' ') && el?.matches('[data-item][data-id]')) {
+      e.preventDefault();
+      open(el.dataset.id!);
+    }
+  });
+
+  // Ссылка вида ?view=<id> открывает сразу
+  const start = new URL(location.href).searchParams.get('view');
+  if (start && byId.has(start)) requestAnimationFrame(() => open(start));
+</script>
+
+<!-- Шаблоны иконок для окна (вставляются скриптом) -->
+<template data-icon-tpl="photo_camera"><Icon name="photo_camera" size={48} /></template>
+<template data-icon-tpl="image"><Icon name="image" size={48} /></template>
+<template data-icon-tpl="arrow_outward"><Icon name="arrow_outward" size={16} /></template>
+<template data-icon-tpl="push_pin"><Icon name="push_pin" size={14} /></template>
+
+<style>
+  .viewer {
+    position: fixed;
+    inset: 0;
+    z-index: 900;
+    width: 100vw;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 24px 32px;
+    border: 0;
+    background: rgb(18 16 16 / 0.97);
+    backdrop-filter: blur(12px);
+    color: #fff;
+  }
+  .viewer[open] {
+    display: grid;
+    grid-template-columns: 1fr 424px;
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas: 'top top' 'stage info' 'strip hint';
+    gap: 24px 32px;
+    animation: viewer-in 0.22s var(--ease);
+  }
+  @keyframes viewer-in { from { opacity: 0; } }
+  :global(html.viewer-open) { overflow: hidden; }
+
+  .viewer__top { grid-area: top; display: flex; justify-content: space-between; align-items: center; }
+  .viewer__top-actions { display: flex; gap: 8px; }
+  .viewer__counter { padding: 6px 14px; border-radius: 999px; background: rgb(255 255 255 / 0.12); }
+  .round {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 50%;
+    background: rgb(255 255 255 / 0.12);
+    color: #fff;
+  }
+  .round:hover { background: rgb(255 255 255 / 0.2); }
+
+  .viewer__stage { grid-area: stage; position: relative; display: grid; place-items: center; min-height: 0; }
+  .viewer__media { position: relative; display: grid; place-items: center; width: 100%; height: 100%; min-height: 0; }
+  .viewer__media :global(.frame) { position: relative; border-radius: 24px; overflow: hidden; }
+  .viewer__media :global(.frame img),
+  .viewer__media :global(.frame .ph) { width: 100%; height: 100%; border-radius: 0; aspect-ratio: auto !important; }
+  .viewer__media :global(.frame img) { object-fit: cover; }
+  .viewer__media :global(.pin-badge) { position: absolute; top: 16px; left: 16px; }
+
+  .arrow {
+    position: absolute;
+    top: 50%;
+    translate: 0 -50%;
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border: 0;
+    border-radius: 50%;
+    background: rgb(0 0 0 / 0.38);
+    color: #fff;
+  }
+  .arrow--prev { left: 16px; }
+  .arrow--next { right: 16px; }
+  .arrow:disabled { opacity: 0; pointer-events: none; }
+  .arrow:hover { background: rgb(0 0 0 / 0.55); }
+
+  .viewer__info {
+    grid-area: info;
+    align-self: start;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-height: 100%;
+    overflow: auto;
+    padding: 28px 28px 24px;
+    border-radius: 28px;
+    background: var(--md-surface-container-low);
+    color: var(--md-on-surface);
+  }
+  .info__head { display: grid; gap: 8px; }
+  .info__caption { color: var(--md-on-surface-variant); }
+  .viewer__info hr { width: 100%; margin: 0; border: 0; border-top: 1px solid var(--md-outline-variant); }
+  .info__fields { display: grid; gap: 16px; margin: 0; }
+  .info__fields :global(dt) { color: var(--md-on-surface-variant); margin-bottom: 4px; }
+  .info__fields :global(dd) { margin: 0; }
+  .info__fields :global(a) { display: inline-flex; align-items: center; gap: 4px; color: var(--md-primary); text-decoration: none; }
+  .info__fields :global(a:hover) { text-decoration: underline; }
+  .info__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .info__toast:empty { display: none; }
+  .info__toast { margin: -8px 0 0; color: var(--md-primary); }
+  .viewer__info :global(.chip--strong) { background: var(--md-tertiary-container); color: var(--md-on-tertiary-container); border-color: transparent; cursor: default; }
+  .viewer__info :global(.chip--soft) { background: var(--md-surface-container-highest); color: var(--md-on-surface-variant); border-color: transparent; cursor: default; }
+
+  .viewer__strip { grid-area: strip; display: flex; gap: 8px; overflow-x: auto; }
+  .viewer__strip :global(.thumb) {
+    flex: none;
+    width: 56px;
+    height: 56px;
+    padding: 0;
+    border: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    background: none;
+    opacity: 0.45;
+    transition: opacity 0.15s;
+  }
+  .viewer__strip :global(.thumb:hover) { opacity: 0.8; }
+  .viewer__strip :global(.thumb.is-current) { opacity: 1; outline: 3px solid var(--md-tertiary-container); outline-offset: -3px; }
+  .viewer__strip :global(.thumb img),
+  .viewer__strip :global(.thumb .ph) { width: 100%; height: 100%; object-fit: cover; border-radius: 0; aspect-ratio: auto !important; }
+  .viewer__hint { grid-area: hint; align-self: center; justify-self: end; opacity: 0.6; }
+
+  @media (max-width: 960px) {
+    .viewer { padding: 16px; overflow: auto; }
+    .viewer[open] {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 60dvh auto auto;
+      grid-template-areas: 'top' 'stage' 'strip' 'info';
+      gap: 16px;
+    }
+    .viewer__info { max-height: none; overflow: visible; }
+    .viewer__hint { display: none; }
+  }
+</style>

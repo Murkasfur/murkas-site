@@ -1,0 +1,173 @@
+---
+import Page from '../Page.astro';
+import Icon from '../Icon.astro';
+import UploadTile from '../UploadTile.astro';
+import Lightbox, { type ViewerItem } from '../Lightbox.astro';
+import { useTranslations, type Lang, type UiKey } from '../../i18n/ui';
+import { arts, loc, locAll, type ArtType } from '../../data/mock';
+
+const { lang } = Astro.props as { lang: Lang };
+const t = useTranslations(lang);
+const locale = lang === 'ru' ? 'ru-RU' : 'en-CA';
+
+const types: ArtType[] = ['full', 'sketch', 'ref', 'stickers', 'comic', 'ych'];
+const count = (c: ArtType) => arts.filter((a) => a.type === c).length;
+const artists = [...new Set(arts.map((a) => a.artist.name))];
+const years = [...new Set(arts.flatMap((a) => (a.created ? [a.created.slice(0, 4)] : [])))].sort().reverse();
+const fullDate = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' }).replace(/\s?г\.$/, '');
+const charName = (c: string) => (c === 'murkas' ? 'Муркас' : c === 'both' ? t('char.both') : 'Arbyss');
+const viewer: ViewerItem[] = arts.map((a) => ({
+  id: a.id,
+  title: loc(a.title, lang),
+  caption: a.caption ? loc(a.caption, lang) : undefined,
+  chips: [{ label: charName(a.character), strong: true }, { label: t(`art.${a.type}` as UiKey) }],
+  fields: [
+    { label: t('viewer.artist'), value: a.artist.name, href: a.artist.url, external: true },
+    { label: t('viewer.drawn'), value: a.created ? fullDate(a.created) : t('viewer.unknown') },
+    ...(a.original ? [{ label: t('viewer.original'), value: a.original.replace(/^https?:\/\//, ''), href: a.original, external: true }] : []),
+    ...(a.uploaded ? [{ label: t('viewer.uploaded'), value: fullDate(a.uploaded) }] : []),
+  ],
+  pinned: a.pinned,
+  ratio: a.ratio,
+  src: a.src,
+  icon: 'image',
+}));
+const fmt = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' }).replace(/\s?г\.$/, '');
+---
+
+<Page lang={lang} page="arts">
+  <header class="page-header">
+    <div class="page-header__titles">
+      <h1 class="md-display-small">{t('arts.title')}</h1>
+      <p class="md-body-large muted">{t('arts.subtitle')}</p>
+    </div>
+    <UploadTile lang={lang} title={t('arts.upload')} hint={t('upload.dropHint')} />
+  </header>
+
+  <div class="gallery" data-gallery>
+    <label class="search">
+      <Icon name="search" />
+      <span class="visually-hidden">{t('arts.search')}</span>
+      <input type="search" placeholder={t('arts.search')} data-q />
+    </label>
+
+    <div class="labeled">
+      <span class="md-label-large muted">{t('common.character')}</span>
+      <div class="segmented" role="group" aria-label={t('common.character')}>
+        <button type="button" data-character data-value="all" aria-pressed="true">{t('common.all')}</button>
+        <button type="button" data-character data-value="arbyss" aria-pressed="false">Arbyss</button>
+        <button type="button" data-character data-value="murkas" aria-pressed="false">Муркас</button>
+      </div>
+    </div>
+
+    <div class="chip-row" role="group">
+      <button type="button" class="chip" data-cat-btn data-value="all" aria-pressed="true">
+        {t('common.all')} <span class="count">{arts.length}</span>
+      </button>
+      {
+        types.map((c) => (
+          <button type="button" class="chip" data-cat-btn data-value={c} aria-pressed="false">
+            {t(`art.${c}` as UiKey)} <span class="count">{count(c)}</span>
+          </button>
+        ))
+      }
+    </div>
+
+    <div class="filters-row">
+      <div class="chip-row">
+        <label class="select">
+          <span class="visually-hidden">{t('arts.artist')}</span>
+          <select data-person>
+            <option value="all">{t('arts.artist')}</option>
+            {artists.map((p) => <option value={p}>{p}</option>)}
+          </select>
+          <Icon name="expand_more" size={18} />
+        </label>
+        <label class="select">
+          <span class="visually-hidden">{t('common.year')}</span>
+          <select data-year>
+            <option value="all">{t('common.year')}</option>
+            {years.map((y) => <option value={y}>{y}</option>)}
+          </select>
+          <Icon name="expand_more" size={18} />
+        </label>
+        <button type="button" class="link-btn" data-reset>{t('common.reset')}</button>
+      </div>
+      <label class="select">
+        <span class="visually-hidden">{t('common.newest')}</span>
+        <select data-sort>
+          <option value="new">{t('common.newest')}</option>
+          <option value="old">{t('common.oldest')}</option>
+        </select>
+        <Icon name="expand_more" size={18} />
+      </label>
+    </div>
+
+    <div class="masonry" data-grid>
+      {
+        arts.map((a) => (
+          <article
+            class="art"
+            data-item
+            data-id={a.id}
+            tabindex="0"
+            role="button"
+            aria-label={loc(a.title, lang)}
+            data-character={a.character}
+            data-cat={a.type}
+            data-person={a.artist.name}
+            data-year={a.created?.slice(0, 4) ?? ''}
+            data-date={a.created ?? ''}
+            data-pinned={a.pinned ? '1' : '0'}
+            data-search={`${locAll(a.title)} ${a.artist.name}`.toLowerCase()}
+          >
+            <div class:list={['ph', { 'ph--pinned': a.pinned }]} style={`aspect-ratio: 1 / ${a.ratio}`}>
+              <Icon name="image" size={28} />
+              {a.pinned && (
+                <span class="pin-badge">
+                  <Icon name="push_pin" size={14} />
+                  {t('common.pinned')}
+                </span>
+              )}
+            </div>
+            <div class="art__info">
+              <h2 class="md-title-small">{loc(a.title, lang)}</h2>
+              <a class="artist md-body-small" href={a.artist.url} target="_blank" rel="noopener">
+                {a.artist.name}
+                <Icon name="arrow_outward" size={14} />
+              </a>
+              <p class="md-label-small muted">
+                {a.created ? `${t('arts.drawn')} ${fmt(a.created)}` : t('common.unknownDate')}
+              </p>
+            </div>
+          </article>
+        ))
+      }
+    </div>
+    <p class="empty md-body-large muted" hidden data-empty>{t('common.empty')}</p>
+    <div class="load-more"><button type="button" class="md-btn md-btn--outlined" data-more>{t('common.loadMore')}</button></div>
+  </div>
+  <Lightbox lang={lang} items={viewer} />
+</Page>
+
+<script>
+  import { initGallery } from '../../scripts/gallery';
+  document.querySelectorAll<HTMLElement>('[data-gallery]').forEach(initGallery);
+</script>
+
+<style>
+  .gallery { display: flex; flex-direction: column; gap: 24px; }
+  .art[hidden] { display: none; }
+  .art { cursor: zoom-in; border-radius: var(--radius-tile); }
+  .art:focus-visible { outline: 3px solid var(--md-primary); outline-offset: 3px; }
+  .art__info { display: grid; gap: 2px; padding: 10px 4px 0; }
+  .artist {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    width: fit-content;
+    color: var(--md-primary);
+    text-decoration: none;
+  }
+  .artist:hover { text-decoration: underline; }
+</style>

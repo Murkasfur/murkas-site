@@ -1,0 +1,177 @@
+---
+import Page from '../Page.astro';
+import Icon from '../Icon.astro';
+import UploadTile from '../UploadTile.astro';
+import Lightbox, { type ViewerItem } from '../Lightbox.astro';
+import { useTranslations, localizePath, type Lang, type UiKey } from '../../i18n/ui';
+import { photos, loc, locAll, type PhotoCategory } from '../../data/mock';
+
+const { lang } = Astro.props as { lang: Lang };
+const t = useTranslations(lang);
+
+const cats: PhotoCategory[] = ['group', 'full', 'partial', 'walks', 'backstage', 'parties'];
+const count = (c: PhotoCategory) => photos.filter((p) => p.category === c).length;
+const photographers = [...new Set(photos.flatMap((p) => (p.photographer ? [p.photographer.name] : [])))];
+const years = [...new Set(photos.map((p) => p.date.slice(0, 4)))].sort().reverse();
+const locale = lang === 'ru' ? 'ru-RU' : 'en-CA';
+const fullDate = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' }).replace(/\s?г\.$/, '');
+const charName = (c: string) => (c === 'murkas' ? 'Муркас' : 'Arbyss');
+const viewer: ViewerItem[] = photos.map((p) => ({
+  id: p.id,
+  title: loc(p.title, lang),
+  caption: p.caption ? loc(p.caption, lang) : undefined,
+  chips: [{ label: charName(p.character), strong: true }, { label: t(`cat.${p.category}` as UiKey) }],
+  fields: [
+    ...(p.event ? [{ label: t('viewer.event'), value: loc(p.event, lang), href: localizePath('/events', lang) + (p.eventId ? `#${p.eventId}` : '') }] : []),
+    { label: t('viewer.photographer'), value: p.photographer?.name ?? t('viewer.unknown'), href: p.photographer?.url, external: true },
+    { label: t('viewer.shot'), value: fullDate(p.date) + (p.city ? ` · ${loc(p.city, lang)}` : '') },
+  ],
+  pinned: p.pinned,
+  ratio: p.ratio,
+  src: p.src,
+  icon: 'photo_camera',
+}));
+---
+
+<Page lang={lang} page="photos">
+  <header class="page-header">
+    <div class="page-header__titles">
+      <h1 class="md-display-small">{t('photos.title')}</h1>
+      <p class="md-body-large muted">{t('photos.subtitle')}</p>
+    </div>
+    <UploadTile lang={lang} title={t('photos.upload')} hint={t('photos.uploadHint')} />
+  </header>
+
+  <div class="gallery" data-gallery>
+    <label class="search">
+      <Icon name="search" />
+      <span class="visually-hidden">{t('photos.search')}</span>
+      <input type="search" placeholder={t('photos.search')} data-q />
+    </label>
+
+    <div class="labeled">
+      <span class="md-label-large muted">{t('common.character')}</span>
+      <div class="segmented" role="group" aria-label={t('common.character')}>
+        <button type="button" data-character data-value="all" aria-pressed="true">{t('common.all')}</button>
+        <button type="button" data-character data-value="arbyss" aria-pressed="false">Arbyss</button>
+        <button type="button" data-character data-value="murkas" aria-pressed="false">Муркас</button>
+      </div>
+    </div>
+
+    <div class="chip-row" role="group">
+      <button type="button" class="chip" data-cat-btn data-value="all" aria-pressed="true">
+        {t('common.all')} <span class="count">{photos.length}</span>
+      </button>
+      {
+        cats.map((c) => (
+          <button type="button" class="chip" data-cat-btn data-value={c} aria-pressed="false">
+            {t(`cat.${c}` as UiKey)} <span class="count">{count(c)}</span>
+          </button>
+        ))
+      }
+    </div>
+
+    <div class="filters-row">
+      <div class="chip-row">
+        <label class="select">
+          <span class="visually-hidden">{t('photos.photographer')}</span>
+          <select data-person>
+            <option value="all">{t('photos.photographer')}</option>
+            {photographers.map((p) => <option value={p}>{p}</option>)}
+          </select>
+          <Icon name="expand_more" size={18} />
+        </label>
+        <label class="select">
+          <span class="visually-hidden">{t('common.year')}</span>
+          <select data-year>
+            <option value="all">{t('common.year')}</option>
+            {years.map((y) => <option value={y}>{y}</option>)}
+          </select>
+          <Icon name="expand_more" size={18} />
+        </label>
+        <button type="button" class="link-btn" data-reset>{t('common.reset')}</button>
+      </div>
+      <label class="select">
+        <span class="visually-hidden">{t('common.newest')}</span>
+        <select data-sort>
+          <option value="new">{t('common.newest')}</option>
+          <option value="old">{t('common.oldest')}</option>
+        </select>
+        <Icon name="expand_more" size={18} />
+      </label>
+    </div>
+
+    <div class="masonry" data-grid>
+      {
+        photos.map((p) => (
+          <figure
+            class="photo"
+            data-item
+            data-id={p.id}
+            tabindex="0"
+            role="button"
+            aria-label={loc(p.title, lang)}
+            data-character={p.character}
+            data-cat={p.category}
+            data-person={p.photographer?.name ?? ''}
+            data-year={p.date.slice(0, 4)}
+            data-date={p.date}
+            data-pinned={p.pinned ? '1' : '0'}
+            data-search={`${locAll(p.title)} ${locAll(p.event)} ${p.photographer?.name ?? ''}`.toLowerCase()}
+          >
+            <div class:list={['ph', { 'ph--pinned': p.pinned }]} style={`aspect-ratio: 1 / ${p.ratio}`}>
+              <Icon name="photo_camera" size={28} />
+              {p.pinned && (
+                <span class="pin-badge">
+                  <Icon name="push_pin" size={14} />
+                  {t('common.pinned')}
+                </span>
+              )}
+              <figcaption class="photo__caption">
+                <span class="md-title-small">{loc(p.title, lang)}</span>
+                <span class="md-body-small">
+                  {p.photographer?.url ? (
+                    <a href={p.photographer.url} target="_blank" rel="noopener">{p.photographer.name}</a>
+                  ) : (
+                    p.photographer?.name
+                  )}
+                  {p.event ? ` · ${loc(p.event, lang)}` : ''}
+                </span>
+              </figcaption>
+            </div>
+          </figure>
+        ))
+      }
+    </div>
+    <p class="empty md-body-large muted" hidden data-empty>{t('common.empty')}</p>
+    <div class="load-more"><button type="button" class="md-btn md-btn--outlined" data-more>{t('common.loadMore')}</button></div>
+  </div>
+  <Lightbox lang={lang} items={viewer} />
+</Page>
+
+<script>
+  import { initGallery } from '../../scripts/gallery';
+  document.querySelectorAll<HTMLElement>('[data-gallery]').forEach(initGallery);
+</script>
+
+<style>
+  .gallery { display: flex; flex-direction: column; gap: 24px; }
+  .photo[hidden] { display: none; }
+  .photo { cursor: zoom-in; border-radius: var(--radius-tile); }
+  .photo:focus-visible { outline: 3px solid var(--md-primary); outline-offset: 3px; }
+  .photo__caption {
+    position: absolute;
+    inset: auto 0 0 0;
+    display: grid;
+    gap: 2px;
+    padding: 40px 16px 14px;
+    background: linear-gradient(transparent, rgb(0 0 0 / 0.7));
+    color: #fff;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .photo__caption a { color: #fff; }
+  .photo:hover .photo__caption,
+  .photo:focus-within .photo__caption { opacity: 1; }
+  @media (hover: none) { .photo__caption { opacity: 1; } }
+</style>

@@ -1,0 +1,106 @@
+---
+import Icon from './Icon.astro';
+import { useTranslations, type Lang } from '../i18n/ui';
+import { socials } from '../data/site';
+
+const { lang } = Astro.props as { lang: Lang };
+const t = useTranslations(lang);
+---
+
+<section class="card card--outlined socials">
+  <h2 class="md-title-small card__title">{t('home.socials')}</h2>
+  <div class="grid">
+    {
+      socials.map((s) => (
+        <a class="tile" href={s.href} target="_blank" rel="noopener me">
+          <Icon name={s.key} />
+          <span class="md-label-medium">{s.label}</span>
+        </a>
+      ))
+    }
+    <button type="button" class="tile" data-open-links>
+      <Icon name="more_horiz" />
+      <span class="md-label-medium">{t('home.allLinks')}</span>
+    </button>
+  </div>
+</section>
+
+<dialog class="dialog" id="links-dialog" aria-labelledby="links-title">
+  <div class="dialog__inner">
+    <div class="dialog__head">
+      <h2 id="links-title" class="md-headline-small">{t('home.allLinks')}</h2>
+      <button type="button" class="icon-btn" data-close aria-label={t('common.close')}><Icon name="close" /></button>
+    </div>
+    <ul class="links">
+      {
+        socials.map((s) => (
+          <li>
+            <a href={s.href} target="_blank" rel="noopener me" class="link-row">
+              <span class="link-row__icon"><Icon name={s.key} size={20} /></span>
+              <span class="link-row__text">
+                <span class="md-title-small">{s.label}</span>
+                <span class="md-body-small muted">{s.handle}</span>
+              </span>
+              <Icon name="arrow_outward" size={18} />
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</dialog>
+
+<script>
+  import { openDialog, bindDialog } from '../scripts/dialog';
+  const d = document.getElementById('links-dialog') as HTMLDialogElement | null;
+  bindDialog(d);
+  document.querySelectorAll('[data-open-links]').forEach((b) => b.addEventListener('click', () => d && openDialog(d)));
+</script>
+
+<style>
+  .socials { display: flex; flex-direction: column; }
+  .grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 88px;
+    border: 0;
+    border-radius: 16px;
+    background: var(--md-surface-container);
+    color: var(--md-on-surface-variant);
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+  }
+  .tile:hover { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+  .tile:focus-visible { outline: 3px solid var(--md-primary); outline-offset: 2px; }
+  .links { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+  .link-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 12px;
+    border-radius: 16px;
+    text-decoration: none;
+    color: var(--md-on-surface-variant);
+  }
+  .link-row:hover { background: color-mix(in srgb, var(--md-on-surface) 8%, transparent); }
+  .link-row__icon {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--md-surface-container-lowest);
+    color: var(--md-on-surface);
+  }
+  .link-row__text { flex: 1; display: grid; color: var(--md-on-surface); }
+</style>

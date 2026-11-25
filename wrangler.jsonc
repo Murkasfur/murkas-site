@@ -1,8 +1,32 @@
 {
+  "$schema": "node_modules/wrangler/config-schema.json",
   "name": "murkas-site",
+  "main": "@astrojs/cloudflare/entrypoints/server",
   "compatibility_date": "2026-11-03",
-  "assets": {
-    "directory": "./dist",
-    "not_found_handling": "404-page"
-  }
+  "compatibility_flags": ["nodejs_compat"],
+
+  // База: ивенты, фото, арты, люди, заявки
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "murkas-db",
+      // ID появится после `npx wrangler d1 create murkas-db` - вставь его сюда
+      "database_id": "20be4237-b49a-438d-b857-e0a5d0af758a",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // Файлы: pending/ (на модерации), media/ (опубликовано), rejected/ (отклонено)
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "murkas-media" }],
+
+  // Быстрые настройки: статус «Сейчас», maintenance, статусы страниц
+  "kv_namespaces": [
+    {
+      "binding": "SETTINGS",
+      // ID появится после `npx wrangler kv namespace create SETTINGS` - вставь его сюда
+      "id": "188ce1365b1d4af4a72e2b1d3217cdf0"
+    }
+  ],
+
+  "observability": { "enabled": true }
 }

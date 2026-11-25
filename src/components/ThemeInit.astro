@@ -17,5 +17,11 @@
     root.dataset.theme = character;
     root.dataset.mode = dark ? 'dark' : 'light';
     root.dataset.modePref = mode;
+
+    // «Меньше анимаций»: из настроек сайта, а если не выбрано - из системы.
+    // При reduce выключаются анимации и кастомный курсор.
+    var motion = saved.motion === 'reduce' || saved.motion === 'full' ? saved.motion : 'auto';
+    var reduce = motion === 'reduce' || (motion === 'auto' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    root.dataset.motion = reduce ? 'reduce' : 'full';
   })();
 </script>

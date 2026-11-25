@@ -1,0 +1,91 @@
+---
+// Переходы между страницами (View Transitions между документами):
+// 1) «Общая ось»: новая страница въезжает справа, если пункт меню правее, и слева - если левее.
+//    Лаймовая пилюля в навбаре перетекает со старого пункта на новый.
+// 2) «Карточка -> страница»: ссылка с data-morph внутри карточки data-morph-card
+//    растягивает саму карточку в шапку новой страницы.
+// Стили - в styles/ui.css. Ставится в <head>, чтобы успеть до первой отрисовки.
+import { pages } from '../data/site';
+const paths = pages.map((p) => p.path);
+---
+
+<script is:inline define:vars={{ paths }}>
+  (function () {
+    var root = document.documentElement;
+    var store = {
+      get: function (k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } },
+      set: function (k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} },
+      del: function (k) { try { sessionStorage.removeItem(k); } catch (e) {} },
+    };
+    function index(url) {
+      try {
+        var p = new URL(url, location.href).pathname.replace(/^\/ru(?=\/|$)/, '').replace(/\/$/, '') || '/';
+        return paths.indexOf(p);
+      } catch (e) {
+        return -1;
+      }
+    }
+    function direction(fromUrl, toUrl) {
+      var a = index(fromUrl);
+      var b = index(toUrl);
+      if (a < 0 || b < 0 || a === b) return null;
+      return b > a ? 'forward' : 'back';
+    }
+
+    // Старая страница: решаем направление и запоминаем его для новой
+    window.addEventListener('pageswap', function (e) {
+      if (!e.viewTransition) return;
+      var dir = store.get('vt-morph') ? 'morph' : e.activation && direction(location.href, e.activation.entry.url);
+      if (dir) {
+        root.dataset.vt = dir;
+        store.set('vt-dir', dir);
+      }
+    });
+
+    // Новая страница: применяем то же направление
+    window.addEventListener('pagereveal', function (e) {
+      var dir = store.get('vt-dir');
+      var morph = store.get('vt-morph');
+      store.del('vt-dir');
+      store.del('vt-morph');
+      if (!e.viewTransition) return;
+      if (!dir && window.navigation && navigation.activation && navigation.activation.from) {
+        dir = direction(navigation.activation.from.url, location.href);
+      }
+      if (morph) {
+        dir = 'morph';
+        var m = morph.split('|');
+        if (m[0]) root.style.setProperty('--vt-morph-bg', m[0]);
+        if (m[1]) root.style.setProperty('--vt-morph-radius', m[1]);
+      }
+      if (dir) root.dataset.vt = dir;
+      e.viewTransition.finished.finally(function () {
+        delete root.dataset.vt;
+        root.style.removeProperty('--vt-morph-bg');
+        root.style.removeProperty('--vt-morph-radius');
+      });
+    });
+
+    // Клик по ссылке из карточки: карточка станет «той же» шапкой новой страницы
+    document.addEventListener('click', function (e) {
+      var link = e.target instanceof Element ? e.target.closest('a[data-morph]') : null;
+      if (!link || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+      var card = link.closest('[data-morph-card]');
+      if (!card) return;
+      card.style.viewTransitionName = 'morph';
+      // Цвет и скругление карточки - чтобы «контейнер» на новой странице был того же цвета
+      var cs = getComputedStyle(card);
+      store.set('vt-morph', cs.backgroundColor + '|' + cs.borderTopLeftRadius);
+    });
+
+    // Возврат кнопкой «назад» из кэша: убираем следы прошлого перехода
+    window.addEventListener('pageshow', function (e) {
+      if (!e.persisted) return;
+      delete root.dataset.vt;
+      store.del('vt-morph');
+      document.querySelectorAll('[data-morph-card]').forEach(function (c) {
+        c.style.viewTransitionName = '';
+      });
+    });
+  })();
+</script>

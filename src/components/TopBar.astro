@@ -1,0 +1,124 @@
+---
+import Icon from './Icon.astro';
+import { useTranslations, localizePath, type Lang, type UiKey } from '../i18n/ui';
+import { pages, type PageKey } from '../data/site';
+
+interface Props {
+  lang: Lang;
+  active: PageKey | null;
+}
+const { lang, active } = Astro.props;
+const t = useTranslations(lang);
+---
+
+<header class="container topbar-wrap">
+  <nav class="topbar" aria-label={t('nav.menu')}>
+    <a href={localizePath('/', lang)} class="brand md-title-large">Murkas</a>
+
+    <ul class="menu" id="site-menu">
+      {
+        pages.map((p) => (
+          <li>
+            <a
+              href={localizePath(p.path, lang)}
+              class:list={['menu__item md-label-large', { 'is-active': p.key === active }]}
+              aria-current={p.key === active ? 'page' : undefined}
+            >
+              {p.key === active && <span class="menu__pill" aria-hidden="true" />}
+              {t(`nav.${p.key}` as UiKey)}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+
+    <div class="actions">
+      <button type="button" class="icon-btn menu-toggle" aria-controls="site-menu" aria-expanded="false" aria-label={t('nav.menu')}>
+        <Icon name="menu" />
+      </button>
+      <button type="button" class="icon-btn" data-open-settings aria-label={t('nav.settings')}>
+        <Icon name="settings" />
+      </button>
+    </div>
+  </nav>
+</header>
+
+<script>
+  const toggle = document.querySelector<HTMLButtonElement>('.menu-toggle');
+  const menu = document.getElementById('site-menu');
+  toggle?.addEventListener('click', () => {
+    const open = toggle.getAttribute('aria-expanded') !== 'true';
+    toggle.setAttribute('aria-expanded', String(open));
+    menu?.classList.toggle('is-open', open);
+  });
+</script>
+
+<style>
+  .topbar-wrap { padding-top: 40px; }
+  .topbar {
+    position: relative;
+    display: grid;
+    grid-template-columns: 160px 1fr 160px;
+    align-items: center;
+    min-height: 64px;
+    padding: 8px 12px 8px 24px;
+    border: 1px solid var(--md-outline-variant);
+    border-radius: 20px;
+    background: var(--md-surface-container-lowest);
+  }
+  .brand { justify-self: start; text-decoration: none; color: var(--md-on-surface); }
+  .menu {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .menu__item {
+    display: inline-flex;
+    align-items: center;
+    height: 40px;
+    padding: 0 16px;
+    border-radius: 999px;
+    color: var(--md-on-surface);
+    text-decoration: none;
+    transition: background-color 0.15s;
+  }
+  .menu__item:hover { background: color-mix(in srgb, var(--md-on-surface) 8%, transparent); }
+  .menu__item:focus-visible { outline: 3px solid var(--md-primary); outline-offset: 2px; }
+  .menu__item { position: relative; isolation: isolate; }
+  .menu__item.is-active { color: var(--md-on-tertiary-container); }
+  .menu__item.is-active:hover { background: none; }
+  /* Пилюля активного пункта - отдельный слой, чтобы при переходе она «переезжала» */
+  .menu__pill {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: var(--md-tertiary-container);
+    view-transition-name: nav-pill;
+  }
+  .actions { display: flex; justify-content: flex-end; gap: 4px; }
+  .menu-toggle { display: none; }
+
+  @media (max-width: 1000px) {
+    .topbar { grid-template-columns: 1fr auto; }
+    .menu-toggle { display: inline-grid; }
+    .menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      right: 0;
+      z-index: 20;
+      flex-direction: column;
+      padding: 8px;
+      border: 1px solid var(--md-outline-variant);
+      border-radius: 20px;
+      background: var(--md-surface-container-lowest);
+    }
+    .menu.is-open { display: flex; }
+    .menu__item { width: 100%; }
+  }
+</style>

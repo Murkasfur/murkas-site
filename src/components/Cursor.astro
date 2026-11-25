@@ -1,0 +1,133 @@
+---
+// Кастомный курсор для всего сайта (как на 404): кружок цвета темы,
+// который над кнопками и ссылками «перетекает» в их форму.
+// Не работает на тач-экранах и при «Меньше анимаций» (html[data-motion="reduce"]).
+---
+
+<div class="site-cursor" aria-hidden="true"></div>
+
+<script>
+  const cursor = document.querySelector<HTMLElement>('.site-cursor');
+  const root = document.documentElement;
+  const fine = window.matchMedia('(hover: hover) and (pointer: fine)');
+  const SIZE = 20;
+  const TARGETS = 'a, button, select, summary, [role="button"], [data-cursor]';
+  const TEXT = 'input, textarea, [contenteditable="true"]';
+
+  let target: HTMLElement | null = null;
+  let x = -100;
+  let y = -100;
+
+  const enabled = () => fine.matches && root.dataset.motion !== 'reduce';
+  const sync = () => root.classList.toggle('has-cursor', enabled());
+  sync();
+  fine.addEventListener('change', sync);
+  // Настройки меняют data-motion - следим за ним
+  new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ['data-motion'] });
+
+  const draw = (left: number, top: number, w: number, h: number, radius: number) => {
+    if (!cursor) return;
+    cursor.style.width = `${w}px`;
+    cursor.style.height = `${h}px`;
+    cursor.style.borderRadius = `${radius}px`;
+    cursor.style.transform = `translate(${left}px, ${top}px)`;
+  };
+  const follow = () => draw(x - SIZE / 2, y - SIZE / 2, SIZE, SIZE, SIZE / 2);
+  const snap = () => {
+    if (!target) return;
+    // У текстовых ссылок без своей формы обводим сам текст, а не всю ширину блока
+    const own0 = parseFloat(getComputedStyle(target).borderTopLeftRadius) || 0;
+    let r = target.getBoundingClientRect();
+    if (!own0) {
+      const range = document.createRange();
+      range.selectNodeContents(target);
+      const t = range.getBoundingClientRect();
+      if (t.width && t.height) r = t;
+    }
+    // У элементов без своей формы (текстовые ссылки, логотип) - мягкая пилюля с запасом
+    const own = parseFloat(getComputedStyle(target).borderTopLeftRadius) || 0;
+    const pad = own ? 4 : 8;
+    const h = r.height + pad * 2;
+    const radius = own ? Math.min(h / 2, own + pad) : h / 2;
+    draw(r.left - pad, r.top - pad, r.width + pad * 2, h, radius);
+  };
+
+  window.addEventListener('mousemove', (e) => {
+    if (!enabled() || !cursor) return;
+    x = e.clientX;
+    y = e.clientY;
+    const el = e.target instanceof Element ? e.target : null;
+    const overText = !!el?.closest(TEXT);
+    root.classList.toggle('cursor-hidden', overText);
+    const next = overText ? null : (el?.closest<HTMLElement>(TARGETS) ?? null);
+    if (next !== target) {
+      target = next;
+      root.classList.toggle('cursor-morph', !!target);
+    }
+    root.classList.add('cursor-visible');
+    target ? snap() : follow();
+  });
+  document.addEventListener('mouseleave', () => root.classList.remove('cursor-visible'));
+  window.addEventListener('scroll', () => (target ? snap() : follow()), { passive: true });
+  window.addEventListener('mousedown', () => root.classList.add('cursor-down'));
+  window.addEventListener('mouseup', () => root.classList.remove('cursor-down'));
+</script>
+
+<style is:global>
+  .site-cursor { display: none; }
+
+  html.has-cursor,
+  html.has-cursor a,
+  html.has-cursor button,
+  html.has-cursor select,
+  html.has-cursor summary,
+  html.has-cursor label { cursor: none; }
+
+  html.has-cursor .site-cursor {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    background: var(--md-primary);
+    pointer-events: none;
+    opacity: 0;
+    transition:
+      width 0.18s cubic-bezier(0.2, 0, 0, 1),
+      height 0.18s cubic-bezier(0.2, 0, 0, 1),
+      border-radius 0.18s cubic-bezier(0.2, 0, 0, 1),
+      transform 0.06s ease-out,
+      background-color 0.18s,
+      opacity 0.2s;
+  }
+  html.cursor-visible .site-cursor { opacity: 1; }
+  html.cursor-hidden .site-cursor { opacity: 0 !important; }
+
+  /* Над кнопкой: полупрозрачная «подсветка» вокруг неё, текст остаётся читаемым */
+  html.cursor-morph .site-cursor {
+    background: color-mix(in srgb, var(--md-primary) 14%, transparent);
+    outline: 2px solid var(--md-primary);
+    outline-offset: -2px;
+    transition:
+      width 0.18s cubic-bezier(0.2, 0, 0, 1),
+      height 0.18s cubic-bezier(0.2, 0, 0, 1),
+      border-radius 0.18s cubic-bezier(0.2, 0, 0, 1),
+      transform 0.18s cubic-bezier(0.2, 0, 0, 1),
+      background-color 0.18s,
+      opacity 0.2s;
+  }
+  html.cursor-down .site-cursor { background: color-mix(in srgb, var(--md-primary) 26%, transparent); }
+  html.cursor-down:not(.cursor-morph) .site-cursor { transform-origin: center; }
+
+  /* «Меньше анимаций» в настройках сайта */
+  html[data-motion='reduce'] *,
+  html[data-motion='reduce'] *::before,
+  html[data-motion='reduce'] *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+</style>

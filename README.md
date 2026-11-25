@@ -37,14 +37,24 @@ npm run preview   # preview the production build
 ```text
 src/
 ├── pages/
-│   ├── index.astro         # home
+│   ├── index.astro         # home (bento)
+│   ├── events / photos / arts.astro
+│   ├── characters / fursuits / portfolio.astro   # "page in progress" for now
 │   ├── 404.astro           # one 404 for both languages
 │   ├── admin.astro         # theme playground (temporary)
 │   └── ru/                 # Russian versions of pages
 ├── components/
+│   ├── pages/              # page bodies (Home, Events, Photos, Arts), shared by en/ru
+│   ├── Page.astro          # page wrapper: maintenance / work-in-progress / content
+│   ├── Layout.astro        # <head>, top bar, footer
+│   ├── Placeholder.astro   # "site closed" and "page in progress" screens
 │   ├── ThemeInit.astro     # sets the theme before first paint, so nothing flickers
 │   ├── NotFound.astro      # 404 with the custom cursor
 │   └── AdminPage.astro     # theme playground UI
+├── data/
+│   ├── site.ts             # maintenance switch, page statuses, socials
+│   └── mock.ts             # temporary data until the backend exists
+├── scripts/gallery.ts      # photo/art filters
 ├── i18n/
 │   └── ui.ts               # all strings (en / ru) + helpers
 └── styles/
@@ -53,6 +63,69 @@ src/
 public/                     # favicon and other static stuff
 wrangler.jsonc              # Cloudflare config
 ```
+
+## 🗄️ Backend (Cloudflare)
+
+The whole site renders on Cloudflare Workers (`output: 'server'`), so data from the database and switches from the bot show up right away, with no rebuild. HTML is cached for 30 seconds.
+
+| Binding    | Service | What lives there                                         |
+| :--------- | :------ | :------------------------------------------------------- |
+| `DB`       | D1      | events, photos, art, people, uploads (`migrations/`)     |
+| `MEDIA`    | R2      | `pending/` → `media/` (published), `rejected/`           |
+| `SETTINGS` | KV      | "Now" status, maintenance switch, page statuses          |
+
+First-time setup (once):
+
+```sh
+npx wrangler login
+npx wrangler d1 create murkas-db              # copy database_id into wrangler.jsonc
+npx wrangler kv namespace create SETTINGS     # copy id into wrangler.jsonc
+npx wrangler r2 bucket create murkas-media
+npm run db:migrate                            # create tables in the real database
+```
+
+Local development uses a local copy of everything (`.wrangler/`):
+
+```sh
+npm run db:migrate:local
+npm run db:seed:local    # fill it with test data from src/data/mock.ts
+npm run dev
+```
+
+API so far: `GET /api/health`, `GET /api/events`
+
+### 🕐 The "Now" card
+
+Worked out on every request by `src/lib/now-core.ts`, first match wins: manual `/now` → short events with a time (on the way, at the event, heading home) → sleep → con day → Canadian holiday → classes (on the way, break, in class, lunch, heading home) → Russian holiday → `/default`.
+
+Classes and the daily routine live in `src/data/schedule.ts` (add a new term there every semester), holidays are calculated in `src/lib/holidays.ts`. Everything is in Toronto time.
+
+### 🤖 Moderation bot (`bot/`)
+
+A separate Worker (`murkas-bot`) on the same database and KV. Only the IDs in `ADMIN_IDS` (`bot/wrangler.jsonc`) can use it; everyone else gets silence.
+
+| Command        | What it does                                              |
+| :------------- | :-------------------------------------------------------- |
+| `/status`      | what's on the site right now                              |
+| `/maintenance` | close or open the whole site                              |
+| `/pages`       | toggle pages between ready ✅ and "in progress" 🚧          |
+| `/now`         | manual "Now" status on top of the schedule, e.g. `Walking \| Гуляю 2ч`; `/now авто` brings the schedule back |
+| `/default`     | what "Now" says when nothing else is going on             |
+| `/events`      | list events, tap one to edit or delete it                 |
+| `/addevent`    | add an event step by step                                 |
+
+First deploy:
+
+```sh
+npm run db:migrate                                            # bot_state table
+npx wrangler secret put TG_BOT_TOKEN -c bot/wrangler.jsonc       # token from @BotFather
+npx wrangler secret put TG_WEBHOOK_SECRET -c bot/wrangler.jsonc  # any long random string
+npm run bot:deploy
+```
+
+Then open `https://murkas-bot.<account>.workers.dev/setup?key=<TG_WEBHOOK_SECRET>` once: it connects the webhook and the command menu.
+
+Locally: copy `bot/.dev.vars.example` to `bot/.dev.vars` and run `npm run bot:dev`. It shares the local database with `npm run dev`. With `TG_DRY=1` the bot doesn't send anything to Telegram and prints its replies to the console instead.
 
 ## 🎨 Themes
 
@@ -66,6 +139,15 @@ The theme is set with attributes on `<html>`:
 | `data-mode`  | `light` ☀️ / `dark` 🌙                   |
 
 Light or dark follows the system, and you can pick one manually on `/admin` (it's remembered in `localStorage` under `murkas-theme`)
+
+## 🚧 Maintenance and unfinished pages
+
+Toggled from the bot (`/maintenance`, `/pages`) and stored in Cloudflare KV, live within a minute:
+
+- maintenance closes the whole site with the "closed for a bit" screen
+- a page "in progress" shows the "page in progress" screen instead of its content
+
+`src/data/site.ts` only has the defaults, used while KV is empty
 
 ## 🌍 Languages
 

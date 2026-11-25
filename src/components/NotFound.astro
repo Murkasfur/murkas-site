@@ -1,8 +1,13 @@
 ---
 import '@fontsource-variable/rubik';
 import '../styles/theme.css';
+import '../styles/ui.css';
+import TopBar from './TopBar.astro';
+import SettingsSheet from './SettingsSheet.astro';
+import { site, pages } from '../data/site';
 import ThemeInit from './ThemeInit.astro';
-import { useTranslations, localizePath, type Lang } from '../i18n/ui';
+import PageTransitions from './PageTransitions.astro';
+import { useTranslations, localizePath, type Lang, type UiKey } from '../i18n/ui';
 
 // Одна страница 404 на оба языка: сервер всегда отдаёт английскую версию,
 // а скрипт ниже переключает тексты на русский для /ru/... и ru.murkas.net.
@@ -14,6 +19,7 @@ const ru = {
   text: tRu('notFound.text'),
   home: tRu('notFound.home'),
   homeHref: localizePath('/', 'ru'),
+  nav: pages.map((p) => ({ label: tRu(`nav.${p.key}` as UiKey), href: localizePath(p.path, 'ru') })),
 };
 ---
 
@@ -24,15 +30,22 @@ const ru = {
     <meta name="robots" content="noindex" />
     <title>{t('notFound.title')}</title>
     <ThemeInit />
+    <PageTransitions />
   </head>
   <body>
     <div class="cursor" aria-hidden="true"></div>
+    <TopBar lang={lang} active={null} />
 
     <main class="not-found">
       <h1 class="not-found__code">404 :o</h1>
       <p class="not-found__text">{t('notFound.text')}</p>
       <a href={localizePath('/', lang)} class="btn-outline" data-cursor-morph>{t('notFound.home')}</a>
     </main>
+    <footer class="container nf-footer md-body-small muted">
+      <span>murkas.net · <a href={`mailto:${site.email}`}>{site.email}</a></span>
+      <span>© 2026 Murkas</span>
+    </footer>
+    <SettingsSheet lang={lang} />
 
     <!-- Выполняется сразу, до отрисовки, поэтому английский текст не «мигает» -->
     <script is:inline define:vars={{ ru }}>
@@ -43,6 +56,11 @@ const ru = {
         document.title = ru.title;
         var text = document.querySelector('.not-found__text');
         if (text) text.textContent = ru.text;
+        document.querySelectorAll('.menu__item').forEach(function (a, i) {
+          if (!ru.nav[i]) return;
+          a.textContent = ru.nav[i].label;
+          a.setAttribute('href', ru.nav[i].href);
+        });
         var home = document.querySelector('.btn-outline');
         if (home) {
           home.textContent = ru.home;
@@ -53,7 +71,8 @@ const ru = {
 
     <script>
       const cursor = document.querySelector<HTMLElement>('.cursor');
-      const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+      const finePointer =
+        window.matchMedia('(hover: hover) and (pointer: fine)').matches && document.documentElement.dataset.motion !== 'reduce';
 
       const main = document.querySelector<HTMLElement>('.not-found');
 
@@ -133,8 +152,7 @@ const ru = {
     box-sizing: border-box;
     width: 100%;
     max-width: 1440px;
-    min-height: 100vh;
-    min-height: 100dvh;
+    flex: 1;
     margin: 0 auto;
     padding: 50px clamp(16px, 9vw, 130px);
     display: flex;
@@ -142,6 +160,20 @@ const ru = {
     justify-content: center;
     align-items: flex-start;
     gap: 15px;
+  }
+
+  :global(body) {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  .nf-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding-block: 24px 40px;
   }
 
   .not-found__code {
@@ -275,6 +307,16 @@ const ru = {
         opacity 0.2s;
     }
   }
+
+  /* «Меньше анимаций»: обычный курсор, без кружка */
+  :global(html[data-motion='reduce']) .cursor,
+  :global(html[data-motion='reduce']) .not-found--ink { display: none !important; }
+  :global(html[data-motion='reduce']),
+  :global(html[data-motion='reduce'] body),
+  :global(html[data-motion='reduce'] a),
+  :global(html[data-motion='reduce'] button) { cursor: auto; }
+  :global(html[data-motion='reduce'] a),
+  :global(html[data-motion='reduce'] button) { cursor: pointer; }
 
   @media (prefers-reduced-motion: reduce) {
     .cursor,

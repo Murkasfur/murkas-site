@@ -1,0 +1,319 @@
+---
+// Всплывающее окно настроек (как в Figma, «Side Sheet»): язык, тема, звуки,
+// меньше анимаций, «Не нажимать» и версия (+ пасхалка: 7 нажатий на версию).
+// Открывается под шестерёнкой, страницу не перекрывает.
+import Icon from './Icon.astro';
+import { useTranslations, localizePath, type Lang } from '../i18n/ui';
+import { site } from '../data/site';
+
+const { lang } = Astro.props as { lang: Lang };
+const t = useTranslations(lang);
+const modes = [
+  ['light', 'light_mode', t('settings.light')],
+  ['dark', 'dark_mode', t('settings.dark')],
+  ['auto', 'brightness_auto', t('settings.auto')],
+] as const;
+---
+
+<dialog class="popover" id="settings" aria-labelledby="settings-title">
+  <div class="popover__head">
+    <h2 id="settings-title" class="md-headline-small">{t('settings.title')}</h2>
+    <button type="button" class="icon-btn" data-close aria-label={t('common.close')}><Icon name="close" /></button>
+  </div>
+
+  <div class="row">
+    <span class="md-title-small">{t('settings.language')}</span>
+    <div class="segmented" role="group" aria-label={t('settings.language')}>
+      {
+        (['ru', 'en'] as Lang[]).map((l) => (
+          <a
+            class="seg"
+            href={localizePath(Astro.url.pathname, l)}
+            hreflang={l}
+            aria-current={l === lang ? 'true' : undefined}
+            data-lang-link
+          >
+            {l === lang && <Icon name="check" size={18} />}
+            {l.toUpperCase()}
+          </a>
+        ))
+      }
+    </div>
+  </div>
+
+  <div class="row">
+    <span class="md-title-small">{t('settings.mode')}</span>
+    <div class="segmented" role="group" aria-label={t('settings.mode')}>
+      {
+        modes.map(([value, icon, label]) => (
+          <button type="button" class="seg seg--icon" data-mode={value} aria-pressed="false" aria-label={label} title={label}>
+            <Icon name={icon} size={20} />
+          </button>
+        ))
+      }
+    </div>
+  </div>
+
+  <hr />
+
+  <div class="row">
+    <span class="row__text">
+      <span class="md-body-large" id="sound-label">{t('settings.sound')}</span>
+      <span class="md-body-medium muted">{t('settings.soundHint')}</span>
+    </span>
+    <button type="button" class="switch" role="switch" aria-checked="false" aria-labelledby="sound-label" data-sound-switch></button>
+  </div>
+
+  <div class="row">
+    <span class="row__text">
+      <span class="md-body-large" id="motion-label">{t('settings.motion')}</span>
+      <span class="md-body-medium muted">{t('settings.motionHint')}</span>
+    </span>
+    <button type="button" class="switch" role="switch" aria-checked="false" aria-labelledby="motion-label" data-motion-switch></button>
+  </div>
+
+  <div class="row">
+    <span class="row__text">
+      <span class="md-body-large" id="nope-label">{t('settings.nope')}</span>
+      <span class="md-body-medium muted" data-nope-hint data-msgs={t('settings.nopeMsgs')}>{t('settings.nopeHint')}</span>
+    </span>
+    <button type="button" class="switch" role="switch" aria-checked="false" aria-labelledby="nope-label" data-nope-switch></button>
+  </div>
+
+  <button type="button" class="version md-body-small muted" data-version>
+    {t('settings.version')} {site.version}
+  </button>
+  <p class="secret md-label-large" role="status" aria-live="polite" data-left={t('settings.secretLeft')} data-found={t('settings.secretFound')}></p>
+</dialog>
+
+<script>
+  import { openDialog, closeDialog, bindDialog } from '../scripts/dialog';
+
+  const KEY = 'murkas-theme';
+  const REOPEN = 'murkas-settings-open';
+  const sheet = document.getElementById('settings') as HTMLDialogElement | null;
+  const root = document.documentElement;
+  const media = window.matchMedia('(prefers-color-scheme: dark)');
+
+  type Prefs = { mode?: string; motion?: string; sound?: string; character?: string };
+  const read = (): Prefs => {
+    try {
+      return JSON.parse(localStorage.getItem(KEY) || '{}') || {};
+    } catch {
+      return {};
+    }
+  };
+  const save = (patch: Prefs) => {
+    try {
+      localStorage.setItem(KEY, JSON.stringify({ ...read(), character: 'watermelon', ...patch }));
+    } catch {}
+  };
+
+  // ---------- Тема ----------
+  const readMode = () => {
+    const m = read().mode;
+    return m === 'light' || m === 'dark' ? m : 'auto';
+  };
+  const applyMode = (mode: string) => {
+    const dark = mode === 'dark' || (mode === 'auto' && media.matches);
+    root.dataset.mode = dark ? 'dark' : 'light';
+    root.dataset.modePref = mode;
+    sheet?.querySelectorAll<HTMLElement>('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
+  };
+  applyMode(readMode());
+  media.addEventListener('change', () => readMode() === 'auto' && applyMode('auto'));
+  sheet?.querySelectorAll<HTMLElement>('[data-mode]').forEach((b) =>
+    b.addEventListener('click', () => {
+      const mode = b.dataset.mode || 'auto';
+      save({ mode });
+      applyMode(mode);
+    }),
+  );
+
+  // ---------- Переключатели ----------
+  const bindSwitch = (sel: string, get: () => boolean, set: (on: boolean) => void) => {
+    const sw = sheet?.querySelector<HTMLElement>(sel);
+    const show = () => sw?.setAttribute('aria-checked', String(get()));
+    show();
+    sw?.addEventListener('click', () => {
+      set(!get());
+      show();
+    });
+    return sw;
+  };
+
+  bindSwitch(
+    '[data-motion-switch]',
+    () => root.dataset.motion === 'reduce',
+    (on) => {
+      root.dataset.motion = on ? 'reduce' : 'full';
+      save({ motion: on ? 'reduce' : 'full' });
+    },
+  );
+
+  // Звуки: короткий «бип» при клике по кнопкам и ссылкам (Web Audio, без файлов)
+  let ctx: AudioContext | null = null;
+  const soundOn = () => read().sound === 'on';
+  bindSwitch('[data-sound-switch]', soundOn, (on) => save({ sound: on ? 'on' : 'off' }));
+  const beep = (freq = 880) => {
+    try {
+      ctx ??= new AudioContext();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(0.06, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.08);
+      o.connect(g).connect(ctx.destination);
+      o.start();
+      o.stop(ctx.currentTime + 0.09);
+    } catch {}
+  };
+  document.addEventListener('click', (e) => {
+    if (!soundOn()) return;
+    const el = e.target instanceof Element ? e.target.closest('a, button, [role="switch"]') : null;
+    if (el) beep(el.getAttribute('aria-checked') === 'false' ? 660 : 880);
+  });
+
+  // «Не нажимать»: всё равно нажали - переключатель отпрыгивает обратно
+  const nope = sheet?.querySelector<HTMLElement>('[data-nope-switch]');
+  const nopeHint = sheet?.querySelector<HTMLElement>('[data-nope-hint]');
+  const msgs = (nopeHint?.dataset.msgs || '').split('|');
+  let nopeCount = 0;
+  nope?.addEventListener('click', () => {
+    nope.setAttribute('aria-checked', 'true');
+    if (nopeHint) nopeHint.textContent = msgs[Math.min(nopeCount, msgs.length - 1)];
+    nopeCount += 1;
+    if (root.dataset.motion !== 'reduce') sheet?.classList.add('is-shaking');
+    setTimeout(() => {
+      nope.setAttribute('aria-checked', 'false');
+      sheet?.classList.remove('is-shaking');
+    }, 450);
+  });
+
+  // ---------- Открытие / закрытие ----------
+  const place = () => {
+    const gear = document.querySelector<HTMLElement>('[data-open-settings]');
+    if (!sheet || !gear) return;
+    const r = gear.getBoundingClientRect();
+    const w = sheet.offsetWidth || 320;
+    sheet.style.top = `${Math.round(r.bottom + 8)}px`;
+    sheet.style.left = `${Math.round(Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8)))}px`;
+  };
+  const open = () => {
+    if (!sheet) return;
+    openDialog(sheet, { scrim: false });
+    place();
+  };
+  bindDialog(sheet);
+  window.addEventListener('resize', () => sheet?.open && place());
+  window.addEventListener('scroll', () => sheet?.open && place(), { passive: true });
+  document.querySelectorAll('[data-open-settings]').forEach((b) =>
+    b.addEventListener('click', () => (sheet?.open ? closeDialog(sheet) : open())),
+  );
+
+  // Смена языка: страница открывается на другом языке, окно настроек - снова открыто
+  sheet?.querySelectorAll('[data-lang-link]').forEach((a) =>
+    a.addEventListener('click', () => {
+      try {
+        sessionStorage.setItem(REOPEN, '1');
+      } catch {}
+    }),
+  );
+  try {
+    if (sessionStorage.getItem(REOPEN) && sheet) {
+      sessionStorage.removeItem(REOPEN);
+      sheet.classList.add('no-anim');
+      open();
+      sheet.addEventListener('close', () => sheet.classList.remove('no-anim'), { once: true });
+    }
+  } catch {}
+
+  // ---------- Пасхалка: 7 нажатий на версию ----------
+  const out = sheet?.querySelector<HTMLElement>('.secret');
+  let taps = 0;
+  let timer: number | undefined;
+  sheet?.querySelector('[data-version]')?.addEventListener('click', () => {
+    taps += 1;
+    clearTimeout(timer);
+    timer = window.setTimeout(() => {
+      taps = 0;
+      if (out) out.textContent = '';
+    }, 2000);
+    if (!out) return;
+    if (taps >= 7) {
+      out.textContent = out.dataset.found || '';
+      try {
+        localStorage.setItem('murkas-secret', '1');
+      } catch {}
+    } else if (taps >= 4) {
+      out.textContent = `${7 - taps} ${out.dataset.left}`;
+    }
+  });
+</script>
+
+<style>
+  .popover {
+    position: fixed;
+    inset: auto;
+    top: 112px;
+    right: 24px;
+    z-index: 900;
+    margin: 0;
+    width: min(320px, calc(100vw - 16px));
+    padding: 24px;
+    border: 1px solid var(--md-outline-variant);
+    border-radius: 28px;
+    background: var(--md-surface-container-low);
+    color: var(--md-on-surface);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.14), 0 2px 6px rgb(0 0 0 / 0.08);
+    transform-origin: top right;
+  }
+  .popover[open] { display: flex; flex-direction: column; gap: 20px; animation: pop-in 0.22s var(--ease); }
+  .popover.no-anim[open] { animation: none; }
+  .popover.is-shaking { animation: shake 0.4s; }
+  @keyframes pop-in { from { opacity: 0; transform: scale(0.92) translateY(-6px); } }
+  @keyframes shake {
+    20%, 60% { transform: translateX(-6px); }
+    40%, 80% { transform: translateX(6px); }
+  }
+
+  .popover__head { display: flex; justify-content: space-between; align-items: center; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .row__text { display: grid; gap: 2px; }
+  hr { width: 100%; margin: 0; border: 0; border-top: 1px solid var(--md-outline-variant); }
+
+  .segmented { flex: none; }
+  .seg {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 36px;
+    min-width: 64px;
+    padding: 0 14px;
+    border: 0;
+    border-left: 1px solid var(--md-outline);
+    background: none;
+    color: var(--md-on-surface);
+    font: 500 14px/20px var(--font-plain);
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .seg:first-child { border-left: 0; }
+  .seg--icon { min-width: 52px; padding: 0 12px; }
+  .seg[aria-current='true'],
+  .seg[aria-pressed='true'] { background: var(--md-tertiary-container); color: var(--md-on-tertiary-container); }
+  .seg:focus-visible { outline: 3px solid var(--md-primary); outline-offset: -3px; }
+
+  .version {
+    align-self: center;
+    border: 0;
+    padding: 4px 8px;
+    background: none;
+    cursor: default;
+    user-select: none;
+  }
+  .secret:empty { display: none; }
+  .secret { margin: -16px 0 0; text-align: center; color: var(--md-primary); }
+</style>

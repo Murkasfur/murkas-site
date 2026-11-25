@@ -1,0 +1,418 @@
+/* Общие элементы страниц: контейнер, карточки, чипы, поиск, сегменты, плитки. */
+
+:root {
+  --page-max: 1216px;
+  --page-pad: clamp(16px, 6vw, 112px);
+  --radius-card: 28px;
+  --radius-tile: 20px;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+}
+
+a { color: inherit; }
+h1, h2, h3, p { margin: 0; }
+img { display: block; max-width: 100%; }
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.container {
+  width: 100%;
+  max-width: calc(var(--page-max) + var(--page-pad) * 2);
+  margin: 0 auto;
+  padding-inline: var(--page-pad);
+}
+
+.muted { color: var(--md-on-surface-variant); }
+
+/* ---------- Карточки ---------- */
+.card {
+  background: var(--md-surface-container-low);
+  border-radius: var(--radius-card);
+  padding: 24px;
+}
+.card--outlined {
+  background: var(--md-surface-container-lowest);
+  border: 1px solid var(--md-outline-variant);
+}
+.card__title { margin-bottom: 16px; }
+
+/* ---------- Шапка страницы ---------- */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.page-header__titles { display: grid; gap: 8px; }
+
+/* ---------- Чипы ---------- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 16px;
+  border: 1px solid var(--md-outline);
+  border-radius: 999px;
+  background: none;
+  color: var(--md-on-surface-variant);
+  font: 500 14px/20px var(--font-plain);
+  letter-spacing: 0.1px;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+.chip:hover { background: color-mix(in srgb, var(--md-on-surface) 8%, transparent); }
+.chip:focus-visible { outline: 3px solid var(--md-primary); outline-offset: 2px; }
+.chip .count { font-weight: 400; font-size: 12px; opacity: 0.8; }
+.chip[aria-pressed='true'],
+.chip.is-selected {
+  background: var(--md-tertiary-container);
+  color: var(--md-on-tertiary-container);
+  border-color: transparent;
+}
+.chip--tonal {
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+  border-color: transparent;
+}
+.chip--square { border-radius: 12px; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* ---------- Сегментированная кнопка ---------- */
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--md-outline);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.segmented button {
+  height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-left: 1px solid var(--md-outline);
+  background: none;
+  color: var(--md-on-surface);
+  font: 500 14px/20px var(--font-plain);
+  cursor: pointer;
+}
+.segmented button:first-child { border-left: 0; }
+.segmented button[aria-pressed='true'] {
+  background: var(--md-tertiary-container);
+  color: var(--md-on-tertiary-container);
+}
+.labeled { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* ---------- Поиск ---------- */
+.search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 20px 0 16px;
+  border-radius: 999px;
+  background: var(--md-surface-container-highest);
+  color: var(--md-on-surface-variant);
+}
+.search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--md-on-surface);
+  font: 400 16px/24px var(--font-plain);
+}
+.search input::placeholder { color: var(--md-on-surface-variant); }
+.search:focus-within { outline: 2px solid var(--md-primary); }
+
+/* ---------- Выпадашка (select под чип) ---------- */
+.select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.select select {
+  appearance: none;
+  height: 38px;
+  padding: 0 36px 0 16px;
+  border: 1px solid var(--md-outline);
+  border-radius: 12px;
+  background: none;
+  color: var(--md-on-surface-variant);
+  font: 500 14px/20px var(--font-plain);
+  cursor: pointer;
+}
+.select .icon {
+  position: absolute;
+  right: 10px;
+  pointer-events: none;
+  color: var(--md-on-surface-variant);
+}
+.link-btn {
+  border: 0;
+  background: none;
+  padding: 0 4px;
+  color: var(--md-primary);
+  font: 500 14px/20px var(--font-plain);
+  cursor: pointer;
+}
+
+.filters-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ---------- Значок «Закреплено» ---------- */
+.pin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 999px;
+  background: var(--md-tertiary-container);
+  color: var(--md-on-tertiary-container);
+  font: 500 11px/16px var(--font-plain);
+  letter-spacing: 0.5px;
+}
+
+/* ---------- Плитка загрузки ---------- */
+.upload-tile {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 24px 12px 14px;
+  border: 1.5px dashed var(--md-outline);
+  border-radius: var(--radius-tile);
+  background: var(--md-surface-container-lowest);
+  color: var(--md-on-surface);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.upload-tile:hover { background: var(--md-surface-container-low); border-color: var(--md-primary); }
+.upload-tile:focus-visible { outline: 3px solid var(--md-primary); outline-offset: 2px; }
+.upload-tile__icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--md-surface-variant);
+  color: var(--md-primary);
+  flex: none;
+}
+.upload-tile__text { display: grid; gap: 2px; }
+
+/* ---------- Masonry ---------- */
+/* Без JS - CSS-колонки; с JS (класс is-js) раскладка идёт по рядам:
+   каждый следующий элемент встаёт в самую короткую колонку */
+.masonry { columns: 4 220px; column-gap: 16px; }
+.masonry figure { margin: 0; }
+.masonry:not(.is-js) > * { break-inside: avoid; margin-bottom: 16px; }
+.masonry.is-js { columns: auto; display: flex; gap: 16px; align-items: flex-start; }
+.masonry__col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+
+.ph {
+  /* Заглушка вместо фото/арта */
+  position: relative;
+  width: 100%;
+  border-radius: var(--radius-tile);
+  background:
+    radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--md-primary) 18%, transparent), transparent 60%),
+    var(--md-outline);
+  display: grid;
+  place-items: center;
+  color: color-mix(in srgb, var(--md-surface) 70%, transparent);
+  overflow: hidden;
+}
+.ph--pinned { outline: 3px solid var(--md-tertiary-container); outline-offset: -3px; }
+.ph .pin-badge { position: absolute; top: 12px; left: 12px; }
+
+.load-more { display: flex; justify-content: center; }
+.empty { padding: 48px 0; text-align: center; }
+
+/* ---------- Диалог ---------- */
+.dialog {
+  width: min(480px, calc(100vw - 32px));
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-card);
+  background: var(--md-surface-container-high);
+  color: var(--md-on-surface);
+}
+.dialog[open] {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  margin: auto;
+  height: fit-content;
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  animation: dialog-in 0.2s var(--ease);
+}
+/* Затемнение вокруг окна (окно открыто без «верхнего слоя», чтобы курсор был поверх) */
+.dialog.has-scrim[open] { box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--md-scrim) 40%, transparent); }
+@keyframes dialog-in { from { opacity: 0; transform: scale(0.95); } }
+.dialog::backdrop { background: color-mix(in srgb, var(--md-scrim) 40%, transparent); backdrop-filter: blur(4px); }
+.dialog__inner { padding: 28px 28px 24px; display: grid; gap: 16px; }
+.dialog__head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.dialog__actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--md-on-surface-variant);
+  cursor: pointer;
+}
+.icon-btn:hover { background: color-mix(in srgb, var(--md-on-surface) 8%, transparent); }
+.icon-btn:focus-visible { outline: 3px solid var(--md-primary); outline-offset: 2px; }
+
+/* ---------- Строительная лента (заглушки) ---------- */
+.stripe {
+  height: 20px;
+  background: repeating-linear-gradient(-50deg, var(--md-on-tertiary-container) 0 14px, var(--md-tertiary-container) 14px 28px);
+}
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 6px 14px 6px 12px;
+  border-radius: 999px;
+  background: var(--md-tertiary-container);
+  color: var(--md-on-tertiary-container);
+  font: 500 14px/20px var(--font-plain);
+}
+.status-badge::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Свитч M3 */
+.switch {
+  position: relative;
+  flex: none;
+  width: 52px;
+  height: 32px;
+  border: 2px solid var(--md-outline);
+  border-radius: 999px;
+  background: var(--md-surface-container-highest);
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--md-outline);
+  transform: translateY(-50%);
+  transition: left 0.2s var(--ease), width 0.2s, height 0.2s, background-color 0.2s;
+}
+.switch[aria-checked='true'] { background: var(--md-primary); border-color: var(--md-primary); }
+.switch[aria-checked='true']::after { left: 22px; width: 24px; height: 24px; background: var(--md-on-primary); }
+.switch:focus-visible { outline: 3px solid var(--md-primary); outline-offset: 2px; }
+
+/* ---------- Переходы между страницами (View Transitions) ----------
+   Работает в Chrome, Edge и Safari 18+; в остальных браузерах страницы открываются как обычно.
+   Направление (data-vt на <html>) ставит components/PageTransitions.astro:
+   forward / back - «общая ось» M3, morph - карточка растягивается в шапку страницы. */
+@view-transition { navigation: auto; }
+
+.topbar-wrap { view-transition-name: topbar; }
+.page { view-transition-name: page; }
+.site-cursor { view-transition-name: cursor; }
+html[data-vt='morph'] .page-header { view-transition-name: morph; }
+
+:root {
+  --vt-emph: cubic-bezier(0.2, 0, 0, 1);
+  --vt-decel: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --vt-accel: cubic-bezier(0.3, 0, 0.8, 0.15);
+}
+
+/* Фон и подвал - просто мягкий кроссфейд */
+::view-transition-old(root) { animation: 200ms var(--vt-accel) both vt-fade-out; }
+::view-transition-new(root) { animation: 300ms var(--vt-decel) 80ms both vt-fade-in; }
+
+/* Навбар стоит на месте, пилюля переезжает */
+::view-transition-group(topbar) { animation: none; }
+::view-transition-old(topbar) { animation: 120ms both vt-fade-out; }
+::view-transition-new(topbar) { animation: 120ms both vt-fade-in; }
+::view-transition-group(nav-pill) { animation-duration: 450ms; animation-timing-function: var(--vt-emph); }
+::view-transition-old(nav-pill) { display: none; }
+::view-transition-new(nav-pill) { animation: none; }
+
+::view-transition-group(cursor) { animation: none; }
+::view-transition-old(cursor) { display: none; }
+
+/* Без направления (первый заход, переход на 404 и т.п.) - лёгкий подъём */
+::view-transition-old(page) { animation: 180ms var(--vt-accel) both vt-up-out; }
+::view-transition-new(page) { animation: 360ms var(--vt-decel) 60ms both vt-up-in; }
+
+/* Общая ось X: вперёд - вправо, назад - влево */
+html[data-vt='forward']::view-transition-old(page) { animation: 200ms var(--vt-accel) both vt-x-out-left; }
+html[data-vt='forward']::view-transition-new(page) { animation: 420ms var(--vt-decel) 70ms both vt-x-in-right; }
+html[data-vt='back']::view-transition-old(page) { animation: 200ms var(--vt-accel) both vt-x-out-right; }
+html[data-vt='back']::view-transition-new(page) { animation: 420ms var(--vt-decel) 70ms both vt-x-in-left; }
+
+/* Карточка -> страница (container transform M3): контейнер цвета карточки растёт в шапку,
+   старое содержимое быстро гаснет, новое проявляется в конце, ничего не растягивается */
+html[data-vt='morph']::view-transition-group(morph) { animation-duration: 520ms; animation-timing-function: var(--vt-emph); }
+html[data-vt='morph']::view-transition-image-pair(morph) {
+  overflow: hidden;
+  border-radius: var(--vt-morph-radius, 28px);
+  animation: 520ms var(--vt-emph) both vt-morph-bg;
+}
+html[data-vt='morph']::view-transition-old(morph),
+html[data-vt='morph']::view-transition-new(morph) {
+  width: 100%;
+  height: 100%;
+  object-fit: none;
+  object-position: left top;
+}
+html[data-vt='morph']::view-transition-old(morph) { animation: 140ms var(--vt-accel) both vt-fade-out; }
+html[data-vt='morph']::view-transition-new(morph) { animation: 240ms var(--vt-decel) 300ms both vt-fade-in; }
+html[data-vt='morph']::view-transition-old(page) { animation: 160ms var(--vt-accel) both vt-fade-out; }
+html[data-vt='morph']::view-transition-new(page) { animation: 360ms var(--vt-decel) 260ms both vt-up-in; }
+@keyframes vt-morph-bg {
+  0%, 55% { background-color: var(--vt-morph-bg, var(--md-surface-container-low)); }
+  100% { background-color: transparent; border-radius: 0; }
+}
+
+@keyframes vt-fade-out { to { opacity: 0; } }
+@keyframes vt-fade-in { from { opacity: 0; } }
+@keyframes vt-up-out { to { opacity: 0; transform: translateY(-8px); } }
+@keyframes vt-up-in { from { opacity: 0; transform: translateY(16px); } }
+@keyframes vt-x-out-left { to { opacity: 0; transform: translateX(-40px); } }
+@keyframes vt-x-out-right { to { opacity: 0; transform: translateX(40px); } }
+@keyframes vt-x-in-right { from { opacity: 0; transform: translateX(56px); } }
+@keyframes vt-x-in-left { from { opacity: 0; transform: translateX(-56px); } }
+
+html[data-motion='reduce']::view-transition-group(*),
+html[data-motion='reduce']::view-transition-old(*),
+html[data-motion='reduce']::view-transition-new(*) { animation: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}

@@ -1,0 +1,34 @@
+{
+  // Модерационный бот murkas.net - отдельный Worker.
+  // Работает с той же базой и KV, что и сайт, но деплоится сам по себе:
+  // обновление или падение бота не трогает сайт.
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "murkas-bot",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-03",
+  // адрес murkas-bot.<аккаунт>.workers.dev нужен для вебхука Telegram
+  "workers_dev": true,
+  "preview_urls": false,
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "murkas-db",
+      "database_id": "20be4237-b49a-438d-b857-e0a5d0af758a",
+      "migrations_dir": "../migrations"
+    }
+  ],
+  "kv_namespaces": [{ "binding": "SETTINGS", "id": "188ce1365b1d4af4a72e2b1d3217cdf0" }],
+
+  "vars": {
+    // Кого бот слушается (Telegram ID через запятую). Остальным он молчит.
+    "ADMIN_IDS": "8449409219",
+    "SITE_URL": "https://murkas.net"
+  },
+  // Секреты (не в гите!):
+  //   npx wrangler secret put TG_BOT_TOKEN -c bot/wrangler.jsonc
+  //   npx wrangler secret put TG_WEBHOOK_SECRET -c bot/wrangler.jsonc
+  // Локально - в файле bot/.dev.vars
+
+  "observability": { "enabled": true }
+}

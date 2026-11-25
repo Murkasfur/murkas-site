@@ -1,0 +1,67 @@
+---
+// Карточка-заглушка со строительной лентой.
+// kind="wip"   - отдельная страница ещё в работе (показываются готовые страницы)
+// kind="maint" - весь сайт закрыт (только соцсети)
+import SocialsCard from './SocialsCard.astro';
+import { useTranslations, localizePath, type Lang, type UiKey } from '../i18n/ui';
+import { pages } from '../data/site';
+
+interface Props {
+  lang: Lang;
+  kind: 'wip' | 'maint';
+}
+const { lang, kind } = Astro.props;
+const t = useTranslations(lang);
+const ready = pages.filter((p) => p.status === 'live');
+---
+
+<section class="placeholder">
+  <div class="stripe" aria-hidden="true"></div>
+  <div class="body">
+    <div class="text">
+      <span class="status-badge">{t(`${kind}.badge` as UiKey)}</span>
+      <h1 class="md-display-large">{t(`${kind}.title` as UiKey)}</h1>
+      <p class="md-body-large muted">{t(`${kind}.text` as UiKey)}</p>
+      {
+        kind === 'wip' && (
+          <>
+            <h2 class="md-label-large">{t('wip.ready')}</h2>
+            <div class="chip-row">
+              {ready.map((p) => (
+                <a class="chip chip--tonal" href={localizePath(p.path, lang)}>
+                  {t(`nav.${p.key}` as UiKey)}
+                </a>
+              ))}
+            </div>
+            <a class="md-btn md-btn--outlined home" href={localizePath('/', lang)}>
+              {t('wip.home')}
+            </a>
+          </>
+        )
+      }
+    </div>
+    <div class="side"><SocialsCard lang={lang} /></div>
+  </div>
+</section>
+
+<style>
+  .placeholder {
+    margin-block: auto;
+    border-radius: 40px;
+    background: var(--md-surface-container-low);
+    overflow: hidden;
+  }
+  .body {
+    display: grid;
+    grid-template-columns: 1fr minmax(280px, 440px);
+    align-items: center;
+    gap: 48px;
+    padding: clamp(24px, 5vw, 56px);
+  }
+  .text { display: grid; gap: 20px; }
+  .home { width: fit-content; }
+  @media (max-width: 860px) {
+    .body { grid-template-columns: 1fr; }
+    h1 { font-size: 40px; line-height: 48px; }
+  }
+</style>

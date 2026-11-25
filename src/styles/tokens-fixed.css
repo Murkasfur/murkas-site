@@ -1,0 +1,27 @@
+/* «Fixed»-цвета M3 из Murkas M3 Kit (одинаковые в светлой и тёмной теме).
+   Выгружены из Figma, как и tokens.css: меняй в Figma, а не здесь. */
+
+:root,
+[data-theme="redpanda"] {
+  --md-primary-fixed: #ffdbd0;
+  --md-primary-fixed-dim: #ffb59e;
+  --md-on-primary-fixed: #3a0b00;
+  --md-on-primary-fixed-variant: #822705;
+  --md-on-secondary-fixed: #291713;
+  --md-tertiary-fixed: #c2e8ff;
+  --md-tertiary-fixed-dim: #83d0f9;
+  --md-on-tertiary-fixed: #001e2b;
+  --md-on-tertiary-fixed-variant: #004d67;
+}
+
+[data-theme="watermelon"] {
+  --md-primary-fixed: #ffdadb;
+  --md-primary-fixed-dim: #ffb2b7;
+  --md-on-primary-fixed: #40000d;
+  --md-on-primary-fixed-variant: #920029;
+  --md-on-secondary-fixed: #002106;
+  --md-tertiary-fixed: #c4f267;
+  --md-tertiary-fixed-dim: #a9d54e;
+  --md-on-tertiary-fixed: #141f00;
+  --md-on-tertiary-fixed-variant: #374e00;
+}

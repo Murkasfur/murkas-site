@@ -1,5 +1,6 @@
 /* Общие стили сайта: цвета тем, шрифты, шкала текста M3 и кнопки. */
 @import './tokens.css';
+@import './tokens-fixed.css';
 
 :root {
   --font-brand: 'Rubik Variable', system-ui, sans-serif;
