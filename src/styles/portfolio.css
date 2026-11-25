@@ -141,39 +141,84 @@ html[data-motion='reduce'] .pf * { transition: none !important; animation: none 
 
 /* Figma ↔ код */
 .pf-compare { position: relative; height: 440px; border: 1px solid var(--line); border-radius: 32px; background: var(--md-surface-container-low); overflow: hidden; --x: 50%; }
-.pf-compare__tag { position: absolute; top: 20px; z-index: 3; height: 32px; padding: 0 14px; display: inline-flex; align-items: center; border-radius: 999px; font: 500 14px/20px var(--font-plain); }
-.pf-compare__tag.is-left { left: 20px; background: var(--chip); }
+.pf-compare__tag { position: absolute; top: 20px; z-index: 5; height: 32px; padding: 0 14px; display: inline-flex; align-items: center; border-radius: 999px; font: 500 14px/20px var(--font-plain); }
+.pf-compare__tag.is-left { left: 20px; background: #2c2c2c; color: #fff; }
 .pf-compare__tag.is-right { right: 20px; background: var(--md-tertiary-container); color: var(--md-on-tertiary-container); }
 .pf-compare__stage { position: absolute; inset: 0; display: grid; place-items: center; }
-.pf-compare__figma { position: absolute; inset: 0; display: grid; place-items: center; background: var(--md-surface-container-low); clip-path: inset(0 calc(100% - var(--x)) 0 0); }
+.pf-compare__figma { position: absolute; inset: 0; display: grid; place-items: center; clip-path: inset(0 calc(100% - var(--x)) 0 0); }
 .pf-compare__line { position: absolute; top: 0; bottom: 0; left: var(--x); z-index: 2; width: 2px; margin-left: -1px; background: var(--md-primary); pointer-events: none; }
 .pf-compare__knob { position: absolute; top: 50%; left: 50%; display: grid; place-items: center; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; background: var(--md-primary); color: var(--md-on-primary); font: 600 16px/1 var(--font-plain); letter-spacing: 2px; box-shadow: 0 4px 12px rgb(0 0 0 / 0.3); }
 .pf-compare__range { position: absolute; inset: 0; z-index: 4; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: ew-resize; }
 .pf-compare__range:focus-visible + * , .pf-compare:has(.pf-compare__range:focus-visible) .pf-compare__knob { outline: 3px solid var(--md-on-surface); outline-offset: 3px; }
 
+/* Карточка «Мой вайб» - те же размеры и цвета, что на murkas.net */
 .pf-vibe {
-  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 8px;
-  width: 259px; height: 305px; padding: 18px 20px 16px; border-radius: 33px;
-  border: 3px solid var(--md-primary-fixed-dim); background: var(--md-primary-fixed); color: var(--md-on-primary-fixed);
+  --v-bg: var(--md-primary-fixed); --v-border: var(--md-primary-fixed-dim); --v-fg: var(--md-on-primary-fixed);
+  --v-soft: var(--md-on-primary-fixed-variant); --v-active: var(--md-primary); --v-inactive: var(--md-primary-fixed-dim);
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  width: 259px; height: 305px; padding: 18px 20px 0; border-radius: 33px;
+  border: 3px solid var(--v-border); background: var(--v-bg); color: var(--v-fg);
 }
-.pf-vibe__title { align-self: stretch; font: 500 14px/20px var(--font-plain); }
-.pf-vibe__disc { position: relative; display: grid; place-items: center; width: 140px; height: 140px; }
-.pf-vibe__ring { position: absolute; inset: -6px; border-radius: 50%; background: conic-gradient(var(--md-primary-container) 0 70%, rgb(27 28 26 / 0.15) 0); mask: radial-gradient(circle, transparent calc(50% - 3px), #000 calc(50% - 2.5px)); }
-.pf-vibe__vinyl { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: repeating-radial-gradient(circle, transparent 0 2px, rgb(255 255 255 / 0.05) 2px 2.6px), #1b1c1a; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.22); animation: pf-spin 6s linear infinite; }
-.pf-vibe__vinyl img { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; }
+html[data-mode='dark'] .pf-vibe {
+  --v-bg: var(--md-on-primary-fixed); --v-border: var(--md-on-primary-fixed-variant); --v-fg: var(--md-primary-fixed);
+  --v-soft: var(--md-primary-fixed-dim); --v-active: var(--md-primary-fixed-dim); --v-inactive: var(--md-on-primary-fixed-variant);
+}
+.pf-vibe__title { align-self: stretch; height: 20px; font: 500 14px/20px var(--font-plain); }
+.pf-vibe__disc { position: relative; flex: none; width: 148px; height: 148px; }
+.pf-vibe__ring { position: absolute; inset: -6px; border-radius: 50%; background: conic-gradient(var(--v-active) 0 62%, rgb(27 28 26 / 0.15) 0); mask: radial-gradient(circle, transparent calc(50% - 3px), #000 calc(50% - 2.5px)); }
+.pf-vibe__vinyl { position: absolute; inset: 0; display: grid; place-items: center; border-radius: 50%; background: repeating-radial-gradient(circle, transparent 0 2px, rgb(255 255 255 / 0.05) 2px 2.6px), #1b1c1a; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.22); animation: pf-spin 3s linear infinite; }
+.pf-vibe__vinyl img { grid-area: 1 / 1; width: 64px; height: 64px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 2px rgb(27 28 26 / 0.6); }
+.pf-vibe__spindle { grid-area: 1 / 1; width: 7px; height: 7px; border-radius: 50%; background: var(--md-surface); box-shadow: 0 0 0 1px #1b1c1a; }
+.pf-vibe__sheen { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 30deg, transparent 0 12%, rgb(255 255 255 / 0.12) 18%, transparent 26% 62%, rgb(255 255 255 / 0.08) 68%, transparent 76%); }
+.pf-vibe.is-still .pf-vibe__vinyl { animation: none; }
 @keyframes pf-spin { to { transform: rotate(360deg); } }
-.pf-vibe__track { display: grid; text-align: center; font-size: 12px; line-height: 16px; }
+.pf-vibe__track { display: grid; height: 36px; text-align: center; font-size: 12px; line-height: 16px; }
 .pf-vibe__track b { font: 500 14px/20px var(--font-plain); }
-.pf-vibe__track span { color: var(--md-on-primary-fixed-variant); }
-.pf-vibe__vol { display: flex; align-items: center; gap: 6px; width: 100%; }
-.pf-vibe__vol span { flex: 1; height: 12px; border-radius: 6px; background: var(--md-primary-container); }
-.pf-vibe__vol span:last-child { background: color-mix(in srgb, var(--md-primary-container) 30%, transparent); }
-.pf-vibe__vol i { width: 4px; height: 26px; border-radius: 2px; background: var(--md-primary-container); }
-.pf-vibe--figma { border: 2px dashed var(--md-primary); background: rgb(128 128 128 / 0.14); color: var(--md-on-surface); }
-.pf-vibe--figma .pf-vibe__vinyl { background: none; border: 2px dashed var(--md-primary); box-shadow: none; animation: none; }
-.pf-vibe--figma .pf-vibe__track span { color: var(--md-on-surface-variant); }
-.pf-vibe--figma .pf-vibe__vol span, .pf-vibe--figma .pf-vibe__vol i { background: rgb(128 128 128 / 0.35); }
-.pf-note { position: absolute; padding: 2px 8px; border-radius: 6px; background: var(--md-primary); color: var(--md-on-primary); font: 500 11px/16px var(--font-plain); white-space: nowrap; }
+.pf-vibe__track span { color: var(--v-soft); }
+.pf-vibe__vol { display: flex; align-items: center; gap: 6px; align-self: stretch; height: 28px; }
+.pf-vibe__volbtn { display: grid; place-items: center; width: 28px; height: 28px; flex: none; color: var(--v-soft); }
+.pf-vibe__slider { --x: calc(var(--v) * (100% - 4px) + 2px); position: relative; flex: 1; height: 28px; }
+.pf-vibe__a, .pf-vibe__i { position: absolute; top: 6px; height: 16px; }
+.pf-vibe__a { left: 0; width: calc(var(--x) - 6px); border-radius: 8px 2px 2px 8px; background: var(--v-active); }
+.pf-vibe__i { left: calc(var(--x) + 6px); right: 0; border-radius: 2px 8px 8px 2px; background: radial-gradient(circle at calc(100% - 8px) 50%, var(--v-active) 0 2px, transparent 2.5px), var(--v-inactive); }
+.pf-vibe__t { position: absolute; top: 0; left: calc(var(--x) - 2px); width: 4px; height: 28px; border-radius: 2px; background: var(--v-active); }
+
+/* Сторона «Figma»: холст, рамка выделения, размеры и красные отступы, как в редакторе */
+.pf-compare__figma {
+  background-color: #1e1e1e;
+  background-image: radial-gradient(circle, rgb(255 255 255 / 0.07) 1px, transparent 1.2px);
+  background-size: 16px 16px;
+  font-family: Inter, system-ui, sans-serif;
+}
+html[data-mode='light'] .pf-compare__figma { background-color: #f5f5f5; background-image: radial-gradient(circle, rgb(0 0 0 / 0.08) 1px, transparent 1.2px); }
+.pf-fsel { position: relative; }
+.pf-fsel__name { position: absolute; left: 0; bottom: calc(100% + 6px); display: inline-flex; align-items: center; gap: 4px; color: #0d99ff; font: 500 11px/14px Inter, system-ui, sans-serif; white-space: nowrap; }
+.pf-fsel__box { position: absolute; inset: 0; border: 1px solid #0d99ff; border-radius: 0; pointer-events: none; }
+.pf-fsel__box i { position: absolute; width: 7px; height: 7px; border: 1px solid #0d99ff; background: #fff; }
+.pf-fsel__box i:nth-child(1) { left: -4px; top: -4px; }
+.pf-fsel__box i:nth-child(2) { right: -4px; top: -4px; }
+.pf-fsel__box i:nth-child(3) { left: -4px; bottom: -4px; }
+.pf-fsel__box i:nth-child(4) { right: -4px; bottom: -4px; }
+.pf-fsel__size { position: absolute; left: 50%; top: calc(100% + 8px); transform: translateX(-50%); padding: 1px 5px; border-radius: 3px; background: #0d99ff; color: #fff; font: 500 11px/16px Inter, system-ui, sans-serif; white-space: nowrap; }
+.pf-fm { position: absolute; background: #f24822; }
+.pf-fm b { position: absolute; padding: 0 4px; border-radius: 3px; background: #f24822; color: #fff; font: 500 10px/15px Inter, system-ui, sans-serif; }
+/* отступ слева 20: от края рамки до ползунка громкости */
+.pf-fm--pad { left: 3px; top: 263px; width: 20px; height: 1px; }
+.pf-fm--pad b { left: 50%; bottom: 4px; transform: translateX(-50%); }
+/* зазор 8 между пластинкой и названием трека */
+.pf-fm--gap { left: 50%; top: 197px; width: 1px; height: 8px; }
+.pf-fm--gap b { left: 6px; top: 50%; transform: translateY(-50%); }
+.pf-fpanel { position: absolute; left: 10px; bottom: 10px; display: grid; gap: 2px; width: 120px; white-space: nowrap; padding: 10px 12px; border-radius: 8px; background: #2c2c2c; color: #fff; font: 400 11px/16px Inter, system-ui, sans-serif; box-shadow: 0 4px 14px rgb(0 0 0 / 0.35); }
+.pf-fpanel p { display: flex; align-items: center; gap: 6px; }
+.pf-fpanel__h { color: rgb(255 255 255 / 0.55); font-weight: 500; }
+.pf-fpanel__h:not(:first-child) { margin-top: 4px; }
+.pf-fpanel__sw { width: 14px; height: 14px; border-radius: 3px; background: var(--md-on-primary-fixed); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.2); }
+html[data-mode='light'] .pf-fpanel__sw { background: var(--md-primary-fixed); }
+.pf-fpanel__light, html[data-mode='light'] .pf-fpanel__dark { display: none; }
+html[data-mode='light'] .pf-fpanel__light { display: inline; }
+.pf-fpanel { font-size: 10px; }
+.pf-compare__line { background: #0d99ff; }
+.pf-compare__knob { background: #0d99ff; color: #fff; }
 
 /* ---------- Обо мне ---------- */
 .pf-about { grid-template-columns: minmax(0, 1fr) minmax(0, 420px); gap: 56px; align-items: start; }
@@ -531,3 +576,41 @@ html[data-motion='reduce'] .pf * { transition: none !important; animation: none 
   .pf-compare { height: 400px; }
   .pf-pop { width: min(300px, calc(100vw - 48px)); }
 }
+
+/* ---------- Окна поверх страницы (открываются через show(), см. portfolio.ts) ---------- */
+html.pf-locked { overflow: hidden; }
+.pf dialog.is-modal[open] { position: fixed; inset: 0; z-index: 900; margin: auto; box-shadow: 0 0 0 100vmax rgb(0 0 0 / 0.6); }
+.pf dialog.pf-cmd.is-modal[open] { top: 12vh; bottom: auto; height: max-content; margin: 0 auto; box-shadow: 0 0 0 100vmax rgb(0 0 0 / 0.55), 0 24px 60px rgb(0 0 0 / 0.45); animation: pf-pop 0.2s var(--ease); }
+.pf dialog.pf-dialog.is-modal[open] { height: max-content; }
+.pf dialog.pf-viewer.is-modal[open] { width: 100%; height: 100%; box-shadow: none; animation: pf-show 0.2s ease; }
+html.is-inspecting .site-cursor { display: none !important; }
+
+/* ---------- Анимации ---------- */
+@keyframes pf-rise { from { opacity: 0; transform: translateY(22px); } }
+@keyframes pf-pop { from { opacity: 0; transform: translateY(-6px) scale(0.97); } }
+@keyframes pf-show { from { opacity: 0; } }
+@keyframes pf-slide-in { from { opacity: 0; transform: translateX(28px); } }
+@keyframes pf-slide-back { from { opacity: 0; transform: translateX(-28px); } }
+.pf-rv:not(.is-in) { opacity: 0; }
+.pf-rv.is-in { animation: pf-rise 0.7s var(--ease) var(--d, 0ms) backwards; }
+.pf-slide { animation-name: pf-slide-in; }
+.pf-work.is-back .pf-slide { animation-name: pf-slide-back; }
+.pf-pop:not([hidden]) { animation: pf-pop 0.18s var(--ease); transform-origin: 30px 0; }
+.pf-hero__title span { display: block; animation: pf-rise 0.8s var(--ease) backwards; }
+.pf-hero__title span + span { animation-delay: 0.12s; }
+.pf-step, .pf-service, .pf-skills__group, .pf-learn, .pf-results li { transition: transform 0.25s var(--ease), border-color 0.2s, background-color 0.2s; }
+.pf-step:hover, .pf-service:hover, .pf-results li:hover { transform: translateY(-4px); }
+.pf-skills__group:hover, .pf-learn:hover { border-color: var(--md-outline); }
+.pf-btn--filled:hover { box-shadow: 0 6px 18px color-mix(in srgb, var(--md-primary) 35%, transparent); }
+.pf-btn { transition: transform 0.15s var(--ease), box-shadow 0.2s; }
+.pf-round { transition: background-color 0.15s, transform 0.15s var(--ease); }
+.pf-round:active { transform: scale(0.92); }
+.pf-tag--link, .pf-fchip, .pf-skill__chip { transition: background-color 0.15s, color 0.15s, transform 0.15s var(--ease); }
+.pf-skill__chip:active, .pf-fchip:active { transform: scale(0.96); }
+.pf-slide__thumb, .pf-gal__thumb { transition: border-color 0.15s, transform 0.2s var(--ease); }
+.pf-slide__thumb:hover, .pf-gal__thumb:hover { transform: translateY(-2px); }
+.pf-gal__slide .pf-shot, .pf-card__img .pf-shot { transition: transform 0.5s var(--ease), opacity 0.3s; }
+.pf-gal__slide:hover .pf-shot, .pf-card:hover .pf-card__img .pf-shot { transform: scale(1.03); }
+.pf-ldetails__body { animation: pf-rise 0.3s var(--ease); }
+.pf-strip__item { transition: border-color 0.15s, opacity 0.25s, background-color 0.15s, transform 0.2s var(--ease); }
+.pf-strip__item:hover { transform: translateY(-2px); }

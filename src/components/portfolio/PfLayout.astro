@@ -5,6 +5,7 @@ import '@fontsource-variable/rubik';
 import '../../styles/theme.css';
 import '../../styles/portfolio.css';
 import Icon from '../Icon.astro';
+import Cursor from '../Cursor.astro';
 import Placeholder from '../Placeholder.astro';
 import { getPortfolio, pfPath, tx, ui, type Lang } from '../../lib/portfolio';
 import { defaultSettings } from '../../lib/settings-core';
@@ -86,7 +87,7 @@ const themes = ['watermelon', 'redpanda', 'light'] as const;
               </a>
               <nav class="pf-nav__links" aria-label="Sections">
                 {nav.map((n) => (
-                  <a href={anchor(n.id)} data-spy={n.id}>
+                  <a href={n.id === 'work' ? href('/projects') : anchor(n.id)} data-spy={n.id} aria-current={n.id === 'work' && !home && Astro.url.pathname.endsWith('/projects') ? 'page' : undefined}>
                     {n.label}
                   </a>
                 ))}
@@ -272,6 +273,7 @@ const themes = ['watermelon', 'redpanda', 'light'] as const;
         </>
       )
     }
+    <Cursor />
     <script>
       import '../../scripts/portfolio';
     </script>

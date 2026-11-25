@@ -5,6 +5,7 @@ import PfShot from './PfShot.astro';
 import PfGlyph from './PfGlyph.astro';
 import PfViewer from './PfViewer.astro';
 import PfContact from './PfContact.astro';
+import PfVibe from './PfVibe.astro';
 import Icon from '../Icon.astro';
 import { getPortfolio, pfPath, roleLabel, tx, ui, visibleRoles, type Lang } from '../../lib/portfolio';
 
@@ -64,7 +65,7 @@ const learningKinds = [
       <dl class="pf-stats">
         {profile.stats.map((s) => (
           <div>
-            <dt>{s.value}</dt>
+            <dt data-count={s.value}>{s.value}</dt>
             <dd class="muted">{tx(s.label, lang)}</dd>
           </div>
         ))}
@@ -76,25 +77,21 @@ const learningKinds = [
       <span class="pf-compare__tag is-left">{t.figmaL}</span>
       <span class="pf-compare__tag is-right">{t.liveCode}</span>
       <div class="pf-compare__stage" aria-hidden="true">
-        <div class="pf-vibe pf-vibe--code">
-          <p class="pf-vibe__title">{t.vibe}</p>
-          <span class="pf-vibe__disc">
-            <span class="pf-vibe__ring"></span>
-            <span class="pf-vibe__vinyl"><img src="/img/vibe-cover.webp" alt="" width="56" height="56" /></span>
-          </span>
-          <span class="pf-vibe__track"><b>Getting Over You</b><span>Hot Freaks</span></span>
-          <span class="pf-vibe__vol"><span></span><i></i><span></span></span>
-        </div>
+        <PfVibe title={t.vibe} />
         <div class="pf-compare__figma">
-          <div class="pf-vibe pf-vibe--figma">
-            <p class="pf-vibe__title">{t.vibe}</p>
-            <span class="pf-vibe__disc"><span class="pf-vibe__vinyl"></span></span>
-            <span class="pf-vibe__track"><b>Getting Over You</b><span>Hot Freaks</span></span>
-            <span class="pf-vibe__vol"><span></span><i></i><span></span></span>
-            <span class="pf-note" style="top:-14px;left:6px">259 × 305</span>
-            <span class="pf-note" style="top:44%;left:-18px">Disc 160</span>
-            <span class="pf-note" style="bottom:72px;left:-10px">gap 8</span>
-            <span class="pf-note" style="bottom:30px;left:-4px">Primary Fixed</span>
+          <div class="pf-fsel">
+            <span class="pf-fsel__name"><Icon name="frame" size={12} /> Vibe card</span>
+            <PfVibe title={t.vibe} still />
+            <span class="pf-fsel__box"><i></i><i></i><i></i><i></i></span>
+            <span class="pf-fsel__size">259 × 305</span>
+            <span class="pf-fm pf-fm--pad"><b>20</b></span>
+            <span class="pf-fm pf-fm--gap"><b>8</b></span>
+          </div>
+          <div class="pf-fpanel">
+            <p class="pf-fpanel__h">Fill</p>
+            <p><span class="pf-fpanel__sw"></span><span class="pf-fpanel__dark">On Primary Fixed</span><span class="pf-fpanel__light">Primary Fixed</span></p>
+            <p class="pf-fpanel__h">Radius</p>
+            <p>33</p>
           </div>
         </div>
       </div>

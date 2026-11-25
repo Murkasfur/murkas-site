@@ -11,6 +11,42 @@ const typing = (e: Event) => {
   return !!el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
 };
 
+/* ---------------- Окна ----------------
+   Открываем через show(), а не showModal(): так кастомный курсор остаётся
+   поверх окна (showModal кладёт окно в «верхний слой» браузера). */
+const modals: HTMLDialogElement[] = [];
+function openModal(d: HTMLDialogElement | null, focus?: HTMLElement | null) {
+  if (!d || d.open) return;
+  d.classList.add('is-modal');
+  const y = scrollY;
+  d.show();
+  scrollTo(scrollX, y); // show() иногда прокручивает к окну в конце страницы
+  modals.push(d);
+  root.classList.add('pf-locked');
+  setTimeout(() => (d.dataset.ready = '1'), 0);
+  (focus ?? d.querySelector<HTMLElement>('button, a, input'))?.focus({ preventScroll: true });
+}
+function closeModal(d: HTMLDialogElement | null) {
+  if (!d || !d.open) return;
+  d.close();
+  delete d.dataset.ready;
+  modals.splice(modals.indexOf(d), 1);
+  if (!modals.length) root.classList.remove('pf-locked');
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && modals.length) {
+    e.preventDefault();
+    closeModal(modals[modals.length - 1]);
+  }
+});
+document.addEventListener('click', (e) => {
+  const d = modals[modals.length - 1];
+  if (!d?.dataset.ready || d.classList.contains('pf-viewer')) return;
+  const t = e.target as Element;
+  if (!t.isConnected || d.contains(t)) return;
+  closeModal(d); // клик мимо окна
+});
+
 type I18n = { copied: string; openMail: string; email: string; inspectOn: string; themes: Record<string, string> };
 const i18n: I18n = JSON.parse($('[data-pf-i18n]')?.dataset.pfI18n ?? '{}');
 
@@ -117,13 +153,12 @@ function cmdFilter() {
 }
 function openCmd() {
   if (!cmd || cmd.open) return;
-  cmd.showModal();
   if (cmdInput) cmdInput.value = '';
   cmdFilter();
-  cmdInput?.focus();
+  openModal(cmd, cmdInput);
 }
 function closeCmd() {
-  cmd?.open && cmd.close();
+  closeModal(cmd);
 }
 $$('[data-cmd-open]').forEach((b) => b.addEventListener('click', openCmd));
 cmdInput?.addEventListener('input', cmdFilter);
@@ -140,7 +175,6 @@ cmd?.addEventListener('keydown', (e) => {
   }
 });
 cmd?.addEventListener('click', (e) => {
-  if (e.target === cmd) closeCmd(); // клик по затемнению
   const item = (e.target as Element).closest('a[data-cmd-item]');
   if (item) closeCmd();
 });
@@ -225,7 +259,7 @@ document.addEventListener('keydown', (e) => {
   }
   if (typing(e) || e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.key === 'i' || e.key === 'I' || e.key === 'ш' || e.key === 'Ш') setInspect(!inspecting);
-  else if (e.key === 'Escape' && inspecting) setInspect(false);
+  else if (e.key === 'Escape' && inspecting && !modals.length) setInspect(false);
   else if (e.key === '/') {
     const q = $<HTMLInputElement>('[data-q]');
     if (q) {
@@ -238,14 +272,17 @@ document.addEventListener('keydown', (e) => {
 /* ---------------- Figma ↔ код ---------------- */
 $$('[data-compare]').forEach((c) => {
   const range = $<HTMLInputElement>('[data-compare-range]', c);
-  range?.addEventListener('input', () => c.style.setProperty('--x', `${range.value}%`));
+  range?.addEventListener('input', () => {
+    c.dataset.touched = '1';
+    c.style.setProperty('--x', `${range.value}%`);
+  });
 });
 
 /* ---------------- Окна (учёба) ---------------- */
 const learning = $<HTMLDialogElement>('[data-learning]');
-$$('[data-learning-open]').forEach((b) => b.addEventListener('click', () => learning?.showModal()));
+$$('[data-learning-open]').forEach((b) => b.addEventListener('click', () => openModal(learning)));
 learning?.addEventListener('click', (e) => {
-  if (e.target === learning || (e.target as Element).closest('[data-close]')) learning.close();
+  if ((e.target as Element).closest('[data-close]')) closeModal(learning);
 });
 $$<HTMLButtonElement>('[data-l-filter]').forEach((b) =>
   b.addEventListener('click', () => {
@@ -366,7 +403,7 @@ function openViewer(g: Gallery, i: number) {
   );
   th.hidden = g.photos.length < 2;
   vRender();
-  viewer.showModal();
+  openModal(viewer, $('[data-v-close]', viewer));
 }
 const vStep = (d: number) => {
   if (!vg) return;
@@ -375,13 +412,16 @@ const vStep = (d: number) => {
 };
 $('[data-v-prev]', viewer ?? document)?.addEventListener('click', () => vStep(-1));
 $('[data-v-next]', viewer ?? document)?.addEventListener('click', () => vStep(1));
-$('[data-v-close]', viewer ?? document)?.addEventListener('click', () => viewer?.close());
-viewer?.addEventListener('keydown', (e) => {
+$('[data-v-close]', viewer ?? document)?.addEventListener('click', () => closeModal(viewer));
+document.addEventListener('keydown', (e) => {
+  if (!viewer?.open) return;
   if (e.key === 'ArrowLeft') vStep(-1);
   if (e.key === 'ArrowRight') vStep(1);
 });
 viewer?.addEventListener('click', (e) => {
-  if (e.target === viewer) viewer.close();
+  const t = e.target as Element;
+  // клик по пустому месту вокруг фото закрывает просмотр
+  if (t === viewer || t.classList.contains('pf-viewer__stage') || t.classList.contains('pf-viewer__photo')) closeModal(viewer);
 });
 document.addEventListener('click', (e) => {
   const b = (e.target as Element).closest<HTMLElement>('[data-open-photo]');
@@ -397,7 +437,9 @@ if (car) {
   const slides = $$('[data-slide]', car);
   let cur = 0;
   const go = (i: number) => {
+    const back = i < cur;
     cur = (i + slides.length) % slides.length;
+    car.classList.toggle('is-back', back);
     slides.forEach((s, j) => (s.hidden = j !== cur));
     strip.forEach((s, j) => s.setAttribute('aria-selected', String(j === cur)));
     $$('[data-dot]', car).forEach((d, j) => d.classList.toggle('on', j === cur));
@@ -555,4 +597,79 @@ if (all) {
     apply();
   });
   apply();
+}
+
+/* ---------------- Анимации появления ---------------- */
+if (!reduce() && 'IntersectionObserver' in window) {
+  // Что выезжает при прокрутке. Внутри одной группы - с небольшой задержкой друг за другом
+  const groups = [
+    '.pf-hero__text > *', '.pf-compare', '.pf-about__text > *', '.pf-learn',
+    '.pf-section > .pf-h2', '.pf-section > .pf-sub', '.pf-skills__group', '.pf-work__head', '.pf-slides', '.pf-strip__item',
+    '.pf-step', '.pf-hire__head', '.pf-service', '.pf-contact', '.pf-footer__cols > *',
+    '.pf-all > *:not(.pf-grid)', '.pf-card', '.pf-case__head > *', '.pf-gal', '.pf-block', '.pf-more__head', '.pf-results li', '.pf-proc li',
+  ];
+  const els = $$(groups.join(','));
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const en of entries) {
+        if (!en.isIntersecting) continue;
+        en.target.classList.add('is-in');
+        io.unobserve(en.target);
+      }
+    },
+    { rootMargin: '0px 0px -8% 0px' },
+  );
+  els.forEach((el) => {
+    const sib = el.parentElement ? Array.from(el.parentElement.children).filter((c) => els.includes(c as HTMLElement)) : [];
+    el.style.setProperty('--d', `${Math.min(sib.indexOf(el), 8) * 60}ms`);
+    el.classList.add('pf-rv');
+    io.observe(el);
+  });
+
+  // Числа «3 yrs / 10k+ / 4» досчитываются от нуля
+  const counters = $$('[data-count]');
+  const cio = new IntersectionObserver((entries) => {
+    for (const en of entries) {
+      if (!en.isIntersecting) continue;
+      cio.unobserve(en.target);
+      const el = en.target as HTMLElement;
+      const m = el.dataset.count!.match(/^(\D*)(\d+)(.*)$/);
+      if (!m) continue;
+      const [, pre, num, post] = m;
+      const end = Number(num);
+      const t0 = performance.now();
+      const tick = (now: number) => {
+        const k = Math.min(1, (now - t0) / 1100);
+        const e = 1 - Math.pow(1 - k, 3);
+        el.textContent = `${pre}${Math.round(end * e)}${post}`;
+        if (k < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }
+  });
+  counters.forEach((c) => cio.observe(c));
+
+  // Слайдер «Figma ↔ код» сам один раз показывает, что его можно тянуть
+  $$('[data-compare]').forEach((c) => {
+    const range = $<HTMLInputElement>('[data-compare-range]', c);
+    const sio = new IntersectionObserver((entries) => {
+      if (!entries[0].isIntersecting) return;
+      sio.disconnect();
+      const pts = [50, 24, 76, 50];
+      const t0 = performance.now() + 700;
+      const step = (now: number) => {
+        if (c.dataset.touched) return;
+        const k = Math.max(0, Math.min(1, (now - t0) / 2600));
+        const seg = Math.min(pts.length - 2, Math.floor(k * (pts.length - 1)));
+        const local = k * (pts.length - 1) - seg;
+        const ease = local < 0.5 ? 2 * local * local : 1 - Math.pow(-2 * local + 2, 2) / 2;
+        const v = pts[seg] + (pts[seg + 1] - pts[seg]) * ease;
+        c.style.setProperty('--x', `${v}%`);
+        if (range) range.value = String(Math.round(v));
+        if (k < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    }, { threshold: 0.6 });
+    sio.observe(c);
+  });
 }

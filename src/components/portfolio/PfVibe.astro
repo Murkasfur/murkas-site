@@ -1,0 +1,26 @@
+---
+// Карточка «Мой вайб сейчас» как на murkas.net - для слайдера «Figma ↔ код».
+// still - без вращения (сторона «Figma»)
+import Icon from '../Icon.astro';
+interface Props { title: string; still?: boolean }
+const { title, still = false } = Astro.props;
+---
+
+<div class:list={['pf-vibe', { 'is-still': still }]}>
+  <p class="pf-vibe__title">{title}</p>
+  <span class="pf-vibe__disc">
+    <span class="pf-vibe__ring"></span>
+    <span class="pf-vibe__vinyl">
+      <img src="/img/vibe-cover.webp" alt="" width="64" height="64" />
+      <span class="pf-vibe__spindle"></span>
+    </span>
+    <span class="pf-vibe__sheen"></span>
+  </span>
+  <span class="pf-vibe__track"><b>Getting Over You</b><span>Hot Freaks</span></span>
+  <span class="pf-vibe__vol">
+    <span class="pf-vibe__volbtn"><Icon name="volume_up" size={20} /></span>
+    <span class="pf-vibe__slider" style="--v:0.7">
+      <span class="pf-vibe__a"></span><span class="pf-vibe__i"></span><span class="pf-vibe__t"></span>
+    </span>
+  </span>
+</div>
