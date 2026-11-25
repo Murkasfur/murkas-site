@@ -16,13 +16,17 @@ export type Settings = {
   manual?: { ru: string; en: string; until: string | null } | null;
   /** Сколько файлов в сутки можно загрузить с одного IP (/limit) */
   uploadLimit: number;
+  /** Три плитки «Фурсьюты» на главной: фото и подпись (бот: «🏠 На главную», /home). null = подобрать само */
+  home: (HomeSlot | null)[];
 };
+export type HomeSlot = { id: string; ru: string; en: string };
 
 export const defaultSettings = (): Settings => ({
   maintenance: site.maintenance,
   pages: Object.fromEntries(pages.map((p) => [p.key, p.status])) as Record<PageKey, PageStatus>,
   now: { ...site.now },
   uploadLimit: LIMITS.perDay,
+  home: [null, null, null],
 });
 
 /** Сливает то, что лежит в KV, с дефолтами; мусор и лишние ключи игнорирует */
@@ -42,6 +46,12 @@ export function mergeSettings(raw: unknown): Settings {
     if (typeof r.now.en === 'string' && r.now.en.trim()) s.now.en = r.now.en;
   }
   if (typeof r.uploadLimit === 'number' && r.uploadLimit >= 0 && r.uploadLimit <= 10000) s.uploadLimit = Math.floor(r.uploadLimit);
+  if (Array.isArray(r.home)) {
+    s.home = [0, 1, 2].map((i) => {
+      const x = (r.home as unknown[])[i] as Partial<HomeSlot> | null;
+      return x && typeof x.id === 'string' ? { id: x.id, ru: String(x.ru ?? ''), en: String(x.en ?? x.ru ?? '') } : null;
+    });
+  }
   const m = r.manual;
   if (m && typeof m === 'object' && typeof m.ru === 'string' && typeof m.en === 'string') {
     s.manual = { ru: m.ru, en: m.en, until: typeof m.until === 'string' ? m.until : null };

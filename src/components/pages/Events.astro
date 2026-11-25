@@ -29,7 +29,8 @@ const key = (e: EventItem) => e.start ?? e.sortKey ?? '9999';
 const endKey = (e: EventItem) => e.end ?? key(e);
 const sorted = [...events].sort((a, b) => key(a).localeCompare(key(b)));
 
-const past = sorted.filter((e) => endKey(e) < today).reverse();
+// лента идёт сверху вниз по времени к «Сегодня»: старые выше, свежие ближе к сегодняшнему дню
+const past = sorted.filter((e) => endKey(e) < today);
 const recent = past.filter((e) => endKey(e) >= weekAgo);
 const earlier = past.filter((e) => endKey(e) < weekAgo);
 const upcoming = sorted.filter((e) => endKey(e) >= today);

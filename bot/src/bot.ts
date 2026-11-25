@@ -18,6 +18,7 @@ type State =
   | { flow: 'add'; step: Field | 'kind' | 'status' | 'confirm'; draft: EventDraft }
   | { flow: 'edit'; id: string; field: Field }
   | { flow: 'now' }
+  | { flow: 'homeLabel'; id: string; slot: number }
   | { flow: 'default' };
 
 const getState = async (env: Env, chat: number) => {
@@ -60,6 +61,7 @@ const HELP = `<b>Бот murkas.net</b> 🐾
 /pending - что ждёт проверки
 /rejected - отклонённые (вернуть или удалить)
 /limit - сколько файлов в сутки можно загрузить с одного IP
+/home - три фото в карточке «Фурсьюты» на главной
 
 /cancel - отменить то, что делаешь сейчас`;
 
@@ -274,6 +276,10 @@ async function onText(env: Env, msg: Message) {
         const [t, kb] = await eventsList(env);
         return send(env, chat, t, kb);
       }
+      case 'home': {
+        const [t, kb] = await homeScreen(env);
+        return send(env, chat, t, kb);
+      }
       case 'pending':
         return pendingCommand(env, chat);
       case 'rejected':
@@ -301,6 +307,11 @@ async function onText(env: Env, msg: Message) {
 
   if (st.flow === 'now') return saveManual(env, chat, text);
   if (st.flow === 'default') return saveDefault(env, chat, text);
+  if (st.flow === 'homeLabel') {
+    const p = parsePair(text);
+    if (!p) return send(env, chat, 'Пусто или слишком длинно. Напиши: <i>Русский | English</i>');
+    return saveHomeSlot(env, chat, st.id, st.slot, p[0], p[1] ?? p[0]);
+  }
 
   // разбираем ответ на текущий шаг
   const field = st.flow === 'add' ? st.step : st.field;
@@ -343,6 +354,28 @@ async function onText(env: Env, msg: Message) {
   if (step === 'kind') return send(env, chat, `<b>Новый ивент</b> 4/${STEPS}\n\nЧто это?`, [...kindRow('wk:'), [CANCEL_BTN]]);
   if (step === 'status') return send(env, chat, `<b>Новый ивент</b> 6/${STEPS}\n\nКак иду?`, [...statusRows('ws:'), [CANCEL_BTN]]);
   return send(env, chat, `<b>Новый ивент</b> ${step === 'city' ? 2 : 3}/${STEPS}\n\n${ASK[step]}`, [[CANCEL_BTN]]);
+}
+
+// ---------- плитки «Фурсьюты» на главной ----------
+
+const SLOT = ['1️⃣', '2️⃣', '3️⃣'];
+
+async function homeScreen(env: Env): Promise<[string, Keyboard]> {
+  const s = await getSettings(env);
+  const lines = s.home.map((x, i) => `${SLOT[i]} ${x ? `${esc(x.ru || 'без подписи')} <i>(${x.id})</i>` : '<i>само: закреплённое или свежее фото</i>'}`);
+  const kb: Keyboard = s.home.flatMap((x, i) => (x ? [[{ text: `❌ Освободить ${i + 1}`, callback_data: `hc:${i}` }]] : []));
+  return [
+    `<b>Карточка «Фурсьюты» на главной</b>\n\n${lines.join('\n')}\n\nЧтобы поставить фото: открой его в «🔍 По одному» и нажми <b>🏠 На главную</b>.`,
+    kb,
+  ];
+}
+
+async function saveHomeSlot(env: Env, chat: number, id: string, slot: number, ru: string, en: string) {
+  const s = await getSettings(env);
+  s.home[slot] = { id, ru, en };
+  await saveSettings(env, s);
+  await clearState(env, chat);
+  return send(env, chat, `Готово ✅ Плитка ${slot + 1}${ru ? `: <b>${esc(ru)}</b>` : ' без подписи'}. На главной - в течение минуты.\n/home - все три`);
 }
 
 async function saveManual(env: Env, chat: number, text: string) {
@@ -498,6 +531,41 @@ async function onCallback(env: Env, cb: CallbackQuery) {
       const e = await getEvent(env.DB, a);
       await answer(env, cb, kindLabel(b));
       return e && edit(env, msg, eventCard(e), eventKb(e.id));
+    }
+
+    case 'hm': {
+      const sets = await getSettings(env);
+      await answer(env, cb);
+      return api(env, 'editMessageReplyMarkup', {
+        chat_id: chat, message_id: msg.message_id,
+        reply_markup: { inline_keyboard: [
+          sets.home.map((x, i) => ({ text: `${SLOT[i]} ${x ? (x.ru || 'фото').slice(0, 14) : 'пусто'}`, callback_data: `hms:${a}:${i}` })),
+          [{ text: '← Назад', callback_data: `ivb:${a}` }],
+        ] },
+      });
+    }
+
+    case 'hms': {
+      const row = await env.DB.prepare(`SELECT caption_ru, caption_en FROM media WHERE id = ?`).bind(a).first<{ caption_ru: string | null; caption_en: string | null }>();
+      await answer(env, cb);
+      await setState(env, chat, { flow: 'homeLabel', id: a, slot: +b });
+      const hint = row?.caption_ru ? `\nПодпись фото: <code>${esc(row.caption_ru)}${row.caption_en ? ` | ${esc(row.caption_en)}` : ''}</code>` : '';
+      return send(env, chat, `Подпись на плитке ${+b + 1}: <i>Русский | English</i>\nНапример: <code>На байке | On the bike</code>${hint}`, [
+        [{ text: 'Без подписи', callback_data: `hml:${a}:${b}` }, CANCEL_BTN],
+      ]);
+    }
+
+    case 'hml':
+      await answer(env, cb);
+      return saveHomeSlot(env, chat, a, +b, '', '');
+
+    case 'hc': {
+      const sets = await getSettings(env);
+      sets.home[+a] = null;
+      await saveSettings(env, sets);
+      await answer(env, cb, 'Освобождено');
+      const [t, kb] = await homeScreen(env);
+      return edit(env, msg, t, kb);
     }
 
     case 'wnourl': {

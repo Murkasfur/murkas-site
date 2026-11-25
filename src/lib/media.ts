@@ -92,3 +92,35 @@ export async function listArts(): Promise<Art[]> {
     return [];
   }
 }
+
+export type HomeTile = { id?: string; src?: string; label: string };
+
+/**
+ * Плитки «Фурсьюты» на главной. Слоты, выбранные в боте, - как есть; пустые заполняются
+ * закреплёнными, потом свежими фото (подпись - подпись фото или ивент). Нет фото - заглушки.
+ */
+export async function homeTiles(slots: ({ id: string; ru: string; en: string } | null)[], lang: 'ru' | 'en', fallback: string[]): Promise<HomeTile[]> {
+  try {
+    const { results } = await env.DB.prepare(
+      `SELECT m.id, m.r2_key, m.caption_ru, m.caption_en, e.title_ru AS ev_ru, e.title_en AS ev_en
+       FROM media m LEFT JOIN events e ON e.id = m.event_id
+       WHERE m.kind = 'photo' AND m.status = 'published' AND m.r2_key IS NOT NULL
+       ORDER BY m.pinned DESC, coalesce(m.published_at, m.uploaded_at) DESC
+       LIMIT 50`,
+    ).all<{ id: string; r2_key: string; caption_ru: string | null; caption_en: string | null; ev_ru: string | null; ev_en: string | null }>();
+    const byId = new Map(results.map((r) => [r.id, r]));
+    const chosen = new Set(slots.flatMap((x) => (x && byId.has(x.id) ? [x.id] : [])));
+    const spare = results.filter((r) => !chosen.has(r.id));
+    const auto = (r: (typeof results)[number]) => (lang === 'en' ? r.caption_en ?? r.caption_ru ?? r.ev_en ?? r.ev_ru : r.caption_ru ?? r.ev_ru) ?? '';
+    return [0, 1, 2].map((i) => {
+      const slot = slots[i];
+      const picked = slot && byId.get(slot.id);
+      if (picked) return { id: picked.id, src: mediaUrl(picked.r2_key, 800), label: slot![lang] || '' };
+      const r = spare.shift();
+      return r ? { id: r.id, src: mediaUrl(r.r2_key, 800), label: auto(r) } : { label: fallback[i] };
+    });
+  } catch (err) {
+    console.error('homeTiles failed', err);
+    return fallback.map((label) => ({ label }));
+  }
+}

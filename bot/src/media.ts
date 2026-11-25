@@ -114,7 +114,7 @@ function itemButtons(r: Row): Keyboard {
     return [[{ text: '✅ Принять', callback_data: `ia:${r.id}` }, { text: '🫥 Размыть', callback_data: `ib:${r.id}` }],
       [{ text: '❌ Отклонить', callback_data: `ir:${r.id}` }, { text: '🗑 Удалить', callback_data: `id:${r.id}` }]];
   if (r.status === 'published')
-    return [[{ text: '👥 Персонаж / категория', callback_data: `icp:${r.id}` }],
+    return [[{ text: '👥 Персонаж / категория', callback_data: `icp:${r.id}` }, ...(r.kind === 'photo' ? [{ text: '🏠 На главную', callback_data: `hm:${r.id}` }] : [])],
       [{ text: r.pinned ? '📍 Открепить' : '📌 Закрепить', callback_data: `ip:${r.id}` }, { text: '↩️ Снять', callback_data: `iu:${r.id}` }, { text: '🗑', callback_data: `id:${r.id}` }]];
   if (r.status === 'rejected')
     return [[{ text: '↩️ На модерацию', callback_data: `iu:${r.id}` }, { text: '🗑 Удалить навсегда', callback_data: `id:${r.id}` }]];
