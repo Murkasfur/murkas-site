@@ -32,6 +32,8 @@ document.addEventListener('keydown', (e) => {
 });
 
 document.addEventListener('click', (e) => {
+  // клики по всплывающему сообщению снизу не закрывают окно
+  if ((e.target as Element | null)?.closest?.('.snackbar')) return;
   for (const d of Array.from(openDialogs)) {
     if (!d.dataset.ready) continue;
     // Клик по «затемнению» вокруг окна = мимо окна

@@ -1,6 +1,7 @@
 export interface Env {
   DB: D1Database;
   SETTINGS: KVNamespace;
+  MEDIA: R2Bucket;
   ADMIN_IDS: string;
   SITE_URL: string;
   TG_BOT_TOKEN: string;

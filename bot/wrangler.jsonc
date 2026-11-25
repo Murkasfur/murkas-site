@@ -19,6 +19,8 @@
     }
   ],
   "kv_namespaces": [{ "binding": "SETTINGS", "id": "188ce1365b1d4af4a72e2b1d3217cdf0" }],
+  // Загрузки: pending/ -> media/ (принято) или rejected/
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "murkas-media" }],
 
   "vars": {
     // Кого бот слушается (Telegram ID через запятую). Остальным он молчит.

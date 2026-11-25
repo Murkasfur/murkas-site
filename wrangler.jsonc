@@ -28,5 +28,14 @@
     }
   ],
 
+  // Модерационный бот: сайт сообщает ему о новых загрузках (RPC, снаружи недоступно)
+  "services": [{ "binding": "BOT", "service": "murkas-bot", "entrypoint": "BotRPC" }],
+
+  "vars": {
+    // Публичный ключ Turnstile (виден в HTML, это нормально). Виджет «murkas.net».
+    // Секрет: npx wrangler secret put TURNSTILE_SECRET. Локально оба ключа тестовые - см. .dev.vars
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAGRuRAVYR-Q1bouH"
+  },
+
   "observability": { "enabled": true }
 }

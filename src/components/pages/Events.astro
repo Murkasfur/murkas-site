@@ -76,7 +76,7 @@ const stats = {
                 <li class="event event--past" data-search={searchText(e)}>
                   <span class="date md-label-large">{dateText(e)}</span>
                   <span class="event__body">
-                    <span class="md-title-medium">{loc(e.title, lang)}</span>
+                    {e.url ? <a class="md-title-medium event__link" href={e.url} target="_blank" rel="noopener noreferrer">{loc(e.title, lang)}<Icon name="arrow_outward" size={16} /></a> : <span class="md-title-medium">{loc(e.title, lang)}</span>}
                     <span class="md-body-small muted">{loc(e.city, lang)}{e.photos ? ` · ${e.photos} ${t('events.photos')}` : ''}</span>
                   </span>
                   <span class:list={['status', `status--${e.status}`]}>{statusText(e)}</span>
@@ -94,7 +94,7 @@ const stats = {
               <li class="event event--past" data-search={searchText(e)}>
                 <span class="date md-label-large">{dateText(e)}</span>
                 <span class="event__body">
-                  <span class="md-title-medium">{loc(e.title, lang)}</span>
+                  {e.url ? <a class="md-title-medium event__link" href={e.url} target="_blank" rel="noopener noreferrer">{loc(e.title, lang)}<Icon name="arrow_outward" size={16} /></a> : <span class="md-title-medium">{loc(e.title, lang)}</span>}
                   <span class="md-body-small muted">{loc(e.city, lang)}{e.photos ? ` · ${e.photos} ${t('events.photos')}` : ''}</span>
                 </span>
                 <span class:list={['status', `status--${e.status}`]}>{statusText(e)}</span>
@@ -115,7 +115,7 @@ const stats = {
                 <li class:list={['event', { 'event--tba': !e.start }]} data-search={searchText(e)}>
                   <span class:list={['date md-label-large', { 'date--exact': !!e.start }]}>{dateText(e)}</span>
                   <span class="event__body">
-                    <span class="md-title-medium">{loc(e.title, lang)}</span>
+                    {e.url ? <a class="md-title-medium event__link" href={e.url} target="_blank" rel="noopener noreferrer">{loc(e.title, lang)}<Icon name="arrow_outward" size={16} /></a> : <span class="md-title-medium">{loc(e.title, lang)}</span>}
                     <span class="md-body-small muted"><Icon name="place" size={14} /> {loc(e.city, lang)}</span>
                   </span>
                   <span class:list={['status', `status--${e.status}`]}>{statusText(e)}</span>
@@ -134,7 +134,7 @@ const stats = {
           <section class="card next">
             <h2 class="md-title-small">{t('events.next')}</h2>
             <span class:list={['date md-label-large', { 'date--exact': !!next.start }]}>{dateText(next)}</span>
-            <p class="md-headline-small">{loc(next.title, lang)}</p>
+            <p class="md-headline-small">{next.url ? <a class="event__link" href={next.url} target="_blank" rel="noopener noreferrer">{loc(next.title, lang)}<Icon name="arrow_outward" size={20} /></a> : loc(next.title, lang)}</p>
             <p class="md-body-medium muted"><Icon name="place" size={16} /> {loc(next.city, lang)}</p>
             <span class:list={['status', `status--${next.status}`]}>{statusText(next)}</span>
           </section>
@@ -233,4 +233,14 @@ const stats = {
   @media (max-width: 600px) {
     .event { grid-template-columns: 1fr; gap: 8px; }
   }
+  .event__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    width: fit-content;
+    color: inherit;
+    text-decoration: none;
+  }
+  .event__link :global(svg) { flex: none; color: var(--md-on-surface-variant); }
+  .event__link:hover { text-decoration: underline; text-underline-offset: 3px; }
 </style>

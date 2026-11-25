@@ -4,6 +4,7 @@ import { send, edit, answer, esc, type Update, type Message, type CallbackQuery,
 import { SETTINGS_KEY, mergeSettings, type Settings } from '../../src/lib/settings-core';
 import { pages, type PageKey } from '../../src/data/site';
 import { computeNow, type NowSource } from '../../src/lib/now-core';
+import { mediaCallback, pendingCommand, rejectedCommand, storageLine } from './media';
 import {
   STATUSES, statusLabel, parsePair, parseDate, parseUrl, dateText,
   listEvents, getEvent, insertEvent, updateEvent, deleteEvent, toNowEvent,
@@ -54,6 +55,11 @@ const HELP = `<b>Бот murkas.net</b> 🐾
 <b>Ивенты</b>
 /events - список, нажми на ивент чтобы изменить
 /addevent - добавить новый
+
+<b>Загрузки</b>
+/pending - что ждёт проверки
+/rejected - отклонённые (вернуть или удалить)
+/limit - сколько файлов в сутки можно загрузить с одного IP
 
 /cancel - отменить то, что делаешь сейчас`;
 
@@ -125,7 +131,9 @@ ${s.maintenance ? '🔴 Сайт закрыт (maintenance)' : '🟢 Сайт о
 
 📅 Ивентов: ${db?.events ?? 0}
 🖼 Опубликовано фото и артов: ${db?.published ?? 0}
-⏳ Ждут модерации: ${db?.pending ?? 0}`;
+⏳ Ждут модерации: ${db?.pending ?? 0}${db?.pending ? ' (/pending)' : ''}
+${await storageLine(env)}
+📤 Лимит загрузок: ${s.uploadLimit} в сутки с одного IP`;
 }
 
 const SOURCE: Record<NowSource, string> = {
@@ -252,6 +260,20 @@ async function onText(env: Env, msg: Message) {
       case 'events': {
         const [t, kb] = await eventsList(env);
         return send(env, chat, t, kb);
+      }
+      case 'pending':
+        return pendingCommand(env, chat);
+      case 'rejected':
+        return rejectedCommand(env, chat);
+      case 'limit': {
+        const s = await getSettings(env);
+        const n = Number(arg);
+        if (arg && Number.isInteger(n) && n >= 0 && n <= 10000) {
+          s.uploadLimit = n;
+          await saveSettings(env, s);
+          return send(env, chat, `Лимит: <b>${n}</b> файлов в сутки с одного IP ✅${n === 0 ? '\n<i>0 = загрузки выключены.</i>' : ''}`);
+        }
+        return send(env, chat, `Сейчас: <b>${s.uploadLimit}</b> файлов в сутки с одного IP.\nПоменять: <code>/limit 500</code> (0 = выключить загрузки)`);
       }
       case 'addevent':
         await setState(env, chat, { flow: 'add', step: 'title', draft: {} });
@@ -448,6 +470,7 @@ async function onCallback(env: Env, cb: CallbackQuery) {
     }
 
     default:
+      if (await mediaCallback(env, cb, kind, a, b)) return;
       return answer(env, cb);
   }
 }

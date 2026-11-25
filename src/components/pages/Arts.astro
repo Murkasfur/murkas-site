@@ -4,10 +4,12 @@ import Icon from '../Icon.astro';
 import UploadTile from '../UploadTile.astro';
 import Lightbox, { type ViewerItem } from '../Lightbox.astro';
 import { useTranslations, type Lang, type UiKey } from '../../i18n/ui';
-import { arts, loc, locAll, type ArtType } from '../../data/mock';
+import { loc, locAll, type ArtType } from '../../data/mock';
+import { listArts } from '../../lib/media';
 
 const { lang } = Astro.props as { lang: Lang };
 const t = useTranslations(lang);
+const arts = await listArts();
 const locale = lang === 'ru' ? 'ru-RU' : 'en-CA';
 
 const types: ArtType[] = ['full', 'sketch', 'ref', 'stickers', 'comic', 'ych'];
@@ -15,12 +17,12 @@ const count = (c: ArtType) => arts.filter((a) => a.type === c).length;
 const artists = [...new Set(arts.map((a) => a.artist.name))];
 const years = [...new Set(arts.flatMap((a) => (a.created ? [a.created.slice(0, 4)] : [])))].sort().reverse();
 const fullDate = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' }).replace(/\s?г\.$/, '');
-const charName = (c: string) => (c === 'murkas' ? 'Муркас' : c === 'both' ? t('char.both') : 'Arbyss');
+const charName = (c: string) => (c === 'murkas' ? t('char.murkas') : c === 'both' ? t('char.both') : 'Arbyss');
 const viewer: ViewerItem[] = arts.map((a) => ({
   id: a.id,
   title: loc(a.title, lang),
   caption: a.caption ? loc(a.caption, lang) : undefined,
-  chips: [{ label: charName(a.character), strong: true }, { label: t(`art.${a.type}` as UiKey) }],
+  chips: [{ label: charName(a.character), strong: true }, ...(a.type ? [{ label: t(`art.${a.type}` as UiKey) }] : [])],
   fields: [
     { label: t('viewer.artist'), value: a.artist.name, href: a.artist.url, external: true },
     { label: t('viewer.drawn'), value: a.created ? fullDate(a.created) : t('viewer.unknown') },
@@ -30,6 +32,8 @@ const viewer: ViewerItem[] = arts.map((a) => ({
   pinned: a.pinned,
   ratio: a.ratio,
   src: a.src,
+  thumb: a.thumb,
+  download: a.originalFile,
   icon: 'image',
 }));
 const fmt = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' }).replace(/\s?г\.$/, '');
@@ -41,7 +45,7 @@ const fmt = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(locale, 
       <h1 class="md-display-small">{t('arts.title')}</h1>
       <p class="md-body-large muted">{t('arts.subtitle')}</p>
     </div>
-    <UploadTile lang={lang} title={t('arts.upload')} hint={t('upload.dropHint')} />
+    <UploadTile lang={lang} kind="art" title={t('arts.upload')} hint={t('upload.dropHint')} />
   </header>
 
   <div class="gallery" data-gallery>
@@ -56,7 +60,7 @@ const fmt = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(locale, 
       <div class="segmented" role="group" aria-label={t('common.character')}>
         <button type="button" data-character data-value="all" aria-pressed="true">{t('common.all')}</button>
         <button type="button" data-character data-value="arbyss" aria-pressed="false">Arbyss</button>
-        <button type="button" data-character data-value="murkas" aria-pressed="false">Муркас</button>
+        <button type="button" data-character data-value="murkas" aria-pressed="false">{t('char.murkas')}</button>
       </div>
     </div>
 
@@ -114,7 +118,7 @@ const fmt = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(locale, 
             role="button"
             aria-label={loc(a.title, lang)}
             data-character={a.character}
-            data-cat={a.type}
+            data-cat={a.type ?? ''}
             data-person={a.artist.name}
             data-year={a.created?.slice(0, 4) ?? ''}
             data-date={a.created ?? ''}
@@ -122,7 +126,7 @@ const fmt = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(locale, 
             data-search={`${locAll(a.title)} ${a.artist.name}`.toLowerCase()}
           >
             <div class:list={['ph', { 'ph--pinned': a.pinned }]} style={`aspect-ratio: 1 / ${a.ratio}`}>
-              <Icon name="image" size={28} />
+              {a.thumb ? <img class="ph__img" src={a.thumb} alt="" loading="lazy" decoding="async" /> : <Icon name="image" size={28} />}
               {a.pinned && (
                 <span class="pin-badge">
                   <Icon name="push_pin" size={14} />
@@ -132,10 +136,14 @@ const fmt = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(locale, 
             </div>
             <div class="art__info">
               <h2 class="md-title-small">{loc(a.title, lang)}</h2>
-              <a class="artist md-body-small" href={a.artist.url} target="_blank" rel="noopener">
-                {a.artist.name}
-                <Icon name="arrow_outward" size={14} />
-              </a>
+              {a.artist.url ? (
+                <a class="artist md-body-small" href={a.artist.url} target="_blank" rel="noopener">
+                  {a.artist.name}
+                  <Icon name="arrow_outward" size={14} />
+                </a>
+              ) : (
+                <span class="artist md-body-small">{a.artist.name}</span>
+              )}
               <p class="md-label-small muted">
                 {a.created ? `${t('arts.drawn')} ${fmt(a.created)}` : t('common.unknownDate')}
               </p>

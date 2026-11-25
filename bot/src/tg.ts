@@ -9,6 +9,9 @@ export type Message = {
   chat: { id: number; type: string };
   from?: { id: number; first_name?: string };
   text?: string;
+  caption?: string;
+  photo?: unknown[];
+  document?: unknown;
 };
 export type CallbackQuery = {
   id: string;
@@ -21,7 +24,7 @@ export type Update = { update_id: number; message?: Message; callback_query?: Ca
 export async function api<T = unknown>(env: Env, method: string, body: Record<string, unknown>): Promise<T | undefined> {
   if (env.TG_DRY === '1') {
     console.log(`[tg] ${method} ${JSON.stringify(body)}`);
-    return undefined;
+    return { message_id: Math.floor(Math.random() * 1e6) } as T;
   }
   const res = await fetch(`https://api.telegram.org/bot${env.TG_BOT_TOKEN}/${method}`, {
     method: 'POST',
@@ -34,10 +37,26 @@ export async function api<T = unknown>(env: Env, method: string, body: Record<st
   return data.result;
 }
 
+/** Запрос с файлами (multipart): поля + Blob'ы */
+export async function apiForm<T = unknown>(env: Env, method: string, fields: Record<string, unknown>, files: Record<string, Blob> = {}): Promise<T | undefined> {
+  if (env.TG_DRY === '1') {
+    const sizes = Object.entries(files).map(([k, b]) => `${k}=${b.size}B`).join(' ');
+    console.log(`[tg] ${method} ${JSON.stringify(fields)} files: ${sizes}`);
+    return { message_id: Math.floor(Math.random() * 1e6) } as T;
+  }
+  const form = new FormData();
+  for (const [k, v] of Object.entries(fields)) if (v !== undefined) form.append(k, typeof v === 'string' ? v : JSON.stringify(v));
+  for (const [k, b] of Object.entries(files)) form.append(k, b, `${k}.${b.type.split('/')[1] ?? 'bin'}`);
+  const res = await fetch(`https://api.telegram.org/bot${env.TG_BOT_TOKEN}/${method}`, { method: 'POST', body: form });
+  const data = (await res.json()) as { ok: boolean; result?: T; description?: string };
+  if (!data.ok && !data.description?.includes('not modified')) console.error(`[tg] ${method} failed: ${data.description}`);
+  return data.result;
+}
+
 const markup = (kb?: Keyboard) => (kb ? { reply_markup: { inline_keyboard: kb } } : {});
 
 export const send = (env: Env, chatId: number, text: string, kb?: Keyboard) =>
-  api(env, 'sendMessage', { chat_id: chatId, text, parse_mode: 'HTML', link_preview_options: { is_disabled: true }, ...markup(kb) });
+  api<Message>(env, 'sendMessage', { chat_id: chatId, text, parse_mode: 'HTML', link_preview_options: { is_disabled: true }, ...markup(kb) });
 
 export const edit = (env: Env, msg: Message, text: string, kb?: Keyboard) =>
   api(env, 'editMessageText', {

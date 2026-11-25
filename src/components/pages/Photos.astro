@@ -4,10 +4,12 @@ import Icon from '../Icon.astro';
 import UploadTile from '../UploadTile.astro';
 import Lightbox, { type ViewerItem } from '../Lightbox.astro';
 import { useTranslations, localizePath, type Lang, type UiKey } from '../../i18n/ui';
-import { photos, loc, locAll, type PhotoCategory } from '../../data/mock';
+import { loc, locAll, type PhotoCategory } from '../../data/mock';
+import { listPhotos } from '../../lib/media';
 
 const { lang } = Astro.props as { lang: Lang };
 const t = useTranslations(lang);
+const photos = await listPhotos();
 
 const cats: PhotoCategory[] = ['group', 'full', 'partial', 'walks', 'backstage', 'parties'];
 const count = (c: PhotoCategory) => photos.filter((p) => p.category === c).length;
@@ -15,12 +17,15 @@ const photographers = [...new Set(photos.flatMap((p) => (p.photographer ? [p.pho
 const years = [...new Set(photos.map((p) => p.date.slice(0, 4)))].sort().reverse();
 const locale = lang === 'ru' ? 'ru-RU' : 'en-CA';
 const fullDate = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' }).replace(/\s?г\.$/, '');
-const charName = (c: string) => (c === 'murkas' ? 'Муркас' : 'Arbyss');
+const charName = (c: string) => (c === 'murkas' ? t('char.murkas') : 'Arbyss');
 const viewer: ViewerItem[] = photos.map((p) => ({
   id: p.id,
   title: loc(p.title, lang),
   caption: p.caption ? loc(p.caption, lang) : undefined,
-  chips: [{ label: charName(p.character), strong: true }, { label: t(`cat.${p.category}` as UiKey) }],
+  chips: [
+    ...(p.character ? [{ label: charName(p.character), strong: true }] : []),
+    ...(p.category ? [{ label: t(`cat.${p.category}` as UiKey) }] : []),
+  ],
   fields: [
     ...(p.event ? [{ label: t('viewer.event'), value: loc(p.event, lang), href: localizePath('/events', lang) + (p.eventId ? `#${p.eventId}` : '') }] : []),
     { label: t('viewer.photographer'), value: p.photographer?.name ?? t('viewer.unknown'), href: p.photographer?.url, external: true },
@@ -29,6 +34,8 @@ const viewer: ViewerItem[] = photos.map((p) => ({
   pinned: p.pinned,
   ratio: p.ratio,
   src: p.src,
+  thumb: p.thumb,
+  download: p.original,
   icon: 'photo_camera',
 }));
 ---
@@ -54,7 +61,7 @@ const viewer: ViewerItem[] = photos.map((p) => ({
       <div class="segmented" role="group" aria-label={t('common.character')}>
         <button type="button" data-character data-value="all" aria-pressed="true">{t('common.all')}</button>
         <button type="button" data-character data-value="arbyss" aria-pressed="false">Arbyss</button>
-        <button type="button" data-character data-value="murkas" aria-pressed="false">Муркас</button>
+        <button type="button" data-character data-value="murkas" aria-pressed="false">{t('char.murkas')}</button>
       </div>
     </div>
 
@@ -111,8 +118,8 @@ const viewer: ViewerItem[] = photos.map((p) => ({
             tabindex="0"
             role="button"
             aria-label={loc(p.title, lang)}
-            data-character={p.character}
-            data-cat={p.category}
+            data-character={p.character ?? ''}
+            data-cat={p.category ?? ''}
             data-person={p.photographer?.name ?? ''}
             data-year={p.date.slice(0, 4)}
             data-date={p.date}
@@ -120,7 +127,7 @@ const viewer: ViewerItem[] = photos.map((p) => ({
             data-search={`${locAll(p.title)} ${locAll(p.event)} ${p.photographer?.name ?? ''}`.toLowerCase()}
           >
             <div class:list={['ph', { 'ph--pinned': p.pinned }]} style={`aspect-ratio: 1 / ${p.ratio}`}>
-              <Icon name="photo_camera" size={28} />
+              {p.thumb ? <img class="ph__img" src={p.thumb} alt="" loading="lazy" decoding="async" /> : <Icon name="photo_camera" size={28} />}
               {p.pinned && (
                 <span class="pin-badge">
                   <Icon name="push_pin" size={14} />

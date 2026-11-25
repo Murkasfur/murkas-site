@@ -17,7 +17,8 @@
     "db:seed:local": "node scripts/make-seed.ts && wrangler d1 execute murkas-db --local --file db/seed.sql",
     "db:seed": "node scripts/make-seed.ts && wrangler d1 execute murkas-db --remote --file db/seed.sql",
     "bot:dev": "wrangler dev -c bot/wrangler.jsonc --persist-to .wrangler/state --port 8788",
-    "bot:deploy": "wrangler deploy -c bot/wrangler.jsonc"
+    "bot:deploy": "wrangler deploy -c bot/wrangler.jsonc",
+    "dev:all": "npm run build && wrangler dev -c dist/server/wrangler.json -c bot/wrangler.jsonc --persist-to .wrangler/state"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^14.4.9",

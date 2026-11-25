@@ -3,6 +3,7 @@
 // берётся из src/data/site.ts, так что пустой KV = сайт как в коде.
 // Этот файл без зависимостей: его импортирует и сайт, и бот (bot/).
 import { site, pages, type PageKey, type PageStatus } from '../data/site';
+import { LIMITS } from './media-core';
 
 export const SETTINGS_KEY = 'settings';
 
@@ -13,12 +14,15 @@ export type Settings = {
   now: { ru: string; en: string };
   /** Ручной статус (/now): перекрывает расписание. until = ISO-время или null (пока не снимешь) */
   manual?: { ru: string; en: string; until: string | null } | null;
+  /** Сколько файлов в сутки можно загрузить с одного IP (/limit) */
+  uploadLimit: number;
 };
 
 export const defaultSettings = (): Settings => ({
   maintenance: site.maintenance,
   pages: Object.fromEntries(pages.map((p) => [p.key, p.status])) as Record<PageKey, PageStatus>,
   now: { ...site.now },
+  uploadLimit: LIMITS.perDay,
 });
 
 /** Сливает то, что лежит в KV, с дефолтами; мусор и лишние ключи игнорирует */
@@ -37,6 +41,7 @@ export function mergeSettings(raw: unknown): Settings {
     if (typeof r.now.ru === 'string' && r.now.ru.trim()) s.now.ru = r.now.ru;
     if (typeof r.now.en === 'string' && r.now.en.trim()) s.now.en = r.now.en;
   }
+  if (typeof r.uploadLimit === 'number' && r.uploadLimit >= 0 && r.uploadLimit <= 10000) s.uploadLimit = Math.floor(r.uploadLimit);
   const m = r.manual;
   if (m && typeof m === 'object' && typeof m.ru === 'string' && typeof m.en === 'string') {
     s.manual = { ru: m.ru, en: m.en, until: typeof m.until === 'string' ? m.until : null };

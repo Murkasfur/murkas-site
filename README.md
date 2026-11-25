@@ -100,6 +100,24 @@ Worked out on every request by `src/lib/now-core.ts`, first match wins: manual `
 
 Classes and the daily routine live in `src/data/schedule.ts` (add a new term there every semester), holidays are calculated in `src/lib/holidays.ts`. Everything is in Toronto time.
 
+### 📤 Uploads
+
+Visitors upload photos and art from the upload tile (or by dropping files anywhere on the page). Code: `src/components/UploadTile.astro`, `src/scripts/upload.ts`, `src/pages/api/upload/*`.
+
+1. The browser prepares the files: photos get re-encoded (long side 2560, or almost lossless in "Full quality"), which also strips EXIF and location data. Art keeps its quality; JPEG metadata is cut out.
+2. `POST /api/upload/batch` checks Turnstile, the fields, the per-IP daily limit (`/limit` in the bot, 300 by default) and free space in R2 (stops at 90%).
+3. `PUT /api/upload/file` for each file → R2 `pending/`. Duplicates are skipped by SHA-256.
+4. `POST /api/upload/finish` → the bot gets the batch (service binding `BOT` → `BotRPC.notifyBatch`).
+5. In the bot: accept all / reject all with a reason / go one by one (accept, blur later, reject, delete, character, category, pin). Accepted files move to `media/` and are served from `/media/<id>.<ext>` with a long cache. Rejected ones sit in `rejected/` until you clean them up with `/rejected`.
+
+Setup: create a Turnstile widget for `murkas.net` in the Cloudflare dashboard, put its site key into `TURNSTILE_SITE_KEY` in `wrangler.jsonc` and the secret into `npx wrangler secret put TURNSTILE_SECRET`. Locally, copy `.dev.vars.example` to `.dev.vars` (Cloudflare's test keys, the check always passes).
+
+To run the site and the bot together locally (so the bot receives uploads):
+
+```sh
+npm run dev:all
+```
+
 ### 🤖 Moderation bot (`bot/`)
 
 A separate Worker (`murkas-bot`) on the same database and KV. Only the IDs in `ADMIN_IDS` (`bot/wrangler.jsonc`) can use it; everyone else gets silence.
@@ -113,6 +131,9 @@ A separate Worker (`murkas-bot`) on the same database and KV. Only the IDs in `A
 | `/default`     | what "Now" says when nothing else is going on             |
 | `/events`      | list events, tap one to edit or delete it                 |
 | `/addevent`    | add an event step by step                                 |
+| `/pending`     | upload batches waiting for review                         |
+| `/rejected`    | rejected files: restore or delete for good                |
+| `/limit`       | how many files one IP can upload per day                  |
 
 First deploy:
 

@@ -14,7 +14,10 @@ export type ViewerItem = {
   fields: { label: string; value: string; href?: string; external?: boolean }[];
   pinned?: boolean;
   ratio: number;
+  /** Картинка в окне, миниатюра в ленте, файл для кнопки «Скачать» */
   src?: string;
+  thumb?: string;
+  download?: string;
   icon: 'photo_camera' | 'image';
 };
 
@@ -66,7 +69,7 @@ const t = useTranslations(lang);
   import { openDialog, closeDialog, bindDialog } from '../scripts/dialog';
 
   type Item = {
-    id: string; title: string; caption?: string; pinned?: boolean; ratio: number; src?: string; icon: string;
+    id: string; title: string; caption?: string; pinned?: boolean; ratio: number; src?: string; thumb?: string; download?: string; icon: string;
     chips: { label: string; strong?: boolean }[];
     fields: { label: string; value: string; href?: string; external?: boolean }[];
   };
@@ -83,7 +86,7 @@ const t = useTranslations(lang);
 
   const media = (it: Item, small = false) =>
     it.src
-      ? `<img src="${esc(it.src)}" alt="${esc(it.title)}" ${small ? 'loading="lazy"' : ''} />`
+      ? `<img src="${esc((small && it.thumb) || it.src)}" alt="${esc(it.title)}" ${small ? 'loading="lazy"' : ''} />`
       : `<div class="ph${small ? ' ph--thumb' : ''}" style="aspect-ratio: 1 / ${it.ratio}">${small ? '' : iconTpl(it.icon)}</div>`;
 
   const render = () => {
@@ -114,8 +117,9 @@ const t = useTranslations(lang);
       `</div>`;
     fit();
     const dl = $<HTMLAnchorElement>('[data-download]')!;
-    dl.hidden = !it.src;
-    if (it.src) dl.href = it.src;
+    const file = it.download ?? it.src;
+    dl.hidden = !file;
+    if (file) dl.href = file;
     // Лента миниатюр: до 4 соседей с каждой стороны
     const from = Math.max(0, current - 4);
     const to = Math.min(order.length, from + 9);

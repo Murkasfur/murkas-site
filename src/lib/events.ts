@@ -35,6 +35,7 @@ export const rowToEvent = (r: EventRow): EventItem => ({
   photos: r.photos ?? undefined,
   startTime: r.start_time ?? undefined,
   endTime: r.end_time ?? undefined,
+  url: r.url ?? undefined,
 });
 
 /** Все ивенты по дате + число опубликованных фото у каждого */

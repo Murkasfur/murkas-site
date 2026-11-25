@@ -124,7 +124,7 @@ const suits = [t('home.fsFull'), t('home.fsRide'), t('home.fsBack')];
               {next.start && (
                 <p class="md-label-small muted" data-countdown={next.start} data-tpl={t('home.inDays')} data-today={t('home.todayEv')} data-tomorrow={t('home.tomorrow')} />
               )}
-              <p class="md-title-large">{loc(next.title, lang)}</p>
+              <p class="md-title-large">{next.url ? <a class="meet__link" href={next.url} target="_blank" rel="noopener noreferrer">{loc(next.title, lang)}<Icon name="arrow_outward" size={18} /></a> : loc(next.title, lang)}</p>
               <p class="md-body-small muted meet__where">
                 <Icon name="place" size={16} /> {when(next)} · {loc(next.city, lang)}
               </p>
@@ -384,6 +384,8 @@ const suits = [t('home.fsFull'), t('home.fsRide'), t('home.fsBack')];
     background: var(--md-surface-container-lowest);
   }
   .meet__title { display: inline-flex; align-items: center; gap: 8px; }
+  .meet__link { display: inline-flex; align-items: center; gap: 4px; color: inherit; text-decoration: none; }
+  .meet__link:hover { text-decoration: underline; text-underline-offset: 3px; }
   .meet__next { display: flex; flex-direction: column; gap: 4px; }
   .meet__next .ev-status { margin-top: 6px; }
   .meet__where { display: inline-flex; align-items: center; gap: 4px; }

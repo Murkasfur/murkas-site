@@ -236,6 +236,16 @@ img { display: block; max-width: 100%; }
   color: color-mix(in srgb, var(--md-surface) 70%, transparent);
   overflow: hidden;
 }
+.ph__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  background: var(--md-surface-variant);
+}
+.ph--pinned .ph__img { border: 3px solid var(--md-tertiary-container); }
 .ph--pinned { outline: 3px solid var(--md-tertiary-container); outline-offset: -3px; }
 .ph .pin-badge { position: absolute; top: 12px; left: 12px; }
 
@@ -416,3 +426,45 @@ html[data-motion='reduce']::view-transition-new(*) { animation: none !important;
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }
+
+/* ---------- Snackbar (src/scripts/snackbar.ts) ---------- */
+.snackbar {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 950;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: max-content;
+  max-width: min(560px, calc(100vw - 32px));
+  min-height: 48px;
+  padding: 6px 6px 6px 16px;
+  border-radius: 12px;
+  background: var(--md-inverse-surface, #322f30);
+  color: var(--md-inverse-on-surface, #f7eeef);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.2);
+  font: 400 14px/20px var(--font-plain);
+  opacity: 0;
+  transform: translate(-50%, 16px);
+  pointer-events: none;
+  transition: opacity 0.2s var(--ease), transform 0.25s var(--ease);
+}
+.snackbar.is-visible { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+.snackbar.is-error { background: var(--md-error-container); color: var(--md-on-error-container); }
+.snackbar__text { flex: 1; padding: 8px 0; }
+.snackbar__action,
+.snackbar__close {
+  flex: none;
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--md-inverse-primary, #ffb2bc);
+  font: 500 14px/20px var(--font-plain);
+  cursor: pointer;
+}
+.snackbar__action { padding: 0 12px; }
+.snackbar__close { display: grid; place-items: center; width: 36px; color: inherit; opacity: 0.8; }
+.snackbar.is-error .snackbar__action { color: var(--md-error); }
+.snackbar__action:hover, .snackbar__close:hover { background: color-mix(in srgb, currentColor 10%, transparent); }

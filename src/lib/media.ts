@@ -1,0 +1,94 @@
+// Опубликованные фото и арты из базы -> те же типы, что были у заглушек (Photo, Art),
+// чтобы страницы и окно просмотра не пришлось переписывать.
+import { env } from 'cloudflare:workers';
+import type { Photo, Art, L, PhotoCategory, ArtType, Character } from '../data/mock';
+
+type Row = {
+  id: string; kind: 'photo' | 'art'; title_ru: string | null; title_en: string | null; caption_ru: string | null; caption_en: string | null;
+  character: string | null; category: string | null; event_id: string | null; taken_date: string | null; created_date: string | null;
+  city_ru: string | null; city_en: string | null; original_url: string | null; pinned: number; width: number | null; height: number | null;
+  r2_key: string | null; mime: string | null; published_at: string | null; uploaded_at: string;
+  person_name: string | null; person_url: string | null; p_name: string | null; p_url: string | null;
+  ev_title_ru: string | null; ev_title_en: string | null; ev_city_ru: string | null; ev_city_en: string | null; ev_start: string | null;
+};
+
+const pair = (ru: string | null, en: string | null): L | undefined => (ru ? (en && en !== ru ? { ru, en } : ru) : en ?? undefined);
+
+/** Адрес картинки. w = ширина превью (сайт сам уменьшает и кэширует), без w - оригинал */
+export const mediaUrl = (r2Key: string | null, w?: 400 | 800 | 1600) =>
+  r2Key ? `/media/${r2Key.split('/').pop()}${w ? `?w=${w}` : ''}` : undefined;
+
+async function rows(kind: 'photo' | 'art') {
+  const { results } = await env.DB.prepare(
+    `SELECT m.*, p.name AS p_name, p.url AS p_url,
+            e.title_ru AS ev_title_ru, e.title_en AS ev_title_en, e.city_ru AS ev_city_ru, e.city_en AS ev_city_en, e.start_date AS ev_start
+     FROM media m
+     LEFT JOIN people p ON p.id = m.person_id
+     LEFT JOIN events e ON e.id = m.event_id
+     WHERE m.kind = ? AND m.status = 'published'
+     ORDER BY m.pinned DESC, coalesce(m.taken_date, m.created_date, m.published_at) DESC
+     LIMIT 1000`,
+  ).bind(kind).all<Row>();
+  return results;
+}
+
+const person = (r: Row) => {
+  const name = r.p_name ?? r.person_name;
+  return name ? { name, url: r.p_url ?? r.person_url ?? undefined } : undefined;
+};
+const ratio = (r: Row) => (r.width && r.height ? r.height / r.width : 1);
+const day = (s: string | null) => s?.slice(0, 10) ?? null;
+
+export async function listPhotos(): Promise<Photo[]> {
+  try {
+    return (await rows('photo')).map((r) => {
+      const event = pair(r.ev_title_ru, r.ev_title_en);
+      return {
+        id: r.id,
+        // у загрузок нет отдельного названия: название = подпись, иначе ивент
+        title: pair(r.title_ru, r.title_en) ?? pair(r.caption_ru, r.caption_en) ?? event ?? { ru: 'Фото', en: 'Photo' },
+        character: (r.character ?? undefined) as Character | undefined,
+        category: (r.category ?? undefined) as PhotoCategory | undefined,
+        event,
+        eventId: r.event_id ?? undefined,
+        photographer: person(r),
+        date: day(r.taken_date) ?? r.ev_start ?? day(r.published_at) ?? day(r.uploaded_at)!,
+        pinned: !!r.pinned,
+        caption: r.title_ru ? pair(r.caption_ru, r.caption_en) : undefined,
+        city: pair(r.city_ru, r.city_en) ?? pair(r.ev_city_ru, r.ev_city_en),
+        ratio: ratio(r),
+        src: mediaUrl(r.r2_key, 1600),
+        thumb: mediaUrl(r.r2_key, 800),
+        original: mediaUrl(r.r2_key),
+      };
+    });
+  } catch (err) {
+    console.error('listPhotos failed', err);
+    return [];
+  }
+}
+
+export async function listArts(): Promise<Art[]> {
+  try {
+    return (await rows('art')).map((r) => ({
+      id: r.id,
+      // у загрузок нет отдельного названия: подпись и есть название
+      title: pair(r.title_ru, r.title_en) ?? pair(r.caption_ru, r.caption_en) ?? { ru: 'Арт', en: 'Art' },
+      caption: r.title_ru ? pair(r.caption_ru, r.caption_en) : undefined,
+      character: (r.character ?? 'arbyss') as Art['character'],
+      type: (r.category ?? undefined) as ArtType | undefined,
+      artist: person(r) ?? { name: '?' },
+      created: day(r.created_date),
+      uploaded: day(r.published_at) ?? undefined,
+      original: r.original_url ?? undefined,
+      pinned: !!r.pinned,
+      ratio: ratio(r),
+      src: mediaUrl(r.r2_key, 1600),
+      thumb: mediaUrl(r.r2_key, 800),
+      originalFile: mediaUrl(r.r2_key),
+    }));
+  } catch (err) {
+    console.error('listArts failed', err);
+    return [];
+  }
+}

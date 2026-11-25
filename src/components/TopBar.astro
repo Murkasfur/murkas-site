@@ -44,6 +44,17 @@ const t = useTranslations(lang);
 </header>
 
 <script>
+  // Клик по уже открытой странице (пункт меню или логотип на главной) не перезагружает её,
+  // а просто плавно поднимает наверх
+  document.addEventListener('click', (e) => {
+    const a = (e.target as Element).closest<HTMLAnchorElement>('a[href]');
+    if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const url = new URL(a.href, location.href);
+    if (url.origin !== location.origin || url.pathname.replace(/\/$/, '') !== location.pathname.replace(/\/$/, '') || url.search !== location.search || url.hash) return;
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  });
+
   const toggle = document.querySelector<HTMLButtonElement>('.menu-toggle');
   const menu = document.getElementById('site-menu');
   toggle?.addEventListener('click', () => {

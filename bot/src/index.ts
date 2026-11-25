@@ -2,7 +2,9 @@
 //   POST /tg     - сюда Telegram шлёт сообщения (проверяем секретный заголовок)
 //   GET  /setup  - один раз после деплоя: подключить вебхук и меню команд
 //                  (https://murkas-bot.<ты>.workers.dev/setup?key=<TG_WEBHOOK_SECRET>)
+import { WorkerEntrypoint } from 'cloudflare:workers';
 import type { Env } from './env';
+import { notifyBatch } from './media';
 import { api, type Update } from './tg';
 import { handleUpdate } from './bot';
 
@@ -14,6 +16,9 @@ const COMMANDS = [
   { command: 'default', description: 'Статус по умолчанию' },
   { command: 'pages', description: 'Готовые и «в работе» страницы' },
   { command: 'maintenance', description: 'Закрыть / открыть сайт' },
+  { command: 'pending', description: 'Ждут проверки' },
+  { command: 'rejected', description: 'Отклонённые' },
+  { command: 'limit', description: 'Лимит загрузок' },
   { command: 'cancel', description: 'Отменить' },
 ];
 
@@ -50,3 +55,11 @@ export default {
     return new Response('murkas-bot 🐾');
   },
 } satisfies ExportedHandler<Env>;
+
+/** Для сайта: сообщить о новой заявке. Доступно только через service binding, снаружи не вызвать. */
+export class BotRPC extends WorkerEntrypoint<Env> {
+  async notifyBatch(batchId: string) {
+    // отвечаем сайту сразу, а превью и кнопки отправляются в фоне
+    this.ctx.waitUntil(notifyBatch(this.env, batchId).catch((e) => console.error('notifyBatch failed', e)));
+  }
+}

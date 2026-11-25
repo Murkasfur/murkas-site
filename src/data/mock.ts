@@ -28,6 +28,8 @@ export type EventItem = {
   /** Время по Торонто ('HH:MM'). Есть = короткий ивент (мит), нет = конвент на весь день */
   startTime?: string;
   endTime?: string;
+  /** Сайт ивента */
+  url?: string;
 };
 
 export const events: EventItem[] = [
@@ -49,8 +51,9 @@ export type PhotoCategory = 'group' | 'full' | 'partial' | 'walks' | 'backstage'
 export type Photo = {
   id: string;
   title: L;
-  character: Character;
-  category: PhotoCategory;
+  /** Модератор ставит в боте; пока не поставил - нет */
+  character?: Character;
+  category?: PhotoCategory;
   event?: L;
   photographer?: { name: string; url?: string };
   date: string;
@@ -58,9 +61,12 @@ export type Photo = {
   caption?: L;
   city?: L;
   eventId?: string;
-  /** Пропорции заглушки (высота / ширина) */
+  /** Пропорции (высота / ширина) */
   ratio: number;
+  /** Картинка для просмотра, превью для сетки, оригинал для скачивания */
   src?: string;
+  thumb?: string;
+  original?: string;
 };
 
 const ratios = [1.25, 0.85, 1.1, 0.75, 1.35, 0.9, 1.0, 1.2, 0.8, 1.15, 0.95, 1.3];
@@ -92,8 +98,8 @@ export type Art = {
   id: string;
   title: L;
   character: Character | 'both';
-  type: ArtType;
-  artist: { name: string; url: string };
+  type?: ArtType;
+  artist: { name: string; url?: string };
   /** Когда арт нарисован (не когда загружен). null = неизвестно */
   created: string | null;
   /** Когда загружен на сайт */
@@ -104,6 +110,9 @@ export type Art = {
   pinned?: boolean;
   ratio: number;
   src?: string;
+  thumb?: string;
+  /** Оригинал для скачивания */
+  originalFile?: string;
 };
 
 export const arts: Art[] = [

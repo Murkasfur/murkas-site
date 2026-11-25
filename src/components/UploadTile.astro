@@ -1,17 +1,35 @@
 ---
-// Плитка загрузки в шапке страницы. Пока бэкенда нет, открывает окно «скоро».
-// Перетаскивание файлов на страницу тоже ловится и открывает это окно.
+// Плитка загрузки в шапке страницы + окно загрузки фото или арта
+// (макеты Figma: «Overlay / Загрузка фото» и «Overlay / Загрузка арта»).
+// Перетаскивание файлов на любое место страницы тоже открывает окно.
+// Вся логика - в src/scripts/upload.ts, сервер - src/pages/api/upload/*.
+import { env } from 'cloudflare:workers';
 import Icon from './Icon.astro';
-import { useTranslations, type Lang } from '../i18n/ui';
-import { site } from '../data/site';
+import { useTranslations, ui, type Lang, type UiKey } from '../i18n/ui';
+import { loc } from '../data/mock';
+import { getEvents } from '../lib/data';
+import { CHARACTERS, ART_TYPES } from '../lib/media-core';
 
 interface Props {
   lang: Lang;
   title: string;
   hint: string;
+  kind?: 'photo' | 'art';
 }
-const { lang, title, hint } = Astro.props;
+const { lang, title, hint, kind = 'photo' } = Astro.props;
 const t = useTranslations(lang);
+const isPhoto = kind === 'photo';
+
+// Ивенты, с которых могут быть фото: уже начавшиеся, свежие сверху
+const today = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
+const events = isPhoto ? (await getEvents()).filter((e) => e.start && e.start <= today).reverse() : [];
+const day = (d: string) =>
+  new Date(`${d}T12:00:00`).toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-CA', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/\s?г\.$/, '');
+
+const siteKey = (env as { TURNSTILE_SITE_KEY?: string }).TURNSTILE_SITE_KEY ?? '';
+// Тексты для скрипта
+const strings = Object.fromEntries(Object.keys(ui[lang]).filter((k) => k.startsWith('up.')).map((k) => [k, t(k as UiKey)]));
+const charName = (c: string) => (c === 'both' ? (lang === 'ru' ? 'Оба' : 'Both') : c === 'arbyss' ? 'Arbyss' : lang === 'ru' ? 'Муркас' : 'Murkas');
 ---
 
 <button type="button" class="upload-tile" data-open-upload>
@@ -22,19 +40,141 @@ const t = useTranslations(lang);
   </span>
 </button>
 
-<dialog class="dialog" id="upload-dialog" aria-labelledby="upload-title">
-  <div class="dialog__inner">
+<dialog class="dialog upload" id="upload-dialog" aria-labelledby="upload-title" data-kind={kind} data-lang={lang} data-sitekey={siteKey} data-strings={JSON.stringify(strings)}>
+  <form class="dialog__inner" novalidate>
     <div class="dialog__head">
       <h2 id="upload-title" class="md-headline-small">{title}</h2>
       <button type="button" class="icon-btn" data-close aria-label={t('common.close')}><Icon name="close" /></button>
     </div>
-    <span class="status-badge">{t('common.soon')}</span>
-    <h3 class="md-title-medium">{t('upload.soonTitle')}</h3>
-    <p class="md-body-medium muted">{t('upload.soonText')}</p>
-    <div class="dialog__actions">
-      <a class="md-btn md-btn--filled" href={`mailto:${site.email}`}>{site.email}</a>
+
+    <!-- Файлы -->
+    <label class="dropzone" data-dropzone>
+      <Icon name="add_photo" />
+      <span class="md-title-small">{isPhoto ? t('up.dropPhoto') : t('up.dropArt')}</span>
+      <span class="md-body-small muted">{isPhoto ? t('up.dropPhotoHint') : t('up.dropArtHint')}</span>
+      <input type="file" accept="image/*,.heic,.heif" multiple data-input class="visually-hidden" />
+    </label>
+    <div class="picked" data-picked hidden>
+      <div class="picked__head">
+        <div>
+          <p class="md-title-small" data-count></p>
+          <p class="md-body-small picked__size" data-size></p>
+        </div>
+        <button type="button" class="md-btn md-btn--text" data-clear>{t('up.clear')}</button>
+      </div>
+      <ul class="thumbs" data-thumbs></ul>
+      {isPhoto && <p class="md-body-small muted">{t('up.batchNote')}</p>}
     </div>
-  </div>
+
+    {isPhoto && (
+      <label class="check">
+        <input type="checkbox" name="full" />
+        <span>
+          <span class="md-body-large">{t('up.full')}</span>
+          <span class="md-body-small muted">{t('up.fullHint')}</span>
+        </span>
+      </label>
+    )}
+
+    {isPhoto ? (
+      <>
+        <div class="field" data-field="eventId">
+          <label class="field__label" for="up-event">{t('up.event')}<span class="req" aria-hidden="true"> *</span></label>
+          <div class="field__box field__box--select">
+            <select id="up-event" name="eventId" required>
+              <option value="">{t('up.eventPick')}</option>
+              {events.map((e, i) => <option value={e.id} selected={i === 0}>{loc(e.title, lang)} • {day(e.start!)}</option>)}
+            </select>
+            <Icon name="expand_more" />
+          </div>
+          <p class="field__error" />
+        </div>
+        <div class="field" data-field="personName">
+          <label class="field__label" for="up-person">{t('up.photographer')}<span class="req" aria-hidden="true"> *</span></label>
+          <div class="field__row">
+            <div class="field__box"><input id="up-person" name="personName" maxlength="80" placeholder={t('up.photographerPh')} autocomplete="off" /></div>
+            <button type="button" class="chip" aria-pressed="false" data-unknown="personName">{t('up.unknown')}</button>
+          </div>
+          <p class="field__error" />
+        </div>
+        <div class="field" data-field="personUrl">
+          <label class="field__label" for="up-url">{t('up.personLink')}</label>
+          <div class="field__box"><input id="up-url" name="personUrl" type="url" inputmode="url" placeholder={t('up.linkPh')} /><Icon name="link" /></div>
+          <p class="field__error" />
+        </div>
+      </>
+    ) : (
+      <>
+        <div class="field" data-field="personName">
+          <label class="field__label" for="up-person">{t('up.artist')}<span class="req" aria-hidden="true"> *</span></label>
+          <div class="field__box"><input id="up-person" name="personName" maxlength="80" placeholder={t('up.artistPh')} required autocomplete="off" /></div>
+          <p class="field__error" />
+        </div>
+        <div class="field" data-field="personUrl">
+          <label class="field__label" for="up-url">{t('up.artistLink')}<span class="req" aria-hidden="true"> *</span></label>
+          <div class="field__box"><input id="up-url" name="personUrl" type="url" inputmode="url" placeholder={t('up.linkPh')} required /><Icon name="link" /></div>
+          <p class="field__error" />
+        </div>
+        <div class="field" data-field="createdDate">
+          <label class="field__label" for="up-date">{t('up.created')}<span class="req" aria-hidden="true"> *</span></label>
+          <div class="field__row">
+            <div class="field__box"><input id="up-date" name="createdDate" type="date" max={new Date().toISOString().slice(0, 10)} required /></div>
+            <button type="button" class="chip" aria-pressed="false" data-unknown="createdDate">{t('up.unknown')}</button>
+          </div>
+          <p class="field__error" />
+        </div>
+        <div class="field" data-field="character">
+          <span class="field__label">{t('up.character')}<span class="req" aria-hidden="true"> *</span></span>
+          <div class="chip-row" data-choice="character">
+            {CHARACTERS.map((c) => <button type="button" class="chip" aria-pressed="false" data-value={c}>{charName(c)}</button>)}
+          </div>
+          <p class="field__error" />
+        </div>
+        <div class="field">
+          <span class="field__label">{t('up.type')}</span>
+          <div class="chip-row" data-choice="category">
+            {ART_TYPES.map((c) => <button type="button" class="chip" aria-pressed="false" data-value={c}>{t(`art.${c}` as UiKey)}</button>)}
+          </div>
+        </div>
+        <div class="field" data-field="originalUrl">
+          <label class="field__label" for="up-orig">{t('up.original')}</label>
+          <div class="field__box"><input id="up-orig" name="originalUrl" type="url" inputmode="url" placeholder="https://…" /><Icon name="link" /></div>
+          <p class="field__error" />
+        </div>
+      </>
+    )}
+
+    <div class="field">
+      <div class="field__label-row">
+        <label class="field__label" for="up-caption">{t('up.caption')}</label>
+        {isPhoto && (
+          <div class="chip-row" data-caption-mode>
+            <button type="button" class="chip is-small" aria-pressed="true" data-value="one">{t('up.captionOne')}</button>
+            <button type="button" class="chip is-small" aria-pressed="false" data-value="each">{t('up.captionEach')}</button>
+          </div>
+        )}
+      </div>
+      <div class="field__box" data-caption-one><input id="up-caption" name="caption" maxlength="300" placeholder={isPhoto ? t('up.captionPhotoPh') : t('up.captionArtPh')} /></div>
+    </div>
+
+    <div class="captcha" data-captcha>
+      <div data-turnstile></div>
+      <span class="captcha__ok md-body-small" data-captcha-ok hidden><Icon name="check" size={18} /> {t('up.checked')}</span>
+      <span class="captcha__wait md-body-small muted" data-captcha-wait>{t('up.check')}</span>
+    </div>
+
+    <p class="note md-body-small">{isPhoto ? t('up.notePhoto') : t('up.noteArt')}</p>
+
+    <div class="progress" data-progress hidden>
+      <div class="progress__bar"><span data-progress-bar></span></div>
+      <p class="md-body-small muted" data-progress-text></p>
+    </div>
+
+    <div class="dialog__actions">
+      <button type="button" class="md-btn md-btn--text" data-close>{t('up.cancel')}</button>
+      <button type="submit" class="md-btn md-btn--filled" data-submit><Icon name="send" size={20} /> {t('up.send')}</button>
+    </div>
+  </form>
 </dialog>
 
 <div class="drop-overlay" aria-hidden="true">
@@ -45,35 +185,171 @@ const t = useTranslations(lang);
 </div>
 
 <script>
-  import { openDialog, bindDialog } from '../scripts/dialog';
-  const dialog = document.getElementById('upload-dialog') as HTMLDialogElement | null;
-  const overlay = document.querySelector<HTMLElement>('.drop-overlay');
-  bindDialog(dialog);
-  document.querySelectorAll('[data-open-upload]').forEach((b) => b.addEventListener('click', () => dialog && openDialog(dialog)));
-
-  // Зона перетаскивания на весь экран с размытием
-  let depth = 0;
-  const hasFiles = (e: DragEvent) => Array.from(e.dataTransfer?.types || []).includes('Files');
-  window.addEventListener('dragenter', (e) => {
-    if (!hasFiles(e)) return;
-    depth += 1;
-    overlay?.classList.add('is-visible');
-  });
-  window.addEventListener('dragleave', () => {
-    depth = Math.max(0, depth - 1);
-    if (!depth) overlay?.classList.remove('is-visible');
-  });
-  window.addEventListener('dragover', (e) => hasFiles(e) && e.preventDefault());
-  window.addEventListener('drop', (e) => {
-    if (!hasFiles(e)) return;
-    e.preventDefault();
-    depth = 0;
-    overlay?.classList.remove('is-visible');
-    dialog && openDialog(dialog);
-  });
+  import { initUpload } from '../scripts/upload';
+  initUpload();
 </script>
 
 <style>
+  .upload .dialog__inner { gap: 20px; grid-template-columns: minmax(0, 1fr); }
+  .upload .dialog__actions { flex-wrap: wrap; }
+  .upload [hidden] { display: none !important; }
+  .req { color: var(--md-error); }
+
+  .dropzone {
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    padding: 28px 20px;
+    border: 1.5px dashed var(--md-outline);
+    border-radius: 20px;
+    background: var(--md-surface-container-lowest);
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background-color 0.15s;
+  }
+  .dropzone:hover,
+  .dropzone.is-over { border-color: var(--md-primary); background: color-mix(in srgb, var(--md-primary) 6%, var(--md-surface-container-lowest)); }
+  .dropzone:focus-within { outline: 3px solid var(--md-primary); outline-offset: 2px; }
+  .dropzone > :global(svg) { color: var(--md-on-surface-variant); }
+
+  .picked { display: grid; gap: 12px; }
+  .picked__head { display: flex; justify-content: space-between; align-items: start; gap: 8px; }
+  .picked__size { color: var(--md-success, #1e7d32); }
+  .thumbs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .thumbs :global(.thumb) { position: relative; aspect-ratio: 1; border-radius: 16px; overflow: hidden; background: var(--md-surface-variant); }
+  .thumbs :global(.thumb img) { width: 100%; height: 100%; object-fit: cover; }
+  .thumbs :global(.thumb.is-busy img) { opacity: 0.5; }
+  .thumbs :global(.thumb__x) {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border: 0;
+    border-radius: 50%;
+    background: color-mix(in srgb, #000 70%, transparent);
+    color: #fff;
+    cursor: pointer;
+  }
+  .thumbs :global(.thumb__add) {
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 4px;
+    aspect-ratio: 1;
+    border: 1.5px dashed var(--md-outline);
+    border-radius: 16px;
+    background: var(--md-surface-container-lowest);
+    color: var(--md-on-surface-variant);
+    font: 500 12px/16px var(--font-plain);
+    width: 100%;
+    cursor: pointer;
+  }
+  /* Режим «подпись для каждой»: список с полем у каждого фото */
+  .thumbs.is-each { grid-template-columns: 1fr; }
+  .thumbs.is-each :global(.thumb) { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: center; aspect-ratio: auto; background: none; overflow: visible; }
+  .thumbs.is-each :global(.thumb img) { width: 64px; height: 64px; border-radius: 12px; }
+  .thumbs.is-each :global(.thumb__x) { top: -6px; left: 46px; right: auto; }
+  .thumbs :global(.thumb__caption) { display: none; }
+  .thumbs.is-each :global(.thumb__caption) {
+    display: flex;
+    align-items: center;
+    height: 48px;
+    padding: 0 14px;
+    border: 1px solid var(--md-outline);
+    border-radius: 10px;
+    background: var(--md-surface-container-lowest);
+  }
+  .thumbs.is-each :global(.thumb__caption:focus-within) { border: 2px solid var(--md-primary); padding: 0 13px; }
+  .thumbs :global(.thumb__caption input) {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: none;
+    color: var(--md-on-surface);
+    font: 400 15px/22px var(--font-plain);
+    outline: none;
+  }
+  .thumbs.is-each :global(.thumb__add) { aspect-ratio: auto; height: 48px; grid-auto-flow: column; justify-content: center; gap: 8px; }
+
+  .check { display: flex; gap: 14px; align-items: start; cursor: pointer; }
+  .check input { width: 18px; height: 18px; margin: 3px 3px 0; accent-color: var(--md-primary); }
+  .check > span { display: grid; gap: 2px; }
+
+  .field { display: grid; gap: 6px; }
+  .field__label { font: 500 12px/16px var(--font-plain); color: var(--md-on-surface-variant); }
+  .field__label-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .field__row { display: flex; gap: 8px; align-items: center; }
+  .field__row .field__box { flex: 1; }
+  .field__box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 52px;
+    padding: 0 14px 0 16px;
+    border: 1px solid var(--md-outline);
+    border-radius: 10px;
+    background: var(--md-surface-container-lowest);
+    color: var(--md-on-surface-variant);
+  }
+  .field__box:focus-within { border: 2px solid var(--md-primary); padding: 0 13px 0 15px; }
+  .field__box input,
+  .field__box select {
+    flex: 1;
+    min-width: 0;
+    height: 50px;
+    border: 0;
+    background: none;
+    color: var(--md-on-surface);
+    font: 400 16px/24px var(--font-plain);
+    outline: none;
+  }
+  .field__box input::placeholder { color: var(--md-on-surface-variant); }
+  .field__box input:disabled { opacity: 0.45; }
+  .field__box--select select { appearance: none; cursor: pointer; }
+  .field__box--select :global(svg) { position: absolute; right: 12px; pointer-events: none; }
+  .field__error { display: none; margin: 0; font: 400 12px/16px var(--font-plain); color: var(--md-error); }
+  .field.is-invalid .field__box { border-color: var(--md-error); }
+  .field.is-invalid .field__error { display: block; }
+  .chip.is-small { height: 32px; padding: 0 12px; }
+
+  .captcha { display: flex; align-items: center; gap: 8px; min-height: 36px; flex-wrap: wrap; }
+  .captcha__ok {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 1px solid var(--md-outline-variant);
+    border-radius: 10px;
+    background: var(--md-surface-container-lowest);
+  }
+  .captcha__ok[hidden], .captcha__wait[hidden] { display: none; }
+
+  .note {
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: var(--md-error-container);
+    color: var(--md-on-error-container);
+  }
+
+  .progress { display: grid; gap: 6px; }
+  .progress[hidden] { display: none; }
+  .progress__bar { height: 6px; border-radius: 3px; background: var(--md-surface-variant); overflow: hidden; }
+  .progress__bar span { display: block; height: 100%; width: 0; background: var(--md-primary); transition: width 0.2s; }
+
+  .upload [data-submit] { gap: 8px; }
+  .upload [data-submit]:disabled { opacity: 0.5; pointer-events: none; }
+
   .drop-overlay {
     position: fixed;
     inset: 0;
@@ -98,5 +374,11 @@ const t = useTranslations(lang);
     border-radius: 32px;
     background: var(--md-surface-container-lowest);
     color: var(--md-primary);
+  }
+
+  @media (max-width: 480px) {
+    .upload .dialog__inner { padding: 24px 18px 20px; }
+    .thumbs { grid-template-columns: repeat(3, 1fr); }
+    .field__row { flex-wrap: wrap; }
   }
 </style>
