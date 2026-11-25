@@ -99,7 +99,12 @@ const tiles = await homeTiles((Astro.locals.settings ?? defaultSettings()).home,
               <span data-vol-icon="down" hidden><Icon name="volume_down" size={20} /></span>
               <span data-vol-icon="off" hidden><Icon name="volume_off" size={20} /></span>
             </button>
-            <input type="range" class="vol__range" min="0" max="100" step="1" value="80" data-vol aria-label={t('home.volume')} style="--v: 0.8" />
+            <div class="vol__slider" style="--v: 0.8">
+              <span class="vol__active" aria-hidden="true"></span>
+              <span class="vol__inactive" aria-hidden="true"></span>
+              <span class="vol__thumb" aria-hidden="true"></span>
+              <input type="range" class="vol__range" min="0" max="100" step="1" value="80" data-vol aria-label={t('home.volume')} />
+            </div>
           </div>
         )}
         {vibe && <audio data-vibe-audio src={`/audio/${vibe.audio}`} preload="none"></audio>}
@@ -226,7 +231,7 @@ const tiles = await homeTiles((Astro.locals.settings ?? defaultSettings()).home,
       if (v > 0) last = v;
       if (range) {
         range.value = String(Math.round(v * 100));
-        range.style.setProperty('--v', String(v));
+        range.parentElement?.style.setProperty('--v', String(v));
       }
       const icon = v === 0 ? 'off' : v < 0.5 ? 'down' : 'up';
       document.querySelectorAll<HTMLElement>('[data-vol-icon]').forEach((el) => (el.hidden = el.dataset.volIcon !== icon));
@@ -460,64 +465,67 @@ const tiles = await homeTiles((Astro.locals.settings ?? defaultSettings()).home,
   }
   .vol__btn:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
   .vol__btn:focus-visible { outline: 2px solid var(--md-primary); outline-offset: 1px; }
-  .vol__range {
+  /* Сам ползунок рисуем span'ами (две дорожки + ручка), а настоящий <input type=range>
+     лежит сверху прозрачным - он отвечает за мышь, тач и клавиатуру */
+  .vol__slider {
     --active: var(--md-primary);
     --inactive: var(--md-primary-fixed-dim);
-    /* позиция ручки в px внутри дорожки (ручка 4px) */
+    /* центр ручки: от 2px до (ширина - 2px) - так же ходит ручка 4px у настоящего input */
     --x: calc(var(--v, 0.8) * (100% - 4px) + 2px);
+    position: relative;
     flex: 1;
     min-width: 0;
     height: 28px;
+  }
+  .vol__active,
+  .vol__inactive {
+    position: absolute;
+    top: 6px;
+    height: 16px;
+    pointer-events: none;
+  }
+  /* снаружи скругление 8px, у ручки 2px; между дорожкой и ручкой зазор 6px */
+  .vol__active {
+    left: 0;
+    width: max(0px, calc(var(--x) - 6px));
+    border-radius: 8px 2px 2px 8px;
+    background: var(--active);
+  }
+  .vol__inactive {
+    left: calc(var(--x) + 6px);
+    right: 0;
+    border-radius: 2px 8px 8px 2px;
+    background:
+      radial-gradient(circle at calc(100% - 8px) 50%, var(--active) 0 2px, transparent 2.5px),
+      var(--inactive);
+  }
+  .vol__thumb {
+    position: absolute;
+    top: 0;
+    left: calc(var(--x) - 2px);
+    width: 4px;
+    height: 28px;
+    border-radius: 2px;
+    background: var(--active);
+    pointer-events: none;
+    transition: width 0.12s;
+  }
+  .vol__slider:active .vol__thumb { width: 2px; left: calc(var(--x) - 1px); }
+  .vol__slider:has(.vol__range:focus-visible) .vol__thumb { outline: 2px solid var(--md-secondary, var(--active)); outline-offset: 2px; }
+  .vol__range {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     margin: 0;
-    background: none;
+    opacity: 0;
     appearance: none;
     -webkit-appearance: none;
+    background: none;
     cursor: pointer;
   }
-  .vol__range:focus { outline: none; }
-  .vol__range::-webkit-slider-runnable-track {
-    height: 16px;
-    border-radius: 8px;
-    background:
-      radial-gradient(circle at calc(100% - 6px) 50%, var(--active) 0 2px, transparent 2.5px),
-      linear-gradient(to right,
-        var(--active) 0 calc(var(--x) - 6px),
-        transparent calc(var(--x) - 6px) calc(var(--x) + 6px),
-        var(--inactive) calc(var(--x) + 6px));
-    background-clip: content-box;
-  }
-  .vol__range::-moz-range-track {
-    height: 16px;
-    border-radius: 8px;
-    background:
-      radial-gradient(circle at calc(100% - 6px) 50%, var(--active) 0 2px, transparent 2.5px),
-      linear-gradient(to right,
-        var(--active) 0 calc(var(--x) - 6px),
-        transparent calc(var(--x) - 6px) calc(var(--x) + 6px),
-        var(--inactive) calc(var(--x) + 6px));
-  }
-  .vol__range::-webkit-slider-thumb {
-    width: 4px;
-    height: 28px;
-    margin-top: -6px;
-    border: 0;
-    border-radius: 2px;
-    background: var(--active);
-    -webkit-appearance: none;
-    transition: width 0.15s;
-  }
-  .vol__range::-moz-range-thumb {
-    width: 4px;
-    height: 28px;
-    border: 0;
-    border-radius: 2px;
-    background: var(--active);
-  }
-  /* при нажатии ручка становится тоньше - как в M3 */
-  .vol__range:active::-webkit-slider-thumb { width: 2px; }
-  .vol__range:active::-moz-range-thumb { width: 2px; }
-  .vol__range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px color-mix(in srgb, var(--active) 30%, transparent); }
-  .vol__range:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px color-mix(in srgb, var(--active) 30%, transparent); }
+  .vol__range::-webkit-slider-thumb { width: 4px; height: 28px; -webkit-appearance: none; }
+  .vol__range::-moz-range-thumb { width: 4px; height: 28px; border: 0; }
 
   .vibe__name { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
 
@@ -654,7 +662,7 @@ const tiles = await homeTiles((Astro.locals.settings ?? defaultSettings()).home,
   }
   :global(html[data-mode='dark']) .vibe__artist { color: var(--md-primary-fixed-dim); }
   :global(html[data-mode='dark']) .vol__btn { color: var(--md-primary-fixed-dim); }
-  :global(html[data-mode='dark']) .vol__range { --active: var(--md-primary-fixed-dim); --inactive: var(--md-on-primary-fixed-variant); }
+  :global(html[data-mode='dark']) .vol__slider { --active: var(--md-primary-fixed-dim); --inactive: var(--md-on-primary-fixed-variant); }
 
   :global(html[data-mode='dark']) .now {
     background: var(--md-on-tertiary-fixed);
