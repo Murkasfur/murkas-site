@@ -37,15 +37,17 @@
     if (!target) return;
     // У текстовых ссылок без своей формы обводим сам текст, а не всю ширину блока
     const own0 = parseFloat(getComputedStyle(target).borderTopLeftRadius) || 0;
+    const isLink = target.tagName === 'A';
     let r = target.getBoundingClientRect();
-    if (!own0) {
+    if (!own0 && isLink) {
       const range = document.createRange();
       range.selectNodeContents(target);
       const t = range.getBoundingClientRect();
       if (t.width && t.height) r = t;
     }
     // У элементов без своей формы (текстовые ссылки, логотип) - мягкая пилюля с запасом
-    const own = parseFloat(getComputedStyle(target).borderTopLeftRadius) || 0;
+    // кнопки без своего скругления (сегменты переключателя) - мягкий прямоугольник по кнопке
+    const own = parseFloat(getComputedStyle(target).borderTopLeftRadius) || (isLink ? 0 : 10);
     const pad = own ? 4 : 8;
     const h = r.height + pad * 2;
     const radius = own ? Math.min(h / 2, own + pad) : h / 2;

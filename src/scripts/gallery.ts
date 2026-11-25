@@ -84,7 +84,8 @@ export function initGallery(root: HTMLElement) {
       }),
     );
   };
-  pressGroup('[data-character]', 'character');
+  // только кнопки: у самих карточек тоже есть data-character
+  pressGroup('button[data-character]', 'character');
   pressGroup('[data-cat-btn]', 'cat');
 
   const selects: [string, 'person' | 'year' | 'sort'][] = [
@@ -106,7 +107,7 @@ export function initGallery(root: HTMLElement) {
       s.value = 'all';
       s.dispatchEvent(new Event('select:sync'));
     });
-    root.querySelectorAll<HTMLElement>('[data-character], [data-cat-btn]').forEach((b) =>
+    root.querySelectorAll<HTMLElement>('button[data-character], [data-cat-btn]').forEach((b) =>
       b.setAttribute('aria-pressed', String(b.dataset.value === 'all')),
     );
     rerender();

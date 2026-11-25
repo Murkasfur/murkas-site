@@ -18,6 +18,7 @@ const COMMANDS = [
   { command: 'maintenance', description: 'Закрыть / открыть сайт' },
   { command: 'pending', description: 'Ждут проверки' },
   { command: 'home', description: 'Фото на главной' },
+  { command: 'hero', description: 'Картинка в «Привет, это»' },
   { command: 'rejected', description: 'Отклонённые' },
   { command: 'limit', description: 'Лимит загрузок' },
   { command: 'cancel', description: 'Отменить' },

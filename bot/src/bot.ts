@@ -1,10 +1,11 @@
 // Логика бота: команды, кнопки и пошаговые диалоги.
 import type { Env } from './env';
-import { api, send, edit, answer, esc, type Update, type Message, type CallbackQuery, type Keyboard } from './tg';
+import { api, downloadFile, send, edit, answer, esc, type Update, type Message, type CallbackQuery, type Keyboard } from './tg';
 import { SETTINGS_KEY, mergeSettings, type Settings } from '../../src/lib/settings-core';
 import { pages, type PageKey } from '../../src/data/site';
 import { computeNow, type NowSource } from '../../src/lib/now-core';
 import { mediaCallback, pendingCommand, rejectedCommand, storageLine } from './media';
+import { sniff, shortId } from '../../src/lib/media-core';
 import {
   STATUSES, statusLabel, parsePair, parseDate, parseUrl, dateText,
   listEvents, getEvent, insertEvent, updateEvent, deleteEvent, toNowEvent, KINDS, kindLabel, type Kind,
@@ -19,6 +20,7 @@ type State =
   | { flow: 'edit'; id: string; field: Field }
   | { flow: 'now' }
   | { flow: 'homeLabel'; id: string; slot: number }
+  | { flow: 'hero' }
   | { flow: 'default' };
 
 const getState = async (env: Env, chat: number) => {
@@ -62,6 +64,7 @@ const HELP = `<b>Бот murkas.net</b> 🐾
 /rejected - отклонённые (вернуть или удалить)
 /limit - сколько файлов в сутки можно загрузить с одного IP
 /home - три фото в карточке «Фурсьюты» на главной
+/hero - картинка в карточке «Привет, это» на главной
 
 /cancel - отменить то, что делаешь сейчас`;
 
@@ -216,7 +219,37 @@ export async function handleUpdate(env: Env, u: Update) {
   if (!from || !admins.includes(from)) return; // чужим молчим
   if (u.message?.chat.type && u.message.chat.type !== 'private') return;
   if (u.callback_query) return onCallback(env, u.callback_query);
+  if (u.message?.photo || u.message?.document) return onFile(env, u.message);
   if (u.message?.text) return onText(env, u.message);
+}
+
+/** Прислали картинку: если ждём фото для «Привет, это» - ставим */
+async function onFile(env: Env, msg: Message) {
+  const chat = msg.chat.id;
+  const st = await getState(env, chat);
+  if (st?.flow !== 'hero') return send(env, chat, 'Чтобы поставить картинку в «Привет, это» на главной, сначала /hero');
+  const file = msg.document ?? msg.photo![msg.photo!.length - 1]; // у фото последний размер - самый большой
+  if ((file.file_size ?? 0) > 20 * 1024 * 1024) return send(env, chat, 'Больше 20 МБ - Telegram не даёт ботам такие скачивать. Пришли поменьше.');
+  const bytes = await downloadFile(env, file.file_id);
+  const type = bytes && sniff(bytes);
+  if (!bytes || !type) return send(env, chat, 'Не получилось прочитать картинку. Нужен JPG, PNG, WebP или GIF.');
+  const name = `${shortId(10)}.${type.ext}`;
+  await env.MEDIA.put(`media/${name}`, bytes, { httpMetadata: { contentType: type.mime } });
+  return setHero(env, chat, name);
+}
+
+async function setHero(env: Env, chat: number, file: string | null) {
+  const s = await getSettings(env);
+  const old = s.hero;
+  s.hero = file;
+  await saveSettings(env, s);
+  await clearState(env, chat);
+  // старую картинку, загруженную именно для «Привет» (не из галереи), убираем из R2
+  if (old && old !== file) {
+    const inGallery = await env.DB.prepare(`SELECT id FROM media WHERE r2_key = ?`).bind(`media/${old}`).first();
+    if (!inGallery) await env.MEDIA.delete(`media/${old}`);
+  }
+  return send(env, chat, file ? 'Готово ✅ Картинка в «Привет, это» обновится на главной в течение минуты.' : 'Убрало картинку из «Привет, это».');
 }
 
 async function onText(env: Env, msg: Message) {
@@ -276,6 +309,14 @@ async function onText(env: Env, msg: Message) {
         const [t, kb] = await eventsList(env);
         return send(env, chat, t, kb);
       }
+      case 'hero': {
+        const sets = await getSettings(env);
+        await setState(env, chat, { flow: 'hero' });
+        return send(env, chat, `<b>Картинка в «Привет, это»</b>\nСейчас: ${sets.hero ? 'стоит' : 'нет (зелёная заглушка)'}\n\nПришли фото сюда (можно файлом, чтобы без сжатия). Или открой фото с сайта в «🔍 По одному» и нажми <b>👋 В «Привет»</b>.`, [
+          ...(sets.hero ? [[{ text: '🗑 Убрать картинку', callback_data: 'hhx' }]] : []),
+          [CANCEL_BTN],
+        ]);
+      }
       case 'home': {
         const [t, kb] = await homeScreen(env);
         return send(env, chat, t, kb);
@@ -312,6 +353,7 @@ async function onText(env: Env, msg: Message) {
     if (!p) return send(env, chat, 'Пусто или слишком длинно. Напиши: <i>Русский | English</i>');
     return saveHomeSlot(env, chat, st.id, st.slot, p[0], p[1] ?? p[0]);
   }
+  if (st.flow === 'hero') return send(env, chat, 'Жду картинку: пришли фото или файл. /cancel - отменить');
 
   // разбираем ответ на текущий шаг
   const field = st.flow === 'add' ? st.step : st.field;
@@ -532,6 +574,17 @@ async function onCallback(env: Env, cb: CallbackQuery) {
       await answer(env, cb, kindLabel(b));
       return e && edit(env, msg, eventCard(e), eventKb(e.id));
     }
+
+    case 'hh': {
+      const row = await env.DB.prepare(`SELECT r2_key FROM media WHERE id = ? AND status = 'published'`).bind(a).first<{ r2_key: string | null }>();
+      if (!row?.r2_key) return answer(env, cb, 'Сначала прими фото');
+      await answer(env, cb, 'Ставлю в «Привет»');
+      return setHero(env, chat, row.r2_key.split('/').pop()!);
+    }
+
+    case 'hhx':
+      await answer(env, cb);
+      return setHero(env, chat, null);
 
     case 'hm': {
       const sets = await getSettings(env);

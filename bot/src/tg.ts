@@ -10,8 +10,8 @@ export type Message = {
   from?: { id: number; first_name?: string };
   text?: string;
   caption?: string;
-  photo?: unknown[];
-  document?: unknown;
+  photo?: { file_id: string; file_size?: number; width: number; height: number }[];
+  document?: { file_id: string; file_size?: number; mime_type?: string; file_name?: string };
 };
 export type CallbackQuery = {
   id: string;
@@ -72,3 +72,11 @@ export const answer = (env: Env, cb: CallbackQuery, text?: string) =>
   api(env, 'answerCallbackQuery', { callback_query_id: cb.id, ...(text ? { text } : {}) });
 
 export const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+/** Скачать файл, присланный боту (до 20 МБ - ограничение Telegram для ботов) */
+export async function downloadFile(env: Env, fileId: string): Promise<Uint8Array | null> {
+  const f = await api<{ file_path?: string }>(env, 'getFile', { file_id: fileId });
+  if (!f?.file_path) return null;
+  const res = await fetch(`https://api.telegram.org/file/bot${env.TG_BOT_TOKEN}/${f.file_path}`);
+  return res.ok ? new Uint8Array(await res.arrayBuffer()) : null;
+}
