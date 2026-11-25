@@ -4,7 +4,7 @@ import { defineMiddleware } from 'astro:middleware';
 import { getSettings } from './lib/settings';
 
 export const onRequest = defineMiddleware(async (ctx, next) => {
-  const isApi = ctx.url.pathname.startsWith('/api/') || ctx.url.pathname.startsWith('/media/');
+  const isApi = ctx.url.pathname.startsWith('/api/') || ctx.url.pathname.startsWith('/media/') || ctx.url.pathname.startsWith('/audio/');
   if (!isApi) ctx.locals.settings = await getSettings();
   const res = await next();
   if (!isApi && !res.headers.has('Cache-Control') && res.headers.get('Content-Type')?.includes('text/html')) {

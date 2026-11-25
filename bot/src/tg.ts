@@ -12,6 +12,12 @@ export type Message = {
   caption?: string;
   photo?: { file_id: string; file_size?: number; width: number; height: number }[];
   document?: { file_id: string; file_size?: number; mime_type?: string; file_name?: string };
+  audio?: {
+    file_id: string; file_size?: number; mime_type?: string; file_name?: string;
+    title?: string; performer?: string; duration?: number;
+    thumbnail?: { file_id: string; file_size?: number };
+  };
+  voice?: { file_id: string };
   reply_markup?: { inline_keyboard?: Keyboard };
 };
 export type CallbackQuery = {

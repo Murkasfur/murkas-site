@@ -21,6 +21,7 @@ const COMMANDS = [
   { command: 'arts', description: 'Арты на сайте' },
   { command: 'home', description: 'Фото на главной' },
   { command: 'hero', description: 'Картинка в «Привет, это»' },
+  { command: 'vibe', description: 'Трек в «Мой вайб»' },
   { command: 'rejected', description: 'Отклонённые' },
   { command: 'limit', description: 'Лимит загрузок' },
   { command: 'cancel', description: 'Отменить' },

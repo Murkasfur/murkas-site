@@ -27,11 +27,13 @@ export const pages: { key: PageKey; path: string; status: PageStatus }[] = [
 
 export const pageStatus = (key: PageKey) => pages.find((p) => p.key === key)?.status ?? 'live';
 
-// TODO: вписать настоящие ссылки
-export const socials = [
-  { key: 'telegram', label: 'Telegram', href: 'https://t.me/', handle: '@murkas' },
-  { key: 'discord', label: 'Discord', href: 'https://discord.com/', handle: 'murkas' },
-  { key: 'tiktok', label: 'TikTok', href: 'https://www.tiktok.com/', handle: '@murkas' },
-  { key: 'youtube', label: 'YouTube', href: 'https://www.youtube.com/', handle: '@murkas' },
-  { key: 'x', label: 'X', href: 'https://x.com/', handle: '@murkas' },
-] as const;
+// Соцсети. У Discord нет публичной ссылки по нику, поэтому там copy:
+// по нажатию ник копируется в буфер (добавить в друзья можно только по нику)
+export type Social = { key: string; label: string; handle: string; href?: string; copy?: string };
+export const socials: Social[] = [
+  { key: 'telegram', label: 'Telegram', href: 'https://t.me/Murkasfur', handle: '@Murkasfur' },
+  { key: 'discord', label: 'Discord', copy: 'koshyara', handle: 'koshyara' },
+  { key: 'tiktok', label: 'TikTok', href: 'https://www.tiktok.com/@murkasredpanda', handle: '@murkasredpanda' },
+  { key: 'youtube', label: 'YouTube', href: 'https://www.youtube.com/@Koshyaraa', handle: '@Koshyaraa' },
+  { key: 'x', label: 'X', href: 'https://x.com/Murkasfur', handle: '@Murkasfur' },
+];

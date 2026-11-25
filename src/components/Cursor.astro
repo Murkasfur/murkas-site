@@ -47,7 +47,10 @@
     }
     // У элементов без своей формы (текстовые ссылки, логотип) - мягкая пилюля с запасом
     // кнопки без своего скругления (сегменты переключателя) - мягкий прямоугольник по кнопке
-    const own = parseFloat(getComputedStyle(target).borderTopLeftRadius) || (isLink ? 0 : 10);
+    const rawR = getComputedStyle(target).borderTopLeftRadius;
+    // круглые элементы (border-radius: 50%, например диск «Мой вайб») - обводим кругом
+    const round = rawR.endsWith('%') && parseFloat(rawR) >= 50;
+    const own = round ? Infinity : parseFloat(rawR) || (isLink ? 0 : 10);
     const pad = own ? 4 : 8;
     const h = r.height + pad * 2;
     const radius = own ? Math.min(h / 2, own + pad) : h / 2;

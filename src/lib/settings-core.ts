@@ -3,7 +3,7 @@
 // берётся из src/data/site.ts, так что пустой KV = сайт как в коде.
 // Этот файл без зависимостей: его импортирует и сайт, и бот (bot/).
 import { site, pages, type PageKey, type PageStatus } from '../data/site';
-import { LIMITS } from './media-core';
+import { LIMITS, AUDIO_NAME } from './media-core';
 
 export const SETTINGS_KEY = 'settings';
 
@@ -20,7 +20,11 @@ export type Settings = {
   home: (HomeSlot | null)[];
   /** Фото в карточке «Привет, это» на главной: имя файла в R2 media/ (бот: «👋 В «Привет»», /hero) */
   hero: string | null;
+  /** Трек в «Мой вайб» на главной (бот: /vibe, прислать аудиофайл). null = диск без звука */
+  vibe: Vibe | null;
 };
+/** audio - файл в R2 audio/, cover - картинка в R2 media/ (или null = стандартная обложка) */
+export type Vibe = { audio: string; title: string; artist: string; cover: string | null };
 export type HomeSlot = { id: string; ru: string; en: string };
 
 export const defaultSettings = (): Settings => ({
@@ -30,6 +34,7 @@ export const defaultSettings = (): Settings => ({
   uploadLimit: LIMITS.perDay,
   home: [null, null, null],
   hero: null,
+  vibe: null,
 });
 
 /** Сливает то, что лежит в KV, с дефолтами; мусор и лишние ключи игнорирует */
@@ -56,6 +61,15 @@ export function mergeSettings(raw: unknown): Settings {
     });
   }
   if (typeof r.hero === 'string' && /^[a-z0-9]{6,20}\.(jpg|png|webp|gif)$/.test(r.hero)) s.hero = r.hero;
+  const v = r.vibe;
+  if (v && typeof v === 'object' && typeof v.audio === 'string' && AUDIO_NAME.test(v.audio)) {
+    s.vibe = {
+      audio: v.audio,
+      title: String(v.title ?? '').slice(0, 100),
+      artist: String(v.artist ?? '').slice(0, 100),
+      cover: typeof v.cover === 'string' && /^[a-z0-9]{6,20}\.(jpg|png|webp|gif)$/.test(v.cover) ? v.cover : null,
+    };
+  }
   const m = r.manual;
   if (m && typeof m === 'object' && typeof m.ru === 'string' && typeof m.en === 'string') {
     s.manual = { ru: m.ru, en: m.en, until: typeof m.until === 'string' ? m.until : null };

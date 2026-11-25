@@ -11,12 +11,19 @@ const t = useTranslations(lang);
   <h2 class="md-title-small card__title">{t('home.socials')}</h2>
   <div class="grid">
     {
-      socials.map((s) => (
-        <a class="tile" href={s.href} target="_blank" rel="noopener me">
-          <Icon name={s.key} />
-          <span class="md-label-medium">{s.label}</span>
-        </a>
-      ))
+      socials.map((s) =>
+        s.copy ? (
+          <button type="button" class="tile" data-copy={s.copy} aria-label={`${s.label}: ${s.copy} - ${t('home.copyNick')}`}>
+            <Icon name={s.key} />
+            <span class="md-label-medium">{s.label}</span>
+          </button>
+        ) : (
+          <a class="tile" href={s.href} target="_blank" rel="noopener me">
+            <Icon name={s.key} />
+            <span class="md-label-medium">{s.label}</span>
+          </a>
+        ),
+      )
     }
     <button type="button" class="tile" data-open-links>
       <Icon name="more_horiz" />
@@ -24,6 +31,8 @@ const t = useTranslations(lang);
     </button>
   </div>
 </section>
+
+<span hidden data-copied={t('home.copied')}></span>
 
 <dialog class="dialog" id="links-dialog" aria-labelledby="links-title">
   <div class="dialog__inner">
@@ -35,14 +44,25 @@ const t = useTranslations(lang);
       {
         socials.map((s) => (
           <li>
-            <a href={s.href} target="_blank" rel="noopener me" class="link-row">
-              <span class="link-row__icon"><Icon name={s.key} size={20} /></span>
-              <span class="link-row__text">
-                <span class="md-title-small">{s.label}</span>
-                <span class="md-body-small muted">{s.handle}</span>
-              </span>
-              <Icon name="arrow_outward" size={18} />
-            </a>
+            {s.copy ? (
+              <button type="button" class="link-row" data-copy={s.copy}>
+                <span class="link-row__icon"><Icon name={s.key} size={20} /></span>
+                <span class="link-row__text">
+                  <span class="md-title-small">{s.label}</span>
+                  <span class="md-body-small muted">{s.handle} · {t('home.copyNick')}</span>
+                </span>
+                <Icon name="content_copy" size={18} />
+              </button>
+            ) : (
+              <a href={s.href} target="_blank" rel="noopener me" class="link-row">
+                <span class="link-row__icon"><Icon name={s.key} size={20} /></span>
+                <span class="link-row__text">
+                  <span class="md-title-small">{s.label}</span>
+                  <span class="md-body-small muted">{s.handle}</span>
+                </span>
+                <Icon name="arrow_outward" size={18} />
+              </a>
+            )}
           </li>
         ))
       }
@@ -52,9 +72,24 @@ const t = useTranslations(lang);
 
 <script>
   import { openDialog, bindDialog } from '../scripts/dialog';
+  import { showSnackbar } from '../scripts/snackbar';
   const d = document.getElementById('links-dialog') as HTMLDialogElement | null;
   bindDialog(d);
   document.querySelectorAll('[data-open-links]').forEach((b) => b.addEventListener('click', () => d && openDialog(d)));
+
+  // Discord: ника по ссылке не открыть - копируем его
+  const copiedTpl = document.querySelector<HTMLElement>('[data-copied]')?.dataset.copied ?? '{nick}';
+  document.querySelectorAll<HTMLElement>('[data-copy]').forEach((b) =>
+    b.addEventListener('click', async () => {
+      const nick = b.dataset.copy!;
+      try {
+        await navigator.clipboard.writeText(nick);
+        showSnackbar(copiedTpl.replace('{nick}', nick));
+      } catch {
+        showSnackbar(nick);
+      }
+    }),
+  );
 </script>
 
 <style>
@@ -92,6 +127,7 @@ const t = useTranslations(lang);
     text-decoration: none;
     color: var(--md-on-surface-variant);
   }
+  button.link-row { width: 100%; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; }
   .link-row:hover { background: color-mix(in srgb, var(--md-on-surface) 8%, transparent); }
   .link-row__icon {
     display: grid;

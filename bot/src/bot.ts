@@ -5,7 +5,7 @@ import { SETTINGS_KEY, mergeSettings, type Settings } from '../../src/lib/settin
 import { pages, type PageKey } from '../../src/data/site';
 import { computeNow, type NowSource } from '../../src/lib/now-core';
 import { mediaCallback, pendingCommand, rejectedCommand, storageLine, navRows, scopeOf, showViewer, refreshViewerText } from './media';
-import { sniff, shortId } from '../../src/lib/media-core';
+import { sniff, sniffAudio, shortId } from '../../src/lib/media-core';
 import {
   STATUSES, statusLabel, parsePair, parseDate, parseDay, parseUrl, dateText,
   listEvents, getEvent, insertEvent, updateEvent, deleteEvent, toNowEvent, KINDS, kindLabel, type Kind,
@@ -21,6 +21,7 @@ type State =
   | { flow: 'now' }
   | { flow: 'homeLabel'; id: string; slot: number }
   | { flow: 'hero' }
+  | { flow: 'vibe'; field: 'title' | 'artist' | 'cover' }
   | { flow: 'mediaEdit'; id: string; field: 'title' | 'caption' | 'author' | 'date'; msgId: number; scope: string | null }
   | { flow: 'default' };
 
@@ -67,6 +68,7 @@ const HELP = `<b>Бот murkas.net</b> 🐾
 /photos, /arts - листать всё, что уже на сайте, и править
 /home - три фото в карточке «Фурсьюты» на главной
 /hero - картинка в карточке «Привет, это» на главной
+/vibe - трек в «Мой вайб» (пришли аудиофайл)
 
 /cancel - отменить то, что делаешь сейчас`;
 
@@ -148,6 +150,7 @@ async function statusText(env: Env) {
 ${s.maintenance ? '🔴 Сайт закрыт (maintenance)' : '🟢 Сайт открыт'}
 🚧 В работе: ${wip.length ? wip.join(', ') : 'ничего'}
 💬 Сейчас: ${esc(now.ru)} <i>/ ${esc(now.en)}</i> (${SOURCE[now.source]})
+🎵 Мой вайб: ${s.vibe ? `${esc(s.vibe.title || 'без названия')}${s.vibe.artist ? ` - ${esc(s.vibe.artist)}` : ''}` : 'без звука'} (/vibe)
 
 📅 Ивентов: ${db?.events ?? 0}
 🖼 Опубликовано фото и артов: ${db?.published ?? 0}
@@ -221,6 +224,8 @@ export async function handleUpdate(env: Env, u: Update) {
   if (!from || !admins.includes(from)) return; // чужим молчим
   if (u.message?.chat.type && u.message.chat.type !== 'private') return;
   if (u.callback_query) return onCallback(env, u.callback_query);
+  if (u.message?.audio || u.message?.voice) return onAudio(env, u.message);
+  if (u.message?.document && /^audio\//.test(u.message.document.mime_type ?? '')) return onAudio(env, u.message);
   if (u.message?.photo || u.message?.document) return onFile(env, u.message);
   if (u.message?.text) return onText(env, u.message);
 }
@@ -229,7 +234,8 @@ export async function handleUpdate(env: Env, u: Update) {
 async function onFile(env: Env, msg: Message) {
   const chat = msg.chat.id;
   const st = await getState(env, chat);
-  if (st?.flow !== 'hero') return send(env, chat, 'Чтобы поставить картинку в «Привет, это» на главной, сначала /hero');
+  if (st?.flow === 'vibe' && st.field === 'cover') return onVibeCover(env, msg);
+  if (st?.flow !== 'hero') return send(env, chat, 'Чтобы поставить картинку в «Привет, это» на главной, сначала /hero. Обложку для «Мой вайб» - через /vibe');
   const file = msg.document ?? msg.photo![msg.photo!.length - 1]; // у фото последний размер - самый большой
   if ((file.file_size ?? 0) > 20 * 1024 * 1024) return send(env, chat, 'Больше 20 МБ - Telegram не даёт ботам такие скачивать. Пришли поменьше.');
   const bytes = await downloadFile(env, file.file_id);
@@ -238,6 +244,113 @@ async function onFile(env: Env, msg: Message) {
   const name = `${shortId(10)}.${type.ext}`;
   await env.MEDIA.put(`media/${name}`, bytes, { httpMetadata: { contentType: type.mime } });
   return setHero(env, chat, name);
+}
+
+// ---------- «Мой вайб»: свой трек на главной ----------
+
+/** Убрать файл из R2, если он больше нигде не используется (обложка могла быть фото из галереи) */
+async function dropMedia(env: Env, file: string | null) {
+  if (!file) return;
+  const inGallery = await env.DB.prepare(`SELECT id FROM media WHERE r2_key = ?`).bind(`media/${file}`).first();
+  const s = await getSettings(env);
+  if (!inGallery && s.hero !== file) await env.MEDIA.delete(`media/${file}`);
+}
+
+async function vibeScreen(env: Env): Promise<[string, Keyboard]> {
+  const v = (await getSettings(env)).vibe;
+  if (!v)
+    return [
+      '<b>Мой вайб</b>\nСейчас: <i>трека нет, диск крутится без звука</i>\n\nПришли аудиофайл (MP3, M4A, OGG, FLAC, WAV, до 20 МБ). Название, исполнитель и обложка возьмутся из файла, потом можно поправить.\n\n⚠️ Только то, на что у тебя есть права: свои записи или с разрешения автора.',
+      [[CANCEL_BTN]],
+    ];
+  return [
+    `<b>Мой вайб</b>\n🎵 <b>${esc(v.title || 'Без названия')}</b>${v.artist ? ` - ${esc(v.artist)}` : ''}\n🖼 Обложка: ${v.cover ? 'своя' : 'стандартная'}\n\nЧтобы заменить трек - просто пришли новый аудиофайл.`,
+    [
+      [{ text: '✏️ Название', callback_data: 'vbe:title' }, { text: '✏️ Исполнитель', callback_data: 'vbe:artist' }],
+      [{ text: '🖼 Обложка', callback_data: 'vbe:cover' }, ...(v.cover ? [{ text: '🗑 Обложку', callback_data: 'vbcx' }] : [])],
+      [{ text: '🗑 Убрать трек', callback_data: 'vbx' }],
+    ],
+  ];
+}
+
+/** Прислали аудио: кладём в R2 audio/ и ставим в «Мой вайб» */
+async function onAudio(env: Env, msg: Message) {
+  const chat = msg.chat.id;
+  if (msg.voice) return send(env, chat, 'Голосовое не подойдёт - пришли трек аудиофайлом (MP3, M4A и т.п.)');
+  const a = msg.audio ?? msg.document!;
+  if ((a.file_size ?? 0) > 20 * 1024 * 1024) return send(env, chat, 'Больше 20 МБ - Telegram не даёт ботам такие скачивать. Сожми трек (например, в MP3 192 kbps) и пришли снова.');
+  const bytes = await downloadFile(env, a.file_id);
+  const type = bytes && sniffAudio(bytes);
+  if (!bytes || !type) return send(env, chat, 'Не получилось прочитать аудио. Нужен MP3, M4A, OGG, FLAC или WAV.');
+  const name = `${shortId(10)}.${type.ext}`;
+  await env.MEDIA.put(`audio/${name}`, bytes, { httpMetadata: { contentType: type.mime } });
+
+  // обложка, вшитая в файл (Telegram отдаёт её уменьшенной копией)
+  let cover: string | null = null;
+  const thumbId = msg.audio?.thumbnail?.file_id;
+  if (thumbId) {
+    const img = await downloadFile(env, thumbId);
+    const it = img && sniff(img);
+    if (img && it) {
+      cover = `${shortId(10)}.${it.ext}`;
+      await env.MEDIA.put(`media/${cover}`, img, { httpMetadata: { contentType: it.mime } });
+    }
+  }
+
+  const s = await getSettings(env);
+  const old = s.vibe;
+  const fileTitle = (a.file_name ?? '').replace(/\.[a-z0-9]{2,4}$/i, '').replace(/[_]+/g, ' ').trim();
+  s.vibe = {
+    audio: name,
+    title: (msg.audio?.title ?? fileTitle).slice(0, 100),
+    artist: (msg.audio?.performer ?? '').slice(0, 100),
+    cover: cover ?? old?.cover ?? null,
+  };
+  await saveSettings(env, s);
+  await clearState(env, chat);
+  if (old) {
+    await env.MEDIA.delete(`audio/${old.audio}`);
+    if (cover && old.cover) await dropMedia(env, old.cover);
+  }
+  const [t, kb] = await vibeScreen(env);
+  return send(env, chat, `Готово ✅ Трек на главной обновится в течение минуты.\n\n${t}`, kb);
+}
+
+async function onVibeCover(env: Env, msg: Message) {
+  const chat = msg.chat.id;
+  const file = msg.document ?? msg.photo![msg.photo!.length - 1];
+  if ((file.file_size ?? 0) > 20 * 1024 * 1024) return send(env, chat, 'Больше 20 МБ - пришли поменьше.');
+  const bytes = await downloadFile(env, file.file_id);
+  const type = bytes && sniff(bytes);
+  if (!bytes || !type) return send(env, chat, 'Не получилось прочитать картинку. Нужен JPG, PNG, WebP или GIF.');
+  const s = await getSettings(env);
+  if (!s.vibe) {
+    await clearState(env, chat);
+    return send(env, chat, 'Сначала пришли трек: /vibe');
+  }
+  const name = `${shortId(10)}.${type.ext}`;
+  await env.MEDIA.put(`media/${name}`, bytes, { httpMetadata: { contentType: type.mime } });
+  const old = s.vibe.cover;
+  s.vibe.cover = name;
+  await saveSettings(env, s);
+  await clearState(env, chat);
+  await dropMedia(env, old);
+  const [t, kb] = await vibeScreen(env);
+  return send(env, chat, `Обложка обновлена ✅\n\n${t}`, kb);
+}
+
+async function saveVibeText(env: Env, chat: number, field: 'title' | 'artist', text: string) {
+  const s = await getSettings(env);
+  if (!s.vibe) {
+    await clearState(env, chat);
+    return send(env, chat, 'Трека уже нет: /vibe');
+  }
+  const v = text === '-' ? '' : text.slice(0, 100);
+  s.vibe[field] = v;
+  await saveSettings(env, s);
+  await clearState(env, chat);
+  const [t, kb] = await vibeScreen(env);
+  return send(env, chat, `Сохранило ✅\n\n${t}`, kb);
 }
 
 async function setHero(env: Env, chat: number, file: string | null) {
@@ -315,6 +428,10 @@ async function onText(env: Env, msg: Message) {
       case 'arts':
         await showViewer(env, chat, cmd === 'photos' ? 'P' : 'A', 0);
         return;
+      case 'vibe': {
+        const [t, kb] = await vibeScreen(env);
+        return send(env, chat, t, kb);
+      }
       case 'hero': {
         const sets = await getSettings(env);
         await setState(env, chat, { flow: 'hero' });
@@ -360,6 +477,10 @@ async function onText(env: Env, msg: Message) {
     return saveHomeSlot(env, chat, st.id, st.slot, p[0], p[1] ?? p[0]);
   }
   if (st.flow === 'hero') return send(env, chat, 'Жду картинку: пришли фото или файл. /cancel - отменить');
+  if (st.flow === 'vibe') {
+    if (st.field === 'cover') return send(env, chat, 'Жду картинку для обложки: пришли фото или файл. /cancel - отменить');
+    return saveVibeText(env, chat, st.field, text);
+  }
   if (st.flow === 'mediaEdit') return saveMediaText(env, chat, st, text);
 
   // разбираем ответ на текущий шаг
@@ -645,6 +766,44 @@ async function onCallback(env: Env, cb: CallbackQuery) {
     case 'hhx':
       await answer(env, cb);
       return setHero(env, chat, null);
+
+    case 'vbe': {
+      const field = a as 'title' | 'artist' | 'cover';
+      const v = (await getSettings(env)).vibe;
+      if (!v) return answer(env, cb, 'Трека нет');
+      await setState(env, chat, { flow: 'vibe', field });
+      await answer(env, cb);
+      if (field === 'cover') return send(env, chat, 'Пришли картинку для обложки (квадратная смотрится лучше всего).', [[CANCEL_BTN]]);
+      const cur = field === 'title' ? v.title : v.artist;
+      return send(env, chat, `${field === 'title' ? 'Новое название трека' : 'Исполнитель'}?\n\nСейчас: ${cur ? `<code>${esc(cur)}</code>` : '<i>пусто</i>'}${field === 'artist' ? '\n<code>-</code> - убрать' : ''}`, [[CANCEL_BTN]]);
+    }
+
+    case 'vbcx': {
+      const s = await getSettings(env);
+      if (s.vibe?.cover) {
+        const old = s.vibe.cover;
+        s.vibe.cover = null;
+        await saveSettings(env, s);
+        await dropMedia(env, old);
+      }
+      await answer(env, cb, 'Обложка стандартная');
+      const [t, kb] = await vibeScreen(env);
+      return edit(env, msg, t, kb);
+    }
+
+    case 'vbx': {
+      const s = await getSettings(env);
+      const old = s.vibe;
+      s.vibe = null;
+      await saveSettings(env, s);
+      if (old) {
+        await env.MEDIA.delete(`audio/${old.audio}`);
+        await dropMedia(env, old.cover);
+      }
+      await answer(env, cb, 'Убрало трек');
+      const [t, kb] = await vibeScreen(env);
+      return edit(env, msg, t, kb);
+    }
 
     case 'hm': {
       const sets = await getSettings(env);

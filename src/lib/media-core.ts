@@ -47,6 +47,18 @@ export function sniff(b: Uint8Array): { mime: string; ext: string } | null {
   return null;
 }
 
+/** Аудио для «Мой вайб»: определяем формат по первым байтам, а не по имени файла */
+export function sniffAudio(b: Uint8Array): { mime: string; ext: string } | null {
+  const ascii = (from: number, to: number) => String.fromCharCode(...b.slice(from, to));
+  if (ascii(0, 3) === 'ID3' || (b[0] === 0xff && (b[1] & 0xe0) === 0xe0 && (b[1] & 0x06) !== 0)) return { mime: 'audio/mpeg', ext: 'mp3' };
+  if (ascii(4, 8) === 'ftyp') return { mime: 'audio/mp4', ext: 'm4a' };
+  if (ascii(0, 4) === 'OggS') return { mime: 'audio/ogg', ext: 'ogg' };
+  if (ascii(0, 4) === 'fLaC') return { mime: 'audio/flac', ext: 'flac' };
+  if (ascii(0, 4) === 'RIFF' && ascii(8, 12) === 'WAVE') return { mime: 'audio/wav', ext: 'wav' };
+  return null;
+}
+export const AUDIO_NAME = /^[a-z0-9]{6,20}\.(mp3|m4a|ogg|flac|wav)$/;
+
 /** Короткий случайный id (base36), для R2-ключей и кнопок бота */
 export const shortId = (len = 10) => {
   const a = new Uint8Array(len);

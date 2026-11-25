@@ -35,6 +35,11 @@ const statusKey = (e: EventItem) => `status.${e.status}` as UiKey;
 
 const telegram = socials.find((s) => s.key === 'telegram')!;
 const heroImg = (Astro.locals.settings ?? defaultSettings()).hero;
+// «Мой вайб»: трек ставится ботом (/vibe). Без трека диск просто крутится
+const vibe = (Astro.locals.settings ?? defaultSettings()).vibe;
+const vibeTitle = vibe ? vibe.title || t('home.vibeUntitled') : 'Getting Over You';
+const vibeArtist = vibe ? vibe.artist : 'Hot Freaks';
+const vibeCover = vibe?.cover ? `/media/${vibe.cover}?w=400` : '/img/vibe-cover.webp';
 const tiles = await homeTiles((Astro.locals.settings ?? defaultSettings()).home, lang, [t('home.fsFull'), t('home.fsRide'), t('home.fsBack')]);
 ---
 
@@ -67,9 +72,10 @@ const tiles = await homeTiles((Astro.locals.settings ?? defaultSettings()).home,
       <!-- Мой вайб -->
       <section class="vibe">
         <h2 class="md-label-large vibe__title">{t('home.vibe')}</h2>
-        <button type="button" class="disc" aria-pressed="false" aria-label="Getting Over You - Hot Freaks">
+        <button type="button" class="disc" aria-pressed="false" aria-label={[vibeTitle, vibeArtist].filter(Boolean).join(' - ')}>
+          {vibe && <span class="disc__ring" aria-hidden="true"></span>}
           <span class="disc__vinyl">
-            <img class="disc__cover" src="/img/vibe-cover.webp" alt="" width="64" height="64" decoding="async" />
+            <img class="disc__cover" src={vibeCover} alt="" width="64" height="64" decoding="async" />
             <span class="disc__spindle"></span>
           </span>
           <span class="disc__sheen"></span>
@@ -79,9 +85,10 @@ const tiles = await homeTiles((Astro.locals.settings ?? defaultSettings()).home,
           </span>
         </button>
         <div class="vibe__track">
-          <p class="md-title-small">Getting Over You</p>
-          <p class="md-body-small vibe__artist">Hot Freaks</p>
+          <p class="md-title-small vibe__name">{vibeTitle}</p>
+          {vibeArtist && <p class="md-body-small vibe__artist">{vibeArtist}</p>}
         </div>
+        {vibe && <audio data-vibe-audio src={`/audio/${vibe.audio}`} preload="none"></audio>}
       </section>
 
       <div class="socials-slot"><SocialsCard lang={lang} /></div>
@@ -160,10 +167,34 @@ const tiles = await homeTiles((Astro.locals.settings ?? defaultSettings()).home,
 </Page>
 
 <script>
-  // Винил: клик - крутится, ещё клик - останавливается
-  document.querySelectorAll<HTMLButtonElement>('.disc').forEach((d) =>
-    d.addEventListener('click', () => d.setAttribute('aria-pressed', String(d.getAttribute('aria-pressed') !== 'true'))),
-  );
+  // Винил: клик - играет и крутится, ещё клик - пауза.
+  // Если трек не поставлен в боте - диск просто крутится без звука.
+  const disc = document.querySelector<HTMLButtonElement>('.disc');
+  const audio = document.querySelector<HTMLAudioElement>('[data-vibe-audio]');
+  if (disc && audio) {
+    const set = (on: boolean) => disc.setAttribute('aria-pressed', String(on));
+    disc.addEventListener('click', () => {
+      if (audio.paused) audio.play().catch(() => set(false));
+      else audio.pause();
+    });
+    audio.addEventListener('play', () => set(true));
+    audio.addEventListener('pause', () => set(false));
+    audio.addEventListener('waiting', () => disc.classList.add('is-loading'));
+    audio.addEventListener('playing', () => disc.classList.remove('is-loading'));
+    audio.addEventListener('timeupdate', () => {
+      if (audio.duration) disc.style.setProperty('--p', String(audio.currentTime / audio.duration));
+    });
+    audio.addEventListener('ended', () => {
+      audio.currentTime = 0;
+      disc.style.setProperty('--p', '0');
+    });
+    audio.addEventListener('error', () => {
+      set(false);
+      disc.classList.remove('is-loading');
+    });
+  } else if (disc) {
+    disc.addEventListener('click', () => disc.setAttribute('aria-pressed', String(disc.getAttribute('aria-pressed') !== 'true')));
+  }
 
   // Живые часы по Торонто
   const clock = document.querySelector<HTMLElement>('[data-clock]');
@@ -260,7 +291,7 @@ const tiles = await homeTiles((Astro.locals.settings ?? defaultSettings()).home,
     color: var(--md-on-primary-fixed);
   }
   .vibe__title { align-self: stretch; }
-  .vibe__track { text-align: center; }
+  .vibe__track { text-align: center; max-width: 100%; }
   .vibe__artist { color: var(--md-on-primary-fixed-variant); }
 
   .disc {
@@ -326,6 +357,22 @@ const tiles = await homeTiles((Astro.locals.settings ?? defaultSettings()).home,
   .disc[aria-pressed='true'] .disc__hint { opacity: 0; }
   .disc[aria-pressed='true'] .disc__vinyl { animation-play-state: running; }
   @keyframes spin { to { transform: rotate(360deg); } }
+  /* Кольцо прогресса вокруг диска: --p от 0 до 1 ставит скрипт */
+  .disc__ring {
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    background: conic-gradient(var(--md-primary) calc(var(--p, 0) * 360deg), rgb(27 28 26 / 0.12) 0);
+    mask: radial-gradient(circle, transparent calc(50% - 3px), #000 calc(50% - 2.5px));
+    opacity: 0;
+    transition: opacity 0.25s;
+    pointer-events: none;
+  }
+  .disc[aria-pressed='true'] .disc__ring,
+  .disc[style*='--p'] .disc__ring { opacity: 1; }
+  .disc.is-loading .disc__ring { animation: pulse 1s ease-in-out infinite alternate; }
+  @keyframes pulse { from { opacity: 0.35; } to { opacity: 1; } }
+  .vibe__name { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
 
   /* ---------- Сейчас ---------- */
   .now {
