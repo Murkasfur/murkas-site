@@ -64,7 +64,21 @@ export async function listEvents(db: D1Database): Promise<EventItem[]> {
   for (const p of previews.results as { event_id: string; r2_key: string }[]) {
     byEvent.set(p.event_id, [...(byEvent.get(p.event_id) ?? []), `/media/${p.r2_key.split('/').pop()}?w=400`]);
   }
-  return (events.results as EventRow[]).map((r) => ({ ...rowToEvent(r), previews: byEvent.get(r.id) }));
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Toronto' });
+  return (events.results as EventRow[]).map((r) => attended({ ...rowToEvent(r), previews: byEvent.get(r.id) }, today));
+}
+
+const GOING = new Set(['full', 'partial', 'nosuit']);
+
+/**
+ * Ивент прошёл, а статус всё ещё «Буду в…» - значит был. Показываем «Был» и считаем в статистике,
+ * а в чём был - берём из прежнего статуса. В базе ничего не меняется: если не пошёл,
+ * достаточно поставить в боте «Не был» / «Не смогу».
+ */
+function attended(e: EventItem, today: string): EventItem {
+  const end = e.end ?? e.start;
+  if (!end || end >= today || !GOING.has(e.status)) return e;
+  return { ...e, status: 'went', suit: e.suit ?? (e.status as EventItem['suit']) };
 }
 
 /** Фото для статистики: всего опубликовано и сколько из них загрузили гости через сайт */

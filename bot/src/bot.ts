@@ -80,6 +80,13 @@ const kindRow = (prefix: string): Keyboard => [KINDS.map((k) => ({ text: `${k.em
 
 const CANCEL_BTN = { text: 'Отмена', callback_data: 'x' };
 
+/** Прошёл, а статус «Буду в…» - сайт сам считает его посещённым (src/lib/events.ts) */
+const autoWent = (e: EventDraft) => {
+  const end = e.end_date ?? e.start_date;
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Toronto' });
+  return !!end && end < today && ['full', 'partial', 'nosuit'].includes(e.status ?? '');
+};
+
 function eventCard(e: EventDraft & { id?: string }) {
   const pair = (ru?: string | null, en?: string | null) => esc(ru ?? '?') + (en ? ` <i>/ ${esc(en)}</i>` : '');
   return [
@@ -88,7 +95,7 @@ function eventCard(e: EventDraft & { id?: string }) {
     `📅 ${esc(dateText(e))}${e.approx_en ? ` <i>/ ${esc(e.approx_en)}</i>` : ''}`,
     kindLabel(e.kind),
     e.venue_ru ? `🏛 ${pair(e.venue_ru, e.venue_en)}` : '',
-    statusLabel(e.status ?? 'full'),
+    statusLabel(e.status ?? 'full') + (autoWent(e) ? '\n<i>Ивент прошёл - на сайте уже «Был». Если не пошёл, поставь «Не был».</i>' : ''),
     e.url ? `🔗 ${esc(e.url)}` : '',
   ].filter(Boolean).join('\n');
 }
