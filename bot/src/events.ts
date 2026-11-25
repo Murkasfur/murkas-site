@@ -28,7 +28,23 @@ export type EventDraft = {
   url?: string | null;
   start_time?: string | null;
   end_time?: string | null;
+  kind?: Kind | null;
+  venue_ru?: string | null;
+  venue_en?: string | null;
+  suit?: 'full' | 'partial' | 'nosuit' | null;
 };
+
+export type Kind = 'con' | 'meet' | 'local';
+export const KINDS: { key: Kind; ru: string; emoji: string }[] = [
+  { key: 'con', ru: 'Кон', emoji: '🏨' },
+  { key: 'meet', ru: 'Мит', emoji: '🐾' },
+  { key: 'local', ru: 'Локальное', emoji: '📍' },
+];
+export const kindLabel = (k?: string | null) => {
+  const x = KINDS.find((v) => v.key === k);
+  return x ? `${x.emoji} ${x.ru}` : '❔ тип не указан';
+};
+const SUITS = ['full', 'partial', 'nosuit'];
 export type EventRow = Required<Omit<EventDraft, 'status'>> & { id: string; status: Status };
 
 /** «Русское | English» -> пара. Если английского нет - null (сайт покажет русское). */
@@ -137,19 +153,22 @@ export async function insertEvent(db: D1Database, d: EventDraft): Promise<string
   for (let i = 2; await getEvent(db, id); i++) id = `${base}-${year}-${i}`.replace('--', '-');
   await db
     .prepare(
-      `INSERT INTO events (id, title_ru, title_en, city_ru, city_en, start_date, end_date, approx_ru, approx_en, sort_key, status, url, start_time, end_time)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO events (id, title_ru, title_en, city_ru, city_en, start_date, end_date, approx_ru, approx_en, sort_key, status, url, start_time, end_time, kind, venue_ru, venue_en, suit)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(id, d.title_ru, d.title_en ?? null, d.city_ru, d.city_en ?? null, d.start_date ?? null, d.end_date ?? null,
       d.approx_ru ?? null, d.approx_en ?? null, d.sort_key ?? null, d.status ?? 'full', d.url ?? null,
-      d.start_time ?? null, d.end_time ?? null)
+      d.start_time ?? null, d.end_time ?? null, d.kind ?? null, d.venue_ru ?? null, d.venue_en ?? null,
+      SUITS.includes(d.status ?? 'full') ? (d.status ?? 'full') : null)
     .run();
   return id;
 }
 
-const EDITABLE = ['title_ru', 'title_en', 'city_ru', 'city_en', 'start_date', 'end_date', 'approx_ru', 'approx_en', 'sort_key', 'status', 'url', 'start_time', 'end_time'] as const;
+const EDITABLE = ['title_ru', 'title_en', 'city_ru', 'city_en', 'start_date', 'end_date', 'approx_ru', 'approx_en', 'sort_key', 'status', 'url', 'start_time', 'end_time', 'kind', 'venue_ru', 'venue_en', 'suit'] as const;
 
 export async function updateEvent(db: D1Database, id: string, patch: Partial<EventDraft>) {
+  // «в чём был» запоминаем отдельно: когда статус станет «Был», статистика всё равно знает, фулл это или нет
+  if (patch.status && SUITS.includes(patch.status)) patch = { ...patch, suit: patch.status as EventDraft['suit'] };
   const keys = EDITABLE.filter((k) => k in patch);
   if (!keys.length) return;
   await db

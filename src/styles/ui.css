@@ -271,6 +271,16 @@ img { display: block; max-width: 100%; }
   overflow: auto;
   animation: dialog-in 0.2s var(--ease);
 }
+/* Длинное окно прокручивается тонкой полоской без фона, которая не вылезает за скруглённые углы */
+.dialog[open] {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--md-on-surface) 25%, transparent) transparent;
+  scrollbar-gutter: auto;
+}
+.dialog::-webkit-scrollbar { width: 6px; }
+.dialog::-webkit-scrollbar-track { background: transparent; margin-block: var(--radius-card); }
+.dialog::-webkit-scrollbar-thumb { border-radius: 3px; background: color-mix(in srgb, var(--md-on-surface) 25%, transparent); }
+.dialog::-webkit-scrollbar-button { display: none; height: 0; }
 /* Затемнение вокруг окна (окно открыто без «верхнего слоя», чтобы курсор был поверх) */
 .dialog.has-scrim[open] { box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--md-scrim) 40%, transparent); }
 @keyframes dialog-in { from { opacity: 0; transform: scale(0.95); } }

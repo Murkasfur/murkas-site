@@ -1,246 +1,334 @@
 ---
+// «Где меня встретить» - 1-в-1 с макетом Figma (frame «Ивенты», 94:391).
+// Данные: ивенты и превью фото из D1 (src/lib/events.ts). Рендерится на Worker
+// при каждом запросе, так что «сегодня» и обратный отсчёт всегда актуальны.
+import { env } from 'cloudflare:workers';
 import Page from '../Page.astro';
 import Icon from '../Icon.astro';
 import UploadTile from '../UploadTile.astro';
-import { useTranslations, type Lang, type UiKey } from '../../i18n/ui';
-import { loc, locAll, type EventItem } from '../../data/mock';
+import EventCard from '../EventCard.astro';
+import { useTranslations, localizePath, type Lang, type UiKey } from '../../i18n/ui';
+import { loc, type EventItem, type EventKind, type Suit } from '../../data/mock';
 import { getEvents } from '../../lib/data';
+import { photoStats } from '../../lib/events';
+import { eventFormat } from '../../lib/event-format';
 
 const { lang } = Astro.props as { lang: Lang };
-const events = await getEvents();
 const t = useTranslations(lang);
-const locale = lang === 'ru' ? 'ru-RU' : 'en-CA';
+const f = eventFormat(lang);
+const tf = (k: string, vars: Record<string, string | number>) => t(k as UiKey).replace(/\{(\w+)\}/g, (_, v) => String(vars[v] ?? ''));
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-// Страница рендерится на Worker при каждом запросе, так что «сегодня» всегда актуально.
-const todayDate = new Date();
-const today = todayDate.toISOString().slice(0, 10);
-const weekAgo = new Date(todayDate.getTime() - 7 * 864e5).toISOString().slice(0, 10);
+const events = await getEvents();
+const photos = await photoStats(env.DB).catch(() => ({ total: 0, guests: 0 }));
+
+// «Сегодня» - по Торонто
+const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Toronto' });
+const weekAgo = new Date(Date.parse(today) - 7 * 864e5).toISOString().slice(0, 10);
 const key = (e: EventItem) => e.start ?? e.sortKey ?? '9999';
+const endKey = (e: EventItem) => e.end ?? key(e);
 const sorted = [...events].sort((a, b) => key(a).localeCompare(key(b)));
 
-const earlier = sorted.filter((e) => key(e) < weekAgo).reverse();
-const recent = sorted.filter((e) => key(e) >= weekAgo && key(e) < today);
-const upcoming = sorted.filter((e) => key(e) >= today);
+const past = sorted.filter((e) => endKey(e) < today).reverse();
+const recent = past.filter((e) => endKey(e) >= weekAgo);
+const earlier = past.filter((e) => endKey(e) < weekAgo);
+const upcoming = sorted.filter((e) => endKey(e) >= today);
 
-const monthLabel = (e: EventItem) =>
-  e.start
-    ? new Date(`${e.start}T12:00:00`).toLocaleDateString(locale, { month: 'long', year: 'numeric' }).replace(/\s?г\.$/, '')
-    : loc(e.approx, lang);
+// будущие - по месяцам или примерным периодам («Весна 2027»)
 const groups = new Map<string, EventItem[]>();
 for (const e of upcoming) {
-  const k = monthLabel(e);
+  const k = cap(e.start ? f.fmt(e.start, { month: 'long', year: 'numeric' }) : loc(e.approx, lang));
   groups.set(k, [...(groups.get(k) ?? []), e]);
 }
 
-const day = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(locale, { day: 'numeric', month: 'short' });
-const dateText = (e: EventItem) =>
-  (e.start ? (e.end ? `${day(e.start)} - ${day(e.end)}` : day(e.start)) : `≈ ${loc(e.approx, lang)}`) + (e.startTime ? `, ${e.startTime}` : '');
-const statusText = (e: EventItem) => t(`status.${e.status}` as UiKey);
-const searchText = (e: EventItem) => `${locAll(e.title)} ${locAll(e.city)} ${key(e).slice(0, 4)}`.toLowerCase();
+// ближайший
+const next = upcoming.find((e) => e.status !== 'cant' && e.status !== 'missed');
+const days = next?.start ? Math.max(0, Math.round((Date.parse(next.start) - Date.parse(today)) / 864e5)) : null;
 
-const next = upcoming.find((e) => e.status !== 'cant');
-const year = String(todayDate.getFullYear());
-const stats = {
-  events: events.filter((e) => e.status === 'went' && e.start?.startsWith(year)).length,
-  photos: events.reduce((s, e) => s + (e.photos ?? 0), 0),
-  cities: new Set(events.filter((e) => e.status === 'went').map((e) => loc(e.city, 'en'))).size,
-};
+// статистика: только там, где был
+const went = events.filter((e) => e.status === 'went');
+const years = went.flatMap((e) => (e.start ? [Number(e.start.slice(0, 4))] : []));
+const since = years.length ? Math.min(...years) : Number(today.slice(0, 4));
+const count = (k: EventKind) => went.filter((e) => e.kind === k).length;
+const suits = (['full', 'partial', 'nosuit'] as Suit[]).map((s) => ({ s, n: went.filter((e) => e.suit === s).length }));
+const suitTotal = suits.reduce((a, x) => a + x.n, 0);
 ---
 
-<Page lang={lang} page="events">
+<Page lang={lang} page="events" title={`${t('events.title')} · Murkas`}>
   <header class="page-header">
     <div class="page-header__titles">
+      <a class="back md-label-large" href={localizePath('/', lang)}>← {t('events.back')}</a>
       <h1 class="md-display-small">{t('events.title')}</h1>
       <p class="md-body-large muted">{t('events.subtitle')}</p>
     </div>
     <UploadTile lang={lang} title={t('events.upload')} hint={t('upload.dropHint')} />
   </header>
 
-  <label class="search">
-    <Icon name="search" />
-    <span class="visually-hidden">{t('events.search')}</span>
-    <input type="search" placeholder={t('events.search')} data-filter-input />
-  </label>
+  <div class="toolbar">
+    <label class="search toolbar__search">
+      <Icon name="search" />
+      <span class="visually-hidden">{t('events.search')}</span>
+      <input type="search" placeholder={t('events.search')} data-filter-input />
+    </label>
+    <div class="kinds" role="group" aria-label={t('events.title')} data-kinds>
+      <button type="button" class="kind" aria-pressed="true" data-value="all">{t('events.kindAll')}</button>
+      {(['con', 'meet', 'local'] as EventKind[]).map((k) => (
+        <button type="button" class="kind" aria-pressed="false" data-value={k}>{t(`events.kinds.${k}` as UiKey)}</button>
+      ))}
+    </div>
+  </div>
 
   <div class="layout">
     <div class="timeline" data-filter-list>
-      {
-        earlier.length > 0 && (
-          <details class="earlier">
-            <summary class="chip">
-              {t('events.earlier')} <span class="count">{earlier.length}</span>
-              <Icon name="expand_more" size={18} />
-            </summary>
-            <ul class="list">
-              {earlier.map((e) => (
-                <li class="event event--past" data-search={searchText(e)}>
-                  <span class="date md-label-large">{dateText(e)}</span>
-                  <span class="event__body">
-                    {e.url ? <a class="md-title-medium event__link" href={e.url} target="_blank" rel="noopener noreferrer">{loc(e.title, lang)}<Icon name="arrow_outward" size={16} /></a> : <span class="md-title-medium">{loc(e.title, lang)}</span>}
-                    <span class="md-body-small muted">{loc(e.city, lang)}{e.photos ? ` · ${e.photos} ${t('events.photos')}` : ''}</span>
-                  </span>
-                  <span class:list={['status', `status--${e.status}`]}>{statusText(e)}</span>
-                </li>
-              ))}
-            </ul>
-          </details>
-        )
-      }
+      {earlier.length > 0 && (
+        <details class="earlier">
+          <summary class="earlier__bar">
+            <span class="md-title-small">{t('events.earlier')} <span class="earlier__count">{earlier.length}</span></span>
+            <span class="earlier__toggle md-label-large">
+              <span class="when-closed">{t('events.show')}</span><span class="when-open">{t('events.hide')}</span>
+              <Icon name="expand_more" size={20} />
+            </span>
+          </summary>
+          <ul class="list">{earlier.map((e) => <EventCard e={e} lang={lang} past />)}</ul>
+        </details>
+      )}
+      {recent.length > 0 && <ul class="list">{recent.map((e) => <EventCard e={e} lang={lang} past />)}</ul>}
 
-      {
-        recent.length > 0 && (
-          <ul class="list">
-            {recent.map((e) => (
-              <li class="event event--past" data-search={searchText(e)}>
-                <span class="date md-label-large">{dateText(e)}</span>
-                <span class="event__body">
-                  {e.url ? <a class="md-title-medium event__link" href={e.url} target="_blank" rel="noopener noreferrer">{loc(e.title, lang)}<Icon name="arrow_outward" size={16} /></a> : <span class="md-title-medium">{loc(e.title, lang)}</span>}
-                  <span class="md-body-small muted">{loc(e.city, lang)}{e.photos ? ` · ${e.photos} ${t('events.photos')}` : ''}</span>
-                </span>
-                <span class:list={['status', `status--${e.status}`]}>{statusText(e)}</span>
-              </li>
-            ))}
-          </ul>
-        )
-      }
+      <div class="today"><span class="today__pill md-label-large">{tf('events.todayOn', { d: f.fmt(today, { day: 'numeric', month: 'long' }) })}</span></div>
 
-      <div class="today"><span class="md-label-large">{t('events.today')}</span></div>
-
-      {
-        [...groups].map(([label, items]) => (
-          <section class="month">
-            <h2 class="md-title-small muted month__title">{label}</h2>
-            <ul class="list">
-              {items.map((e) => (
-                <li class:list={['event', { 'event--tba': !e.start }]} data-search={searchText(e)}>
-                  <span class:list={['date md-label-large', { 'date--exact': !!e.start }]}>{dateText(e)}</span>
-                  <span class="event__body">
-                    {e.url ? <a class="md-title-medium event__link" href={e.url} target="_blank" rel="noopener noreferrer">{loc(e.title, lang)}<Icon name="arrow_outward" size={16} /></a> : <span class="md-title-medium">{loc(e.title, lang)}</span>}
-                    <span class="md-body-small muted"><Icon name="place" size={14} /> {loc(e.city, lang)}</span>
-                  </span>
-                  <span class:list={['status', `status--${e.status}`]}>{statusText(e)}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))
-      }
+      {[...groups].map(([label, items]) => (
+        <section class="month">
+          <h2 class="month__title md-title-small">{label}</h2>
+          <ul class="list">{items.map((e) => <EventCard e={e} lang={lang} />)}</ul>
+        </section>
+      ))}
       <p class="empty md-body-large muted" hidden data-empty>{t('common.empty')}</p>
     </div>
 
     <aside class="sidebar">
-      {
-        next && (
-          <section class="card next">
-            <h2 class="md-title-small">{t('events.next')}</h2>
-            <span class:list={['date md-label-large', { 'date--exact': !!next.start }]}>{dateText(next)}</span>
-            <p class="md-headline-small">{next.url ? <a class="event__link" href={next.url} target="_blank" rel="noopener noreferrer">{loc(next.title, lang)}<Icon name="arrow_outward" size={20} /></a> : loc(next.title, lang)}</p>
-            <p class="md-body-medium muted"><Icon name="place" size={16} /> {loc(next.city, lang)}</p>
-            <span class:list={['status', `status--${next.status}`]}>{statusText(next)}</span>
-          </section>
-        )
-      }
-      <section class="card stats">
-        <h2 class="md-title-small card__title">{t('events.stats')}</h2>
-        <dl>
-          <div><dt class="md-body-small muted">{t('events.statEvents')}</dt><dd class="md-display-small">{stats.events}</dd></div>
-          <div><dt class="md-body-small muted">{t('events.statPhotos')}</dt><dd class="md-display-small">{stats.photos}</dd></div>
-          <div><dt class="md-body-small muted">{t('events.statCities')}</dt><dd class="md-display-small">{stats.cities}</dd></div>
-        </dl>
+      {next && (
+        <section class="next">
+          <h2 class="md-title-small">{t('events.next')}</h2>
+          <p class="next__count">
+            {days === null ? (
+              <span class="next__approx">≈ {loc(next.approx, lang)}</span>
+            ) : days === 0 ? (
+              <span class="next__approx">{t('events.nextToday')}</span>
+            ) : (
+              <>
+                <span class="next__num">{days}</span>
+                <span class="next__unit">{f.plural(days, ['день', 'дня', 'дней'], ['day', 'days'])}</span>
+              </>
+            )}
+          </p>
+          {next.url ? (
+            <a class="next__title next__link" href={next.url} target="_blank" rel="noopener noreferrer">{loc(next.title, lang)}<Icon name="arrow_outward" size={20} /></a>
+          ) : (
+            <p class="next__title">{loc(next.title, lang)}</p>
+          )}
+          <p class="next__where"><Icon name="place" size={16} /> {f.range(next)} • {next.venue ? loc(next.venue, lang) : loc(next.city, lang)}</p>
+          <span class:list={['next__status', `next__status--${next.status}`]}>{t(`status.${next.status}` as UiKey)}</span>
+        </section>
+      )}
+
+      <section class="stats">
+        <div class="stats__head">
+          <h2 class="md-title-small">{t('events.stats')}</h2>
+          <span class="md-body-small muted">{tf('events.since', { y: since })}</span>
+        </div>
+        <div class="stats__grid">
+          <div class="metric">
+            <span class="metric__num">{went.length}</span>
+            <span class="metric__label">{tf('events.attended', { w: f.plural(went.length, ['ивент', 'ивента', 'ивентов'], ['event', 'events']) })}</span>
+          </div>
+          <div class="metric">
+            <span class="metric__num">{photos.total}</span>
+            <span class="metric__label">{t('events.statPhotos')}</span>
+            {photos.guests > 0 && <span class="metric__extra">{tf('events.fromGuests', { n: photos.guests })}</span>}
+          </div>
+          <div class="metric">
+            <span class="metric__num">{count('con')}</span>
+            <span class="metric__label">{f.plural(count('con'), ['кон', 'кона', 'конов'], ['con', 'cons'])}</span>
+          </div>
+          <div class="metric">
+            <span class="metric__num">{count('meet')}</span>
+            <span class="metric__label">{f.plural(count('meet'), ['мит', 'мита', 'митов'], ['meet', 'meets'])}</span>
+          </div>
+        </div>
+        <div class="wore">
+          <span class="wore__title">{t('events.wore')}</span>
+          <div class="wore__bar">
+            {suitTotal
+              ? suits.filter((x) => x.n).map((x) => <span class:list={['wore__seg', `suit--${x.s}`]} style={`flex-grow: ${x.n}`} />)
+              : <span class="wore__seg suit--none" />}
+          </div>
+          <ul class="wore__legend">
+            {suits.map((x) => <li><span class:list={['dot', `suit--${x.s}`]} />{t(`events.suit.${x.s}` as UiKey)} • {x.n}</li>)}
+          </ul>
+        </div>
       </section>
     </aside>
   </div>
 </Page>
 
 <script>
+  // Поиск + фильтр по типу (Все / Коны / Миты / Локальные)
   const input = document.querySelector<HTMLInputElement>('[data-filter-input]');
   const list = document.querySelector<HTMLElement>('[data-filter-list]');
-  input?.addEventListener('input', () => {
-    const q = input.value.trim().toLowerCase();
+  const kinds = document.querySelector<HTMLElement>('[data-kinds]');
+  let kind = 'all';
+  const apply = () => {
+    const q = (input?.value ?? '').trim().toLowerCase();
     let shown = 0;
     list?.querySelectorAll<HTMLElement>('[data-search]').forEach((el) => {
-      const ok = !q || (el.dataset.search || '').includes(q);
+      const ok = (!q || (el.dataset.search || '').includes(q)) && (kind === 'all' || el.dataset.kind === kind);
       el.hidden = !ok;
       if (ok) shown += 1;
     });
     list?.querySelectorAll<HTMLElement>('.month').forEach((m) => (m.hidden = !m.querySelector('[data-search]:not([hidden])')));
     const earlier = list?.querySelector<HTMLDetailsElement>('.earlier');
-    if (earlier && q) earlier.open = !!earlier.querySelector('[data-search]:not([hidden])');
+    if (earlier) {
+      const any = !!earlier.querySelector('[data-search]:not([hidden])');
+      earlier.hidden = !any;
+      if (q || kind !== 'all') earlier.open = any;
+    }
     const empty = list?.querySelector<HTMLElement>('[data-empty]');
     if (empty) empty.hidden = shown > 0;
+  };
+  input?.addEventListener('input', apply);
+  kinds?.addEventListener('click', (e) => {
+    const b = (e.target as Element).closest<HTMLButtonElement>('[data-value]');
+    if (!b) return;
+    kind = b.dataset.value!;
+    kinds.querySelectorAll('[data-value]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    apply();
   });
 </script>
 
 <style>
-  .layout { display: grid; grid-template-columns: 1fr 328px; gap: 24px; align-items: start; }
-  .timeline { display: flex; flex-direction: column; gap: 20px; }
-  .list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
-  .event {
-    display: grid;
-    grid-template-columns: 140px 1fr auto;
-    align-items: center;
-    gap: 16px;
-    padding: 16px 20px;
-    border-radius: 20px;
-    background: var(--md-surface-container-low);
-  }
-  .event[hidden] { display: none; }
-  .event--past { opacity: 0.75; }
-  .event--tba { background: none; border: 1.5px dashed var(--md-outline-variant); }
-  .event__body { display: grid; gap: 2px; }
-  .event__body .icon { vertical-align: -2px; }
-  .date { color: var(--md-on-surface-variant); }
-  .date--exact {
-    width: fit-content;
-    padding: 4px 12px;
+  .back { width: fit-content; color: var(--md-on-surface-variant); text-decoration: none; }
+  .back:hover { color: var(--md-primary); }
+
+  .toolbar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .toolbar__search { flex: 0 1 420px; min-width: 240px; }
+  .kinds { display: flex; gap: 8px; flex-wrap: wrap; }
+  .kind {
+    height: 38px;
+    padding: 0 16px;
+    border: 1px solid var(--md-outline);
     border-radius: 999px;
-    background: var(--md-tertiary-container);
-    color: var(--md-on-tertiary-container);
-  }
-  .status {
-    padding: 6px 12px;
-    border-radius: 8px;
-    font: 500 12px/16px var(--font-plain);
-    white-space: nowrap;
-    background: var(--md-surface-container-highest);
+    background: none;
     color: var(--md-on-surface-variant);
-    width: fit-content;
+    font: 500 14px/20px var(--font-plain);
+    cursor: pointer;
   }
-  .status--full { background: var(--md-primary); color: var(--md-on-primary); }
-  .status--partial { background: var(--md-surface-variant); color: var(--md-on-surface-variant); }
-  .status--nosuit { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
-  .status--cant { background: var(--md-error-container); color: var(--md-on-error-container); }
+  .kind:hover { background: color-mix(in srgb, var(--md-on-surface) 8%, transparent); }
+  .kind[aria-pressed='true'] { border-color: transparent; background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
 
-  .earlier summary { list-style: none; width: fit-content; }
-  .earlier summary::-webkit-details-marker { display: none; }
-  .earlier[open] summary .icon { transform: rotate(180deg); }
-  .earlier .list { margin-top: 12px; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 32px; align-items: start; }
+  .timeline { display: flex; flex-direction: column; gap: 16px; }
+  .list { display: grid; gap: 16px; margin: 0; padding: 0; list-style: none; }
 
-  .today { display: flex; align-items: center; gap: 12px; color: var(--md-primary); }
-  .today::after { content: ''; flex: 1; height: 2px; border-radius: 2px; background: var(--md-primary); }
-  .month__title { text-transform: capitalize; margin-bottom: 8px; }
+  .earlier[hidden] { display: none; }
+  .earlier__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 44px;
+    padding: 0 16px 0 20px;
+    border-radius: 22px;
+    background: var(--md-surface-container-low);
+    list-style: none;
+    cursor: pointer;
+  }
+  .earlier__bar::-webkit-details-marker { display: none; }
+  .earlier__bar:hover { background: var(--md-surface-container); }
+  .earlier__count { margin-left: 4px; font-weight: 400; font-size: 12px; color: var(--md-on-surface-variant); }
+  .earlier__toggle { display: inline-flex; align-items: center; gap: 4px; color: var(--md-on-surface-variant); }
+  .earlier__toggle :global(svg) { transition: transform 0.2s var(--ease); }
+  .earlier[open] .earlier__toggle :global(svg) { transform: rotate(180deg); }
+  .earlier .when-open, .earlier[open] .when-closed { display: none; }
+  .earlier[open] .when-open { display: inline; }
+  .earlier .list { margin-top: 16px; }
+
+  .today { display: flex; align-items: center; gap: 12px; margin: 8px 0; }
+  .today::after { content: ''; flex: 1; height: 2px; border-radius: 2px; background: var(--md-tertiary-container); }
+  .today__pill {
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--md-tertiary-fixed, #c4f267);
+    color: var(--md-on-tertiary-fixed, #141f00);
+  }
+  .month { display: grid; gap: 16px; }
+  .month[hidden] { display: none; }
+  .month__title { color: var(--md-on-surface-variant); }
 
   .sidebar { display: grid; gap: 24px; position: sticky; top: 24px; }
-  .next { display: grid; gap: 10px; }
-  .next .icon { vertical-align: -3px; }
-  .stats dl { display: grid; gap: 12px; margin: 0; }
-  .stats dd { margin: 0; color: var(--md-primary); }
 
-  @media (max-width: 900px) {
-    .layout { grid-template-columns: 1fr; }
-    .sidebar { position: static; order: -1; }
+  .next {
+    display: grid;
+    gap: 12px;
+    padding: 24px 24px 28px;
+    border: 5px solid var(--md-on-secondary-fixed);
+    border-radius: 32px;
+    background: var(--md-secondary);
+    color: var(--md-on-secondary);
   }
-  @media (max-width: 600px) {
-    .event { grid-template-columns: 1fr; gap: 8px; }
-  }
-  .event__link {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
+  .next__count { display: flex; align-items: baseline; gap: 8px; }
+  .next__num { font: 400 64px/64px var(--font-plain); color: var(--md-tertiary-fixed, #c4f267); }
+  .next__unit { font: 400 22px/28px var(--font-plain); }
+  .next__approx { font: 400 32px/40px var(--font-plain); color: var(--md-tertiary-fixed, #c4f267); }
+  .next__title { font: 400 22px/28px var(--font-plain); margin: 0; }
+  .next__link { display: inline-flex; align-items: center; gap: 6px; width: fit-content; color: inherit; text-decoration: none; }
+  .next__link:hover { text-decoration: underline; text-underline-offset: 4px; }
+  .next__where { display: flex; align-items: center; gap: 4px; margin: 0; font: 400 12px/16px var(--font-plain); }
+  .next__where :global(svg) { flex: none; }
+  .next__status {
     width: fit-content;
-    color: inherit;
-    text-decoration: none;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font: 500 11px/16px var(--font-plain);
+    letter-spacing: 0.5px;
+    background: color-mix(in srgb, #fff 18%, transparent);
   }
-  .event__link :global(svg) { flex: none; color: var(--md-on-surface-variant); }
-  .event__link:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .next__status--full { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+  .next__status--partial { background: var(--md-tertiary-container); color: var(--md-on-tertiary-container); }
+
+  .stats {
+    display: grid;
+    gap: 16px;
+    padding: 24px;
+    border: 3px solid var(--md-outline-variant);
+    border-radius: 32px;
+    background: var(--md-surface-container-lowest);
+  }
+  .stats__head { display: flex; justify-content: space-between; align-items: baseline; }
+  .stats__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .metric { display: grid; align-content: start; gap: 2px; min-height: 78px; padding: 14px 16px; border-radius: 20px; background: var(--md-surface-container); }
+  .metric__num { font: 400 28px/32px var(--font-plain); color: var(--md-on-surface); }
+  .metric__label { font: 400 12px/16px var(--font-plain); color: var(--md-on-surface-variant); }
+  .metric__extra { font: 500 12px/16px var(--font-plain); color: var(--md-on-surface); }
+
+  .wore { display: grid; gap: 8px; }
+  .wore__title { font: 500 12px/16px var(--font-plain); color: var(--md-on-surface-variant); }
+  .wore__bar { display: flex; gap: 3px; height: 12px; }
+  .wore__seg { flex: 1 1 0; border-radius: 6px; }
+  .wore__legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 0; list-style: none; font: 400 12px/16px var(--font-plain); color: var(--md-on-surface-variant); }
+  .wore__legend li { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .suit--full { background: var(--md-secondary-container); }
+  .suit--partial { background: var(--md-tertiary-container); }
+  .suit--nosuit, .suit--none { background: var(--md-surface-container-highest); }
+
+  /* Тёмная тема: как у карточки-приветствия на главной */
+  :global(html[data-mode='dark']) .next {
+    background: var(--md-on-secondary-fixed);
+    border-color: color-mix(in srgb, var(--md-secondary) 45%, transparent);
+    color: var(--md-on-surface);
+  }
+
+  @media (max-width: 960px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { position: static; order: -1; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  }
 </style>

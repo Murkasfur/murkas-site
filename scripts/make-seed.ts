@@ -18,8 +18,9 @@ for (const [id, p] of people) lines.push(`INSERT INTO people (id, name, url) VAL
 
 for (const e of events) {
   lines.push(
-    `INSERT INTO events (id, title_ru, title_en, city_ru, city_en, start_date, end_date, approx_ru, approx_en, sort_key, status) VALUES (${[
+    `INSERT INTO events (id, title_ru, title_en, city_ru, city_en, start_date, end_date, approx_ru, approx_en, sort_key, status, kind, venue_ru, venue_en, suit) VALUES (${[
       e.id, ru(e.title), en(e.title), ru(e.city), en(e.city), e.start, e.end, ru(e.approx), en(e.approx), e.sortKey, e.status,
+      e.kind, ru(e.venue), en(e.venue), e.suit,
     ].map(q).join(', ')});`,
   );
 }

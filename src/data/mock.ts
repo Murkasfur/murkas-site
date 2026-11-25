@@ -30,19 +30,29 @@ export type EventItem = {
   endTime?: string;
   /** Сайт ивента */
   url?: string;
+  /** Кон / мит / локальное */
+  kind?: EventKind;
+  /** Место: отель, парк... */
+  venue?: L;
+  /** В чём был (или собираюсь) - для статистики */
+  suit?: Suit;
+  /** Превью фото с ивента (для прошедших) */
+  previews?: string[];
 };
+export type EventKind = 'con' | 'meet' | 'local';
+export type Suit = 'full' | 'partial' | 'nosuit';
 
 export const events: EventItem[] = [
-  { id: 'fe-2026', title: 'Furnal Equinox 2026', city: TO, start: '2026-03-20', end: '2026-03-22', status: 'went', photos: 64 },
-  { id: 'spring-meet', title: { ru: 'Весенний мит', en: 'Spring meet' }, city: TO, start: '2026-05-16', status: 'went', photos: 22 },
-  { id: 'pride', title: 'Pride Toronto', city: TO, start: '2026-06-28', status: 'went', photos: 41 },
-  { id: 'summer-rave', title: 'Furry Rave', city: TO, start: '2026-08-15', status: 'missed' },
-  { id: 'autumn-walk', title: { ru: 'Осенняя прогулка', en: 'Autumn walk' }, city: TO, start: '2026-10-10', status: 'went', photos: 18 },
-  { id: 'park-meet', title: { ru: 'Мит в High Park', en: 'High Park meet' }, city: TO, start: '2026-11-21', status: 'went', photos: 12 },
-  { id: 'winter-meet', title: { ru: 'Зимний мит', en: 'Winter meet' }, city: TO, start: '2026-12-12', status: 'full' },
-  { id: 'ny-party', title: { ru: 'Новогодняя вечеринка', en: "New Year's party" }, city: TO, start: '2026-12-27', status: 'nosuit' },
-  { id: 'fe-2027', title: 'Furnal Equinox 2027', city: TO, start: null, approx: { ru: 'март 2027', en: 'March 2027' }, sortKey: '2027-03-01', status: 'full' },
-  { id: 'ac-2027', title: 'Anthrocon 2027', city: { ru: 'Питтсбург', en: 'Pittsburgh' }, start: null, approx: { ru: 'лето 2027', en: 'Summer 2027' }, sortKey: '2027-06-20', status: 'partial' },
+  { id: 'fe-2026', title: 'Furnal Equinox 2026', city: TO, start: '2026-03-20', end: '2026-03-22', status: 'went', photos: 64, kind: 'con', suit: 'full', venue: 'Sheraton Centre Toronto' },
+  { id: 'spring-meet', title: { ru: 'Весенний мит', en: 'Spring meet' }, city: TO, start: '2026-05-16', status: 'went', photos: 22, kind: 'meet', suit: 'partial' },
+  { id: 'pride', title: 'Pride Toronto', city: TO, start: '2026-06-28', status: 'went', photos: 41, kind: 'local', suit: 'full' },
+  { id: 'summer-rave', title: 'Furry Rave', city: TO, start: '2026-08-15', status: 'missed', kind: 'local' },
+  { id: 'autumn-walk', title: { ru: 'Осенняя прогулка', en: 'Autumn walk' }, city: TO, start: '2026-10-10', status: 'went', photos: 18, kind: 'local', suit: 'nosuit' },
+  { id: 'park-meet', title: { ru: 'Мит в High Park', en: 'High Park meet' }, city: TO, start: '2026-11-21', status: 'went', photos: 12, kind: 'meet', suit: 'full' },
+  { id: 'winter-meet', title: { ru: 'Зимний мит', en: 'Winter meet' }, city: TO, start: '2026-12-12', status: 'full', kind: 'meet', suit: 'full' },
+  { id: 'ny-party', title: { ru: 'Новогодняя вечеринка', en: "New Year's party" }, city: TO, start: '2026-12-27', status: 'nosuit', kind: 'local', suit: 'nosuit' },
+  { id: 'fe-2027', title: 'Furnal Equinox 2027', city: TO, start: null, approx: { ru: 'март 2027', en: 'March 2027' }, sortKey: '2027-03-01', status: 'full', kind: 'con', suit: 'full', venue: 'Sheraton Centre Toronto' },
+  { id: 'ac-2027', title: 'Anthrocon 2027', city: { ru: 'Питтсбург', en: 'Pittsburgh' }, start: null, approx: { ru: 'лето 2027', en: 'Summer 2027' }, sortKey: '2027-06-20', status: 'partial', kind: 'con', suit: 'partial' },
 ];
 
 export type Character = 'arbyss' | 'murkas';

@@ -243,6 +243,55 @@ export function initUpload() {
   });
   form.addEventListener('input', (e) => (e.target as Element).closest('.field')?.classList.remove('is-invalid'));
 
+  // ---------- выбор ивента (своё меню вместо <select>) ----------
+
+  const picker = dialog.querySelector<HTMLElement>('[data-picker]');
+  if (picker) {
+    const btn = picker.querySelector<HTMLButtonElement>('[data-picker-btn]')!;
+    const menu = picker.querySelector<HTMLElement>('[data-picker-menu]')!;
+    const hiddenInput = picker.querySelector<HTMLInputElement>('input[type="hidden"]')!;
+    const valueBox = picker.querySelector<HTMLElement>('[data-picker-value]')!;
+    const options = () => Array.from(menu.querySelectorAll<HTMLLIElement>('[role="option"]'));
+    const setOpen = (open: boolean, focusSelected = true) => {
+      menu.hidden = !open;
+      btn.setAttribute('aria-expanded', String(open));
+      if (open && focusSelected) (options().find((o) => o.getAttribute('aria-selected') === 'true') ?? options()[0])?.focus();
+      if (open) menu.querySelector<HTMLElement>('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
+    };
+    const choose = (li: HTMLLIElement) => {
+      options().forEach((o) => o.setAttribute('aria-selected', String(o === li)));
+      hiddenInput.value = li.dataset.value ?? '';
+      valueBox.innerHTML = li.querySelector('.picker__text')!.innerHTML;
+      picker.closest('.field')?.classList.remove('is-invalid');
+      setOpen(false);
+      btn.focus();
+    };
+    btn.addEventListener('click', () => setOpen(menu.hidden));
+    menu.addEventListener('click', (e) => {
+      const li = (e.target as Element).closest<HTMLLIElement>('[role="option"]');
+      if (li) choose(li);
+    });
+    picker.addEventListener('keydown', (e) => {
+      const list = options();
+      const i = list.indexOf(document.activeElement as HTMLLIElement);
+      if (e.key === 'Escape' && !menu.hidden) {
+        e.stopPropagation(); // закрыть только меню, а не всё окно
+        setOpen(false);
+        btn.focus();
+      } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (menu.hidden) return setOpen(true);
+        list[Math.max(0, Math.min(list.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))]?.focus();
+      } else if ((e.key === 'Enter' || e.key === ' ') && i >= 0) {
+        e.preventDefault();
+        choose(list[i]);
+      }
+    });
+    document.addEventListener('click', (e) => {
+      if (!menu.hidden && !picker.contains(e.target as Node)) setOpen(false, false);
+    });
+  }
+
   // ---------- Turnstile ----------
 
   let token: string | null = null;
@@ -391,6 +440,10 @@ export function initUpload() {
       else showSnackbar(tr(dupes ? 'up.okDupes' : 'up.ok', { n: fin.received, d: dupes, ref: fin.ref ?? '' }), { ms: 10000 });
       clearAll();
       form.reset();
+      // выбранный ивент оставляем: следующую пачку часто грузят с того же ивента
+      const sel = dialog!.querySelector<HTMLElement>('[data-picker-menu] [aria-selected="true"]');
+      const hid = dialog!.querySelector<HTMLInputElement>('[data-picker] input[type="hidden"]');
+      if (sel && hid) hid.value = sel.dataset.value ?? '';
       dialog!.querySelectorAll('[aria-pressed="true"]:not([data-value="one"])').forEach((c) => c.setAttribute('aria-pressed', 'false'));
       dialog!.querySelectorAll<HTMLInputElement>('input:disabled').forEach((x) => (x.disabled = false));
       closeDialog(dialog!);

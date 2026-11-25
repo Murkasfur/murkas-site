@@ -79,13 +79,27 @@ const charName = (c: string) => (c === 'both' ? (lang === 'ru' ? 'Оба' : 'Bot
     {isPhoto ? (
       <>
         <div class="field" data-field="eventId">
-          <label class="field__label" for="up-event">{t('up.event')}<span class="req" aria-hidden="true"> *</span></label>
-          <div class="field__box field__box--select">
-            <select id="up-event" name="eventId" required>
-              <option value="">{t('up.eventPick')}</option>
-              {events.map((e, i) => <option value={e.id} selected={i === 0}>{loc(e.title, lang)} • {day(e.start!)}</option>)}
-            </select>
-            <Icon name="expand_more" />
+          <span class="field__label" id="up-event-label">{t('up.event')}<span class="req" aria-hidden="true"> *</span></span>
+          <div class="picker" data-picker>
+            <input type="hidden" name="eventId" value={events[0]?.id ?? ''} />
+            <button type="button" class="field__box picker__btn" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="up-event-label" data-picker-btn>
+              <span class="picker__value" data-picker-value data-placeholder={t('up.eventPick')}>
+                {events[0] ? <><span class="picker__title">{loc(events[0].title, lang)}</span><span class="picker__meta">{day(events[0].start!)} · {loc(events[0].city, lang)}</span></> : <span class="picker__placeholder">{t('up.eventPick')}</span>}
+              </span>
+              <Icon name="expand_more" />
+            </button>
+            <ul class="picker__menu" role="listbox" aria-labelledby="up-event-label" tabindex="-1" hidden data-picker-menu>
+              {events.map((e, i) => (
+                <li role="option" tabindex="-1" data-value={e.id} aria-selected={i === 0 ? 'true' : 'false'}>
+                  <span class="picker__text"><span class="picker__title">{loc(e.title, lang)}</span><span class="picker__meta">{day(e.start!)} · {loc(e.city, lang)}</span></span>
+                  <Icon name="check" size={20} />
+                </li>
+              ))}
+              <li role="option" tabindex="-1" data-value="none" aria-selected="false" class="picker__other">
+                <span class="picker__text"><span class="picker__title">{t('up.eventOther')}</span></span>
+                <Icon name="check" size={20} />
+              </li>
+            </ul>
           </div>
           <p class="field__error" />
         </div>
@@ -316,10 +330,62 @@ const charName = (c: string) => (c === 'both' ? (lang === 'ru' ? 'Оба' : 'Bot
   }
   .field__box input::placeholder { color: var(--md-on-surface-variant); }
   .field__box input:disabled { opacity: 0.45; }
-  .field__box--select select { appearance: none; cursor: pointer; }
-  .field__box--select :global(svg) { position: absolute; right: 12px; pointer-events: none; }
+  /* Выбор ивента: своё меню вместо системного списка */
+  .picker { position: relative; }
+  .picker__btn {
+    width: 100%;
+    justify-content: space-between;
+    min-height: 56px;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+  }
+  .picker__btn[aria-expanded='true'] { border: 2px solid var(--md-primary); padding: 0 13px 0 15px; }
+  .picker__btn[aria-expanded='true'] > :global(svg) { transform: rotate(180deg); }
+  .picker__btn > :global(svg) { flex: none; transition: transform 0.2s var(--ease); }
+  .picker__value, .picker__text { display: grid; min-width: 0; }
+  .picker__title { font: 400 16px/22px var(--font-plain); color: var(--md-on-surface); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .picker__meta { font: 400 12px/16px var(--font-plain); color: var(--md-on-surface-variant); }
+  .picker__placeholder { font: 400 16px/24px var(--font-plain); color: var(--md-on-surface-variant); }
+  .picker__menu {
+    position: absolute;
+    z-index: 5;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    max-height: 296px;
+    margin: 0;
+    padding: 6px;
+    overflow-y: auto;
+    list-style: none;
+    border-radius: 16px;
+    background: var(--md-surface-container);
+    box-shadow: 0 6px 20px rgb(0 0 0 / 0.18), 0 1px 3px rgb(0 0 0 / 0.12);
+    scrollbar-width: thin;
+    animation: picker-in 0.16s var(--ease);
+  }
+  @keyframes picker-in { from { opacity: 0; transform: translateY(-4px); } }
+  .picker__menu li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 52px;
+    padding: 6px 12px 6px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    outline: none;
+  }
+  .picker__menu li :global(svg) { flex: none; color: var(--md-on-tertiary-container); visibility: hidden; }
+  .picker__menu li:hover, .picker__menu li:focus-visible { background: color-mix(in srgb, var(--md-on-surface) 8%, transparent); }
+  .picker__menu li[aria-selected='true'] { background: var(--md-tertiary-container); }
+  .picker__menu li[aria-selected='true'] .picker__title { color: var(--md-on-tertiary-container); font-weight: 500; }
+  .picker__menu li[aria-selected='true'] .picker__meta { color: var(--md-on-tertiary-container); opacity: 0.8; }
+  .picker__menu li[aria-selected='true'] :global(svg) { visibility: visible; }
+  .picker__other { margin-top: 4px; border-top: 1px solid var(--md-outline-variant); border-radius: 0 0 10px 10px !important; }
   .field__error { display: none; margin: 0; font: 400 12px/16px var(--font-plain); color: var(--md-error); }
   .field.is-invalid .field__box { border-color: var(--md-error); }
+  .upload .picker__menu[hidden] { display: none !important; }
   .field.is-invalid .field__error { display: block; }
   .chip.is-small { height: 32px; padding: 0 12px; }
 

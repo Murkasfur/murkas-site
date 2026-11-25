@@ -1,0 +1,126 @@
+---
+// Карточка ивента на странице «Где меня встретить».
+// past: серая плитка даты, превью фото и «12 фото →»; иначе - зелёная (точная дата) или пунктирная (TBA) плитка.
+import Icon from './Icon.astro';
+import { useTranslations, localizePath, type Lang, type UiKey } from '../i18n/ui';
+import { loc, locAll, type EventItem } from '../data/mock';
+import { eventFormat } from '../lib/event-format';
+
+interface Props {
+  e: EventItem;
+  lang: Lang;
+  past?: boolean;
+}
+const { e, lang, past = false } = Astro.props;
+const t = useTranslations(lang);
+const f = eventFormat(lang);
+const tile = f.tile(e);
+const search = `${locAll(e.title)} ${locAll(e.city)} ${locAll(e.venue)} ${(e.start ?? e.sortKey ?? '').slice(0, 4)}`.toLowerCase();
+const photosUrl = `${localizePath('/photos', lang)}?q=${encodeURIComponent(loc(e.title, lang).toLowerCase())}`;
+const more = (e.photos ?? 0) - (e.previews?.length ?? 0);
+---
+
+<li class:list={['evc', { 'evc--past': past }]} id={e.id} data-search={search} data-kind={e.kind ?? ''}>
+  <span class:list={['tile', past ? 'tile--past' : e.start ? 'tile--exact' : 'tile--tba']}>
+    <span class="tile__big">{tile.big}</span>
+    <span class="tile__small">{tile.small}</span>
+  </span>
+  <span class="evc__body">
+    {e.url ? (
+      <a class="evc__title evc__link" href={e.url} target="_blank" rel="noopener noreferrer">{loc(e.title, lang)}<Icon name="arrow_outward" size={16} /></a>
+    ) : (
+      <span class="evc__title">{loc(e.title, lang)}</span>
+    )}
+    <span class="evc__meta"><Icon name="place" size={14} /> {f.meta(e)}</span>
+    {past && (e.previews?.length ?? 0) > 0 && (
+      <a class="thumbs" href={photosUrl} aria-label={`${e.photos} ${t('events.photos')}`}>
+        {e.previews!.map((src) => <img src={src} alt="" loading="lazy" decoding="async" />)}
+        {more > 0 && <span class="thumbs__more">+{more}</span>}
+      </a>
+    )}
+  </span>
+  <span class="evc__side">
+    <span class:list={['status', `status--${e.status}`]}>{t(`status.${e.status}` as UiKey)}</span>
+    {past && (e.photos ?? 0) > 0 && (
+      <a class="photos-link md-label-large" href={photosUrl}>{t('events.photosLink').replace('{n}', String(e.photos))} →</a>
+    )}
+  </span>
+</li>
+
+<style>
+  .evc {
+    display: grid;
+    grid-template-columns: 80px 1fr auto;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 16px 16px 16px;
+    border: 1px solid var(--md-outline-variant);
+    border-radius: 24px;
+    background: var(--md-surface-container-lowest);
+  }
+  .evc[hidden] { display: none; }
+  .tile {
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 2px;
+    width: 80px;
+    height: 74px;
+    border-radius: 16px;
+    text-align: center;
+  }
+  .tile__big { font: 400 22px/28px var(--font-plain); }
+  .tile__small { font: 500 11px/14px var(--font-plain); letter-spacing: 0.5px; }
+  .tile--exact { background: var(--md-tertiary-fixed, #c4f267); color: var(--md-on-tertiary-fixed, #141f00); }
+  .tile--tba { border: 1.5px dashed var(--md-outline); background: var(--md-surface-container); color: var(--md-on-surface-variant); }
+  .tile--past { background: var(--md-surface-container); color: var(--md-on-surface-variant); }
+  .tile--past .tile__big { color: var(--md-on-surface-variant); }
+
+  .evc__body { display: grid; align-content: center; gap: 4px; min-width: 0; }
+  .evc__title { font: 500 16px/24px var(--font-plain); color: var(--md-on-surface); }
+  .evc--past .evc__title { color: var(--md-on-surface-variant); }
+  .evc__link { display: inline-flex; align-items: center; gap: 4px; width: fit-content; text-decoration: none; }
+  .evc__link :global(svg) { flex: none; color: var(--md-on-surface-variant); }
+  .evc__link:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .evc__meta { display: flex; align-items: center; gap: 4px; font: 400 12px/16px var(--font-plain); color: var(--md-on-surface-variant); }
+  .evc__meta :global(svg) { flex: none; }
+
+  .thumbs { display: flex; gap: 6px; margin-top: 8px; width: fit-content; text-decoration: none; }
+  .thumbs img, .thumbs__more {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    object-fit: cover;
+    background: var(--md-surface-variant);
+  }
+  .thumbs__more {
+    display: grid;
+    place-items: center;
+    background: var(--md-inverse-surface);
+    color: var(--md-inverse-on-surface);
+    font: 500 13px/16px var(--font-plain);
+  }
+
+  .evc__side { display: grid; justify-items: end; gap: 16px; }
+  .photos-link { color: var(--md-on-surface-variant); text-decoration: none; white-space: nowrap; }
+  .photos-link:hover { color: var(--md-primary); }
+
+  .status {
+    padding: 4px 10px;
+    border-radius: 999px;
+    font: 500 11px/16px var(--font-plain);
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    background: var(--md-surface-container-high);
+    color: var(--md-on-surface-variant);
+  }
+  .status--full { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+  .status--partial { background: var(--md-tertiary-container); color: var(--md-on-tertiary-container); }
+  .status--cant { background: var(--md-error-container); color: var(--md-on-error-container); }
+
+  @media (max-width: 600px) {
+    .evc { grid-template-columns: 64px 1fr; }
+    .tile { width: 64px; height: 64px; }
+    .evc__side { grid-column: 2; justify-items: start; gap: 8px; }
+  }
+</style>

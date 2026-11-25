@@ -1,21 +1,21 @@
 // Логика бота: команды, кнопки и пошаговые диалоги.
 import type { Env } from './env';
-import { send, edit, answer, esc, type Update, type Message, type CallbackQuery, type Keyboard } from './tg';
+import { api, send, edit, answer, esc, type Update, type Message, type CallbackQuery, type Keyboard } from './tg';
 import { SETTINGS_KEY, mergeSettings, type Settings } from '../../src/lib/settings-core';
 import { pages, type PageKey } from '../../src/data/site';
 import { computeNow, type NowSource } from '../../src/lib/now-core';
 import { mediaCallback, pendingCommand, rejectedCommand, storageLine } from './media';
 import {
   STATUSES, statusLabel, parsePair, parseDate, parseUrl, dateText,
-  listEvents, getEvent, insertEvent, updateEvent, deleteEvent, toNowEvent,
+  listEvents, getEvent, insertEvent, updateEvent, deleteEvent, toNowEvent, KINDS, kindLabel, type Kind,
   type EventDraft, type EventRow, type Status,
 } from './events';
 
 // ---------- состояние диалога (таблица bot_state) ----------
 
-type Field = 'title' | 'city' | 'date' | 'url';
+type Field = 'title' | 'city' | 'date' | 'venue' | 'url';
 type State =
-  | { flow: 'add'; step: Field | 'status' | 'confirm'; draft: EventDraft }
+  | { flow: 'add'; step: Field | 'kind' | 'status' | 'confirm'; draft: EventDraft }
   | { flow: 'edit'; id: string; field: Field }
   | { flow: 'now' }
   | { flow: 'default' };
@@ -72,8 +72,11 @@ const ASK: Record<Field, string> = {
 <code>12.12.2026 14.12.2026</code> - конвент на несколько дней
 <code>~2027-03</code> - точной даты нет, примерно март 2027
 <code>~2027-07 лето 2027 | summer 2027</code> - примерно, со своей подписью`,
+  venue: 'Где именно? Отель, парк, бар...\n<i>Русское | English</i>, если одинаково - просто одно.\nНапример: <code>Sheraton Centre Toronto</code>',
   url: 'Ссылка на сайт ивента (https://...)',
 };
+const STEPS = 7;
+const kindRow = (prefix: string): Keyboard => [KINDS.map((k) => ({ text: `${k.emoji} ${k.ru}`, callback_data: prefix + k.key }))];
 
 const CANCEL_BTN = { text: 'Отмена', callback_data: 'x' };
 
@@ -83,6 +86,8 @@ function eventCard(e: EventDraft & { id?: string }) {
     `<b>${pair(e.title_ru, e.title_en)}</b>`,
     `📍 ${pair(e.city_ru, e.city_en)}`,
     `📅 ${esc(dateText(e))}${e.approx_en ? ` <i>/ ${esc(e.approx_en)}</i>` : ''}`,
+    kindLabel(e.kind),
+    e.venue_ru ? `🏛 ${pair(e.venue_ru, e.venue_en)}` : '',
     statusLabel(e.status ?? 'full'),
     e.url ? `🔗 ${esc(e.url)}` : '',
   ].filter(Boolean).join('\n');
@@ -91,6 +96,7 @@ function eventCard(e: EventDraft & { id?: string }) {
 const eventKb = (id: string): Keyboard => [
   [{ text: '✏️ Название', callback_data: `ef:${id}:title` }, { text: '✏️ Город', callback_data: `ef:${id}:city` }],
   [{ text: '✏️ Дата', callback_data: `ef:${id}:date` }, { text: '✏️ Ссылка', callback_data: `ef:${id}:url` }],
+  [{ text: '✏️ Тип', callback_data: `ek:${id}` }, { text: '✏️ Место', callback_data: `ef:${id}:venue` }],
   ...statusRows(`es:${id}:`),
   [{ text: '🗑 Удалить', callback_data: `ed:${id}` }, { text: '← К списку', callback_data: 'el' }],
 ];
@@ -277,7 +283,7 @@ async function onText(env: Env, msg: Message) {
       }
       case 'addevent':
         await setState(env, chat, { flow: 'add', step: 'title', draft: {} });
-        return send(env, chat, `<b>Новый ивент</b> 1/5\n\n${ASK.title}`, [[CANCEL_BTN]]);
+        return send(env, chat, `<b>Новый ивент</b> 1/${STEPS}\n\n${ASK.title}`, [[CANCEL_BTN]]);
       default:
         return send(env, chat, 'Не знаю такую команду. /help');
     }
@@ -301,6 +307,10 @@ async function onText(env: Env, msg: Message) {
     const d = parseDate(text);
     if (typeof d === 'string') err = d;
     else patch = d;
+  } else if (field === 'venue') {
+    const p = parsePair(text);
+    if (!p) err = 'Пусто или слишком длинно (до 120 символов)';
+    else patch = { venue_ru: p[0], venue_en: p[1] };
   } else if (field === 'url') {
     const url = parseUrl(text);
     if (!url) err = 'Нужна ссылка, которая начинается с https://';
@@ -319,12 +329,13 @@ async function onText(env: Env, msg: Message) {
 
   // мастер добавления: следующий шаг
   const draft = { ...st.draft, ...patch };
-  const next = { title: 'city', city: 'date', date: 'status' } as const;
+  const next = { title: 'city', city: 'date', date: 'kind', venue: 'status' } as const;
   if (field === 'url') return confirmAdd(env, chat, draft);
   const step = next[field as keyof typeof next];
   await setState(env, chat, { flow: 'add', step, draft });
-  if (step === 'status') return send(env, chat, `<b>Новый ивент</b> 4/5\n\nКак иду?`, [...statusRows('ws:'), [CANCEL_BTN]]);
-  return send(env, chat, `<b>Новый ивент</b> ${step === 'city' ? 2 : 3}/5\n\n${ASK[step]}`, [[CANCEL_BTN]]);
+  if (step === 'kind') return send(env, chat, `<b>Новый ивент</b> 4/${STEPS}\n\nЧто это?`, [...kindRow('wk:'), [CANCEL_BTN]]);
+  if (step === 'status') return send(env, chat, `<b>Новый ивент</b> 6/${STEPS}\n\nКак иду?`, [...statusRows('ws:'), [CANCEL_BTN]]);
+  return send(env, chat, `<b>Новый ивент</b> ${step === 'city' ? 2 : 3}/${STEPS}\n\n${ASK[step]}`, [[CANCEL_BTN]]);
 }
 
 async function saveManual(env: Env, chat: number, text: string) {
@@ -407,7 +418,7 @@ async function onCallback(env: Env, cb: CallbackQuery) {
     case 'ea':
       await answer(env, cb);
       await setState(env, chat, { flow: 'add', step: 'title', draft: {} });
-      return send(env, chat, `<b>Новый ивент</b> 1/5\n\n${ASK.title}`, [[CANCEL_BTN]]);
+      return send(env, chat, `<b>Новый ивент</b> 1/${STEPS}\n\n${ASK.title}`, [[CANCEL_BTN]]);
 
     case 'ev': {
       await answer(env, cb);
@@ -449,7 +460,37 @@ async function onCallback(env: Env, cb: CallbackQuery) {
       await answer(env, cb);
       const draft = { ...st.draft, status: a as Status };
       await setState(env, chat, { flow: 'add', step: 'url', draft });
-      return edit(env, msg, `<b>Новый ивент</b> 5/5\n\nСтатус: ${statusLabel(a)}\n\n${ASK.url}`, [[{ text: 'Без ссылки →', callback_data: 'wnourl' }, CANCEL_BTN]]);
+      return edit(env, msg, `<b>Новый ивент</b> 7/${STEPS}\n\nСтатус: ${statusLabel(a)}\n\n${ASK.url}`, [[{ text: 'Без ссылки →', callback_data: 'wnourl' }, CANCEL_BTN]]);
+    }
+
+    case 'wk': {
+      const st = await getState(env, chat);
+      if (st?.flow !== 'add') return answer(env, cb, 'Это уже неактуально');
+      await answer(env, cb);
+      await setState(env, chat, { flow: 'add', step: 'venue', draft: { ...st.draft, kind: a as Kind } });
+      return edit(env, msg, `<b>Новый ивент</b> 5/${STEPS}\n\nТип: ${kindLabel(a)}\n\n${ASK.venue}`, [[{ text: 'Без места →', callback_data: 'wnovenue' }, CANCEL_BTN]]);
+    }
+
+    case 'wnovenue': {
+      const st = await getState(env, chat);
+      if (st?.flow !== 'add') return answer(env, cb, 'Это уже неактуально');
+      await answer(env, cb);
+      await setState(env, chat, { flow: 'add', step: 'status', draft: { ...st.draft, venue_ru: null, venue_en: null } });
+      return edit(env, msg, `<b>Новый ивент</b> 6/${STEPS}\n\nКак иду?`, [...statusRows('ws:'), [CANCEL_BTN]]);
+    }
+
+    case 'ek':
+      await answer(env, cb);
+      return api(env, 'editMessageReplyMarkup', {
+        chat_id: chat, message_id: msg.message_id,
+        reply_markup: { inline_keyboard: [...kindRow(`ekk:${a}:`), [{ text: '← Назад', callback_data: `ev:${a}` }]] },
+      });
+
+    case 'ekk': {
+      await updateEvent(env.DB, a, { kind: b as Kind });
+      const e = await getEvent(env.DB, a);
+      await answer(env, cb, kindLabel(b));
+      return e && edit(env, msg, eventCard(e), eventKb(e.id));
     }
 
     case 'wnourl': {

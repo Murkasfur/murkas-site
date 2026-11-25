@@ -122,5 +122,12 @@ export function initGallery(root: HTMLElement) {
     }
   }).observe(grid);
 
+  // ?q=... в адресе (ссылка «12 фото →» со страницы ивентов) - сразу ищем
+  const q0 = new URLSearchParams(location.search).get('q');
+  if (q0) {
+    state.q = q0.trim().toLowerCase();
+    root.querySelectorAll<HTMLInputElement>('[data-q]').forEach((i) => (i.value = q0));
+  }
+
   render();
 }

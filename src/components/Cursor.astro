@@ -59,7 +59,9 @@
     const el = e.target instanceof Element ? e.target : null;
     const overText = !!el?.closest(TEXT);
     root.classList.toggle('cursor-hidden', overText);
-    const next = overText ? null : (el?.closest<HTMLElement>(TARGETS) ?? null);
+    let next = overText ? null : (el?.closest<HTMLElement>(TARGETS) ?? null);
+    // Элемент внутри оформленной рамки (выпадающий список в поле формы) - обводим рамку целиком
+    if (next) next = next.closest<HTMLElement>('[data-cursor-box]') ?? next;
     if (next !== target) {
       target = next;
       root.classList.toggle('cursor-morph', !!target);

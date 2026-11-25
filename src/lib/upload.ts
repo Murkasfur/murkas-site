@@ -53,8 +53,8 @@ export async function validateMeta(kind: Kind, raw: Record<string, unknown>): Pr
   if (kind === 'photo') {
     m.eventId = str(raw.eventId, 60);
     if (!m.eventId) throw new UploadError(400, 'no_event');
-    const ev = await ENV.DB.prepare(`SELECT id FROM events WHERE id = ?`).bind(m.eventId).first();
-    if (!ev) throw new UploadError(400, 'no_event');
+    if (m.eventId === 'none') m.eventId = null; // «Другой / нет в списке» - модератор разберётся
+    else if (!(await ENV.DB.prepare(`SELECT id FROM events WHERE id = ?`).bind(m.eventId).first())) throw new UploadError(400, 'no_event');
   } else {
     if (!m.personName || !m.personUrl) throw new UploadError(400, 'no_artist');
     m.createdDate = str(raw.createdDate, 10);
