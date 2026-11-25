@@ -1,0 +1,7 @@
+---
+// Значок «in» / «Up» для LinkedIn и Upwork (в simple-icons логотипа LinkedIn нет)
+interface Props { text: string; size?: number }
+const { text, size = 22 } = Astro.props;
+---
+
+<span class="pf-glyph" style={`--s:${size}px`} aria-hidden="true">{text}</span>

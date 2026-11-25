@@ -1,0 +1,34 @@
+---
+// Просмотр фото на весь экран: стрелки, ← →, Esc, подпись и ссылки.
+// Заполняется скриптом из data-gallery (см. src/scripts/portfolio.ts).
+import Icon from '../Icon.astro';
+import { ui, type Lang } from '../../lib/portfolio';
+
+interface Props { lang: Lang }
+const t = ui[Astro.props.lang];
+---
+
+<dialog class="pf-viewer" data-viewer aria-label="Photo viewer">
+  <div class="pf-viewer__top">
+    <span class="pf-viewer__count" data-v-count></span>
+    <button type="button" class="pf-viewer__close" data-v-close aria-label={t.close}>
+      <Icon name="close" size={20} /> <span>Esc</span>
+    </button>
+  </div>
+  <div class="pf-viewer__stage">
+    <button type="button" class="pf-round pf-viewer__arrow" data-v-prev aria-label={t.prev}><Icon name="chevron_left" /></button>
+    <figure class="pf-viewer__photo" data-v-photo></figure>
+    <button type="button" class="pf-round pf-viewer__arrow" data-v-next aria-label={t.next}><Icon name="chevron_right" /></button>
+    <aside class="pf-viewer__info">
+      <p class="pf-viewer__made" data-v-made-wrap><span class="muted">{t.madeL}</span> · <span data-v-made></span></p>
+      <h2 class="pf-viewer__title" data-v-title></h2>
+      <p class="muted" data-v-caption></p>
+      <div class="pf-viewer__links">
+        <a class="pf-link" data-v-page>{t.projectPage} →</a>
+        <a class="pf-link" data-v-figma target="_blank" rel="noopener">{t.openFigma} →</a>
+      </div>
+    </aside>
+  </div>
+  <div class="pf-viewer__thumbs" data-v-thumbs></div>
+  <p class="pf-viewer__hint muted">{t.browse}</p>
+</dialog>

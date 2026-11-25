@@ -1,0 +1,352 @@
+---
+// Главная портфолио. Содержимое - src/data/portfolio.ts
+import PfLayout from './PfLayout.astro';
+import PfShot from './PfShot.astro';
+import PfGlyph from './PfGlyph.astro';
+import PfViewer from './PfViewer.astro';
+import PfContact from './PfContact.astro';
+import Icon from '../Icon.astro';
+import { getPortfolio, pfPath, roleLabel, tx, ui, visibleRoles, type Lang } from '../../lib/portfolio';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const t = ui[lang];
+const base = Astro.locals.pfBase ?? '/portfolio';
+const href = (p = '') => pfPath(base, lang, p);
+const pf = await getPortfolio();
+const { profile } = pf;
+const featured = pf.projects.filter((p) => p.featured);
+const pad = (n: number) => String(n).padStart(2, '0');
+const shortLearning = pf.learning.slice(0, 3);
+const moreLearning = pf.learning.length - shortLearning.length;
+const levelPos = { junior: 18, middle: 55, senior: 90 };
+const gallery = (p: (typeof pf.projects)[number]) =>
+  JSON.stringify({
+    project: p.title,
+    href: href(`/${p.slug}`),
+    figma: p.figma ?? null,
+    photos: p.photos.map((ph) => ({ src: ph.src ?? null, title: tx(ph.title, lang), caption: tx(ph.caption, lang), made: tx(ph.made, lang), figma: ph.figma ?? null })),
+  });
+const learningKinds = [
+  { k: 'all', label: t.lAll },
+  { k: 'education', label: t.lEdu },
+  { k: 'course', label: t.lCourse },
+  { k: 'certificate', label: t.lCert },
+].filter((x) => x.k === 'all' || pf.learning.some((l) => l.kind === x.k));
+---
+
+<PfLayout
+  lang={lang}
+  home
+  title={`${profile.name} · UI/UX designer & frontend developer`}
+  description={t.heroSub}
+>
+  <!-- ============ Hero ============ -->
+  <section class="pf-hero" aria-labelledby="hero-title">
+    <div class="pf-hero__text">
+      <p class="pf-status"><span class="pf-status__dot" aria-hidden="true"></span>{tx(profile.status, lang)}</p>
+      <h1 id="hero-title" class="pf-hero__title">
+        <span>{t.heroA}</span>
+        <span class="accent">{t.heroB}</span>
+      </h1>
+      <p class="pf-hero__sub muted">{t.heroSub}</p>
+      <div class="pf-hero__actions">
+        <a class="pf-btn pf-btn--filled pf-btn--lg" href="#contact"><Icon name="send" />{t.getInTouch}</a>
+        {profile.cv && <a class="pf-btn pf-btn--outlined" href={profile.cv} download><Icon name="download" size={20} />{t.cv}</a>}
+        <span class="pf-hero__icons">
+          <a class="pf-icon-link" href={profile.github.href} target="_blank" rel="noopener me" aria-label="GitHub"><Icon name="github" /></a>
+          <a class="pf-icon-link" href={profile.telegram.href} target="_blank" rel="noopener me" aria-label="Telegram"><Icon name="telegram" /></a>
+          <a class="pf-icon-link" href={`mailto:${profile.email}`} aria-label={t.email}><Icon name="mail" /></a>
+          {profile.linkedin && <a class="pf-icon-link" href={profile.linkedin.href} target="_blank" rel="noopener me" aria-label="LinkedIn"><PfGlyph text="in" /></a>}
+          {profile.upwork && <a class="pf-icon-link" href={profile.upwork.href} target="_blank" rel="noopener me" aria-label="Upwork"><PfGlyph text="Up" /></a>}
+        </span>
+      </div>
+      <dl class="pf-stats">
+        {profile.stats.map((s) => (
+          <div>
+            <dt>{s.value}</dt>
+            <dd class="muted">{tx(s.label, lang)}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+
+    <!-- Design ↔ Code: тянешь ручку - слева макет, справа живая карточка -->
+    <div class="pf-compare" data-compare style="--x:50%">
+      <span class="pf-compare__tag is-left">{t.figmaL}</span>
+      <span class="pf-compare__tag is-right">{t.liveCode}</span>
+      <div class="pf-compare__stage" aria-hidden="true">
+        <div class="pf-vibe pf-vibe--code">
+          <p class="pf-vibe__title">{t.vibe}</p>
+          <span class="pf-vibe__disc">
+            <span class="pf-vibe__ring"></span>
+            <span class="pf-vibe__vinyl"><img src="/img/vibe-cover.webp" alt="" width="56" height="56" /></span>
+          </span>
+          <span class="pf-vibe__track"><b>Getting Over You</b><span>Hot Freaks</span></span>
+          <span class="pf-vibe__vol"><span></span><i></i><span></span></span>
+        </div>
+        <div class="pf-compare__figma">
+          <div class="pf-vibe pf-vibe--figma">
+            <p class="pf-vibe__title">{t.vibe}</p>
+            <span class="pf-vibe__disc"><span class="pf-vibe__vinyl"></span></span>
+            <span class="pf-vibe__track"><b>Getting Over You</b><span>Hot Freaks</span></span>
+            <span class="pf-vibe__vol"><span></span><i></i><span></span></span>
+            <span class="pf-note" style="top:-14px;left:6px">259 × 305</span>
+            <span class="pf-note" style="top:44%;left:-18px">Disc 160</span>
+            <span class="pf-note" style="bottom:72px;left:-10px">gap 8</span>
+            <span class="pf-note" style="bottom:30px;left:-4px">Primary Fixed</span>
+          </div>
+        </div>
+      </div>
+      <span class="pf-compare__line" aria-hidden="true"><span class="pf-compare__knob">‹›</span></span>
+      <input class="pf-compare__range" type="range" min="0" max="100" value="50" aria-label={t.dragHint} data-compare-range />
+    </div>
+  </section>
+
+  <!-- ============ About ============ -->
+  <section id="about" class="pf-section pf-about" aria-labelledby="about-title">
+    <div class="pf-about__text">
+      <h2 id="about-title" class="pf-h2">{t.aboutTitle}</h2>
+      <p>{t.aboutP1}</p>
+      <p class="muted">{t.aboutP2}</p>
+      <ul class="pf-facts">
+        {profile.facts.map((f) => (
+          <li><span class="accent">{tx(f.label, lang)}</span> {tx(f.value, lang)}</li>
+        ))}
+      </ul>
+    </div>
+    <div class="pf-learn">
+      <div class="pf-learn__head">
+        <h3 class="pf-h3">{t.learning}</h3>
+        <button type="button" class="pf-chipbtn" data-learning-open>{t.showAll} <Icon name="expand_more" size={18} /></button>
+      </div>
+      <ul class="pf-learn__list">
+        {shortLearning.map((l, i) => (
+          <li>
+            <span class={`pf-dot pf-dot--${i % 3}`} aria-hidden="true"></span>
+            <span class="pf-learn__main"><b>{tx(l.title, lang)}</b><span class="muted">{tx(l.where, lang)}{l.note && ` · ${tx(l.note, lang)}`}</span></span>
+            <span class="pf-learn__when">{l.when === 'Earlier' && lang === 'ru' ? 'Раньше' : l.when}</span>
+          </li>
+        ))}
+      </ul>
+      {moreLearning > 0 && <button type="button" class="pf-learn__more" data-learning-open>{t.moreInList(moreLearning)}</button>}
+    </div>
+  </section>
+
+  <!-- ============ Skills ============ -->
+  <section id="skills" class="pf-section" aria-labelledby="skills-title">
+    <h2 id="skills-title" class="pf-h2">{t.skills}</h2>
+    <p class="pf-sub muted">{t.skillsSub}</p>
+    <div class="pf-skills">
+      {(['design', 'dev'] as const).map((g) => (
+        <div class="pf-skills__group">
+          <h3 class="pf-h3">{g === 'design' ? t.design : t.development}</h3>
+          <ul class="pf-skills__chips">
+            {pf.skills.filter((s) => s.group === g).map((s, i) => {
+              const id = `skill-${g}-${i}`;
+              return (
+                <li class="pf-skill">
+                  <button type="button" class="pf-skill__chip" aria-expanded="false" aria-controls={id} data-skill={s.name} data-used={(s.used ?? []).join(' ')}>
+                    {s.name}
+                    {s.level && <span class="pf-skill__lvl">{t.levels[s.level]}</span>}
+                  </button>
+                  <div class="pf-pop" id={id} role="dialog" aria-label={s.name} hidden>
+                    <div class="pf-pop__head">
+                      <b>{s.name}</b>
+                      {s.level && <span class="accent">{t.levels[s.level]}{s.years && ` · ${s.years}`}</span>}
+                    </div>
+                    {s.level && (
+                      <div class="pf-scale" style={`--lvl:${levelPos[s.level]}%`}>
+                        <span class="pf-scale__bar"><i></i></span>
+                        <span class="pf-scale__labels">
+                          {(['junior', 'middle', 'senior'] as const).map((l) => <span class:list={{ on: l === s.level }}>{t.levels[l]}</span>)}
+                        </span>
+                      </div>
+                    )}
+                    {s.about && <p>{tx(s.about, lang)}</p>}
+                    {s.used && s.used.length > 0 && (
+                      <>
+                        <p class="pf-pop__label muted">{t.usedIn}</p>
+                        <div class="pf-pop__links">
+                          {s.used.map((slug) => {
+                            const p = pf.projects.find((x) => x.slug === slug);
+                            return p && <a class="pf-tag pf-tag--link" href={href(`/${p.slug}`)}>{p.title} →</a>;
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <!-- ============ Selected work ============ -->
+  <section id="work" class="pf-section pf-work" aria-labelledby="work-title" data-carousel>
+    <div class="pf-work__head">
+      <div>
+        <h2 id="work-title" class="pf-h2">{t.selected}</h2>
+        <p class="pf-sub muted">{t.selectedSub}</p>
+      </div>
+      <div class="pf-work__controls">
+        <a class="pf-link" href={href('/projects')}>{t.allProjects} →</a>
+        <span class="pf-work__count" aria-live="polite"><span data-c-now>01</span> / {pad(featured.length)}</span>
+        <button type="button" class="pf-round" data-c-prev aria-label={t.prev}><Icon name="chevron_left" /></button>
+        <button type="button" class="pf-round pf-round--filled" data-c-next aria-label={t.next}><Icon name="chevron_right" /></button>
+      </div>
+    </div>
+
+    <div class="pf-slides">
+      {featured.map((p, i) => {
+        const shots = p.photos.length ? p.photos : [{}];
+        return (
+          <article class="pf-slide" data-slide hidden={i !== 0} aria-roledescription="slide" aria-label={`${i + 1} / ${featured.length}: ${p.title}`} data-gallery={gallery(p)}>
+            <div class="pf-slide__gallery">
+              <button type="button" class="pf-slide__main" data-open-photo="0" data-main>
+                <PfShot photo={shots[0]} alt={tx(shots[0].title, lang) || p.title} eager={i === 0} />
+                <span class="pf-pill pf-slide__full">{t.fullSize}</span>
+              </button>
+              {shots.length > 1 && (
+                <div class="pf-slide__thumbs">
+                  {shots.slice(0, 4).map((ph, j) => (
+                    <button type="button" class:list={['pf-slide__thumb', { on: j === 0 }]} data-thumb={j} aria-label={tx(ph.title, lang) || `${j + 1}`}>
+                      <PfShot photo={ph} />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div class="pf-slide__info">
+              <p class="pf-slide__meta">
+                <span class="pf-tag pf-tag--date">{tx(p.when, lang)}</span>
+                <span class="pf-tag">{visibleRoles(p).map((r) => roleLabel[r][lang]).join(' · ')}</span>
+              </p>
+              <h3 class="pf-slide__title">
+                {p.live ? (
+                  <a href={p.live} target="_blank" rel="noopener">{p.title} <Icon name="arrow_outward" /></a>
+                ) : (
+                  <a href={href(`/${p.slug}`)}>{p.title}</a>
+                )}
+              </h3>
+              <p class="pf-slide__desc muted"><a href={href(`/${p.slug}`)}>{tx(p.description, lang)}</a></p>
+              {p.metrics && (
+                <dl class="pf-metrics">
+                  {p.metrics.map((m) => (
+                    <div><dt>{m.value}</dt><dd>{tx(m.label, lang)}</dd></div>
+                  ))}
+                </dl>
+              )}
+              <p class="pf-tags">{p.tags.slice(0, 6).map((tg) => <span class="pf-tag">{tg}</span>)}{p.tags.length > 6 && <span class="pf-tag muted">+{p.tags.length - 6}</span>}</p>
+              <p class="pf-slide__actions">
+                <a class="pf-btn pf-btn--filled" href={href(`/${p.slug}`)}>{t.projectPage} →</a>
+                {p.live && <a class="pf-link" href={p.live} target="_blank" rel="noopener">{t.liveSite} →</a>}
+              </p>
+            </div>
+          </article>
+        );
+      })}
+    </div>
+
+    <div class="pf-strip" role="tablist" aria-label={t.selected}>
+      {featured.map((p, i) => (
+        <button type="button" role="tab" class="pf-strip__item" aria-selected={i === 0 ? 'true' : 'false'} data-go={i} data-tags={p.tags.join('|')} data-slug={p.slug}>
+          <PfShot photo={p.photos[0]} class="pf-strip__img" />
+          <span><b>{p.title}</b><span class="muted">{p.year}</span></span>
+        </button>
+      ))}
+    </div>
+    <div class="pf-dots" aria-hidden="true">{featured.map((_, i) => <span class:list={{ on: i === 0 }} data-dot={i}></span>)}</div>
+    <p class="pf-filter-note" data-skill-note hidden>
+      <span data-skill-note-text></span> · <button type="button" class="pf-link" data-skill-reset>{t.reset}</button>
+    </p>
+  </section>
+
+  <!-- ============ How I work ============ -->
+  <section id="process" class="pf-section" aria-labelledby="process-title">
+    <h2 id="process-title" class="pf-h2">{t.howTitle}</h2>
+    <p class="pf-sub muted">{t.howSub}</p>
+    <ol class="pf-steps">
+      {pf.process.map((s, i) => (
+        <li class={`pf-step pf-step--${i % 3}`}>
+          <span class="pf-step__n">{pad(i + 1)}</span>
+          <h3>{tx(s.title, lang)}</h3>
+          <p class="muted">{tx(s.text, lang)}</p>
+        </li>
+      ))}
+    </ol>
+  </section>
+
+  <!-- ============ Work with me ============ -->
+  <section class="pf-section" aria-labelledby="hire-title">
+    <div class="pf-hire__head">
+      <div>
+        <h2 id="hire-title" class="pf-h2">{t.withMe}</h2>
+        <p class="pf-sub muted">{t.withMeSub}</p>
+      </div>
+      <p class="pf-rate">
+        <span class="pf-rate__price"><b>${profile.rate.from}–{profile.rate.to}</b> <span class="muted">{t.perHour}</span></span>
+        <span class="muted">{profile.rate.currency} · {t.rateNote}</span>
+      </p>
+    </div>
+    <div class="pf-services">
+      {pf.services.map((s, i) => (
+        <article class:list={['pf-service', `pf-service--${i % 3}`, { 'is-best': s.best }]}>
+          <div class="pf-service__top">
+            <h3>{tx(s.title, lang)}</h3>
+            {s.best && <span class="pf-badge">{t.bestFit}</span>}
+          </div>
+          <p class="muted">{tx(s.text, lang)}</p>
+          <p class="pf-tags">{s.tags.map((tg) => <span class="pf-tag">{tg}</span>)}</p>
+        </article>
+      ))}
+    </div>
+    <p class="pf-note-line muted">{t.noBackend}</p>
+  </section>
+
+  <PfContact lang={lang} />
+
+  <!-- ============ Окно «Учёба» ============ -->
+  <dialog class="pf-dialog" data-learning aria-labelledby="learning-title">
+    <div class="pf-dialog__head">
+      <div>
+        <h2 id="learning-title" class="pf-h2">{t.learning}</h2>
+        <p class="muted">{t.learningSub}</p>
+      </div>
+      <button type="button" class="pf-round" data-close aria-label={t.close}><Icon name="close" /></button>
+    </div>
+    {learningKinds.length > 2 && (
+      <div class="pf-seg" role="radiogroup">
+        {learningKinds.map((k, i) => (
+          <button type="button" role="radio" aria-checked={i === 0 ? 'true' : 'false'} data-l-filter={k.k}>{k.label}</button>
+        ))}
+      </div>
+    )}
+    <ul class="pf-ldetails">
+      {pf.learning.map((l, i) => (
+        <li data-kind={l.kind}>
+          <details open={i === 0}>
+            <summary>
+              <span class="pf-ldetails__when muted">{l.when === 'Earlier' && lang === 'ru' ? 'Раньше' : l.when}</span>
+              <span class="pf-ldetails__main"><b>{tx(l.title, lang)}</b><span class="muted">{tx(l.where, lang)}</span></span>
+              <span class="pf-tag">{t.kind[l.kind]}</span>
+              <Icon name="expand_more" class="pf-ldetails__chev" />
+            </summary>
+            {(l.about || l.tags || l.links) && (
+              <div class="pf-ldetails__body">
+                {l.about && <p class="muted">{tx(l.about, lang)}</p>}
+                {l.tags && <p class="pf-tags">{l.tags.map((tg) => <span class="pf-tag">{tg}</span>)}</p>}
+                {l.links && <p class="pf-ldetails__links">{l.links.map((ln) => <a class="pf-link" href={ln.href} target="_blank" rel="noopener">{tx(ln.label, lang)} →</a>)}</p>}
+              </div>
+            )}
+          </details>
+        </li>
+      ))}
+    </ul>
+  </dialog>
+
+  <PfViewer lang={lang} />
+</PfLayout>

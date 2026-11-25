@@ -1,0 +1,38 @@
+---
+// Блок «Есть проект? Давай обсудим» со ссылками. Почта по клику копируется.
+import PfGlyph from './PfGlyph.astro';
+import Icon from '../Icon.astro';
+import { getPortfolio, tx, ui, type Lang } from '../../lib/portfolio';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const t = ui[lang];
+const { profile } = await getPortfolio();
+const contacts = [
+  { key: 'email', label: t.email, value: profile.email, href: `mailto:${profile.email}`, icon: 'mail' as const, copy: true },
+  { key: 'telegram', label: 'Telegram', value: profile.telegram.handle, href: profile.telegram.href, icon: 'telegram' as const },
+  { key: 'github', label: 'GitHub', value: profile.github.handle, href: profile.github.href, icon: 'github' as const },
+  ...(profile.linkedin ? [{ key: 'linkedin', label: 'LinkedIn', value: profile.linkedin.handle, href: profile.linkedin.href, glyph: 'in' }] : []),
+  ...(profile.upwork ? [{ key: 'upwork', label: 'Upwork', value: tx(profile.upwork.handle, lang) || t.freelance, href: profile.upwork.href, glyph: 'Up' }] : []),
+];
+
+---
+
+  <section id="contact" class="pf-contact" aria-labelledby="contact-title">
+    <div class="pf-contact__text">
+      <h2 id="contact-title" class="pf-contact__title"><span>{t.talkA}</span><span class="accent">{t.talkB}</span></h2>
+      <p class="muted">{t.talkSub}</p>
+    </div>
+    <ul class="pf-contact__links">
+      {contacts.map((c) => (
+        <li>
+          <a class="pf-contact__link" href={c.href} target={c.copy ? undefined : '_blank'} rel={c.copy ? undefined : 'noopener me'} data-copy-email={c.copy ? '' : undefined}>
+            {'glyph' in c && c.glyph ? <PfGlyph text={c.glyph} size={24} /> : <Icon name={(c as { icon: 'mail' }).icon} />}
+            <span><small class="muted">{c.label}</small><b>{c.value}</b></span>
+            <Icon name={c.copy ? 'content_copy' : 'arrow_outward'} size={20} />
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
+

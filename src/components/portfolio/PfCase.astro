@@ -1,0 +1,158 @@
+---
+// Страница проекта: шапка, ссылки, все теги, галерея (сначала главные
+// кадры, потом все остальные), блоки рассказа и «Другие проекты».
+import PfLayout from './PfLayout.astro';
+import PfShot from './PfShot.astro';
+import PfCard from './PfCard.astro';
+import PfViewer from './PfViewer.astro';
+import PfContact from './PfContact.astro';
+import Icon from '../Icon.astro';
+import NotFound from '../NotFound.astro';
+import Layout from '../Layout.astro';
+import { getPortfolio, pfPath, roleLabel, tx, ui, visibleRoles, type Lang } from '../../lib/portfolio';
+
+interface Props { lang: Lang; slug: string }
+const { lang, slug } = Astro.props;
+const t = ui[lang];
+const href = (p = '') => pfPath(Astro.locals.pfBase ?? '/portfolio', lang, p);
+const pf = await getPortfolio();
+const p = pf.projects.find((x) => x.slug === slug);
+if (!p) Astro.response.status = 404;
+const others = p ? pf.projects.filter((x) => x.slug !== p.slug) : [];
+const photos = p ? (p.photos.length ? p.photos : [{}]) : [];
+const mainN = p ? Math.min(p.mainPhotos ?? Math.min(3, photos.length), photos.length) : 0;
+const main = photos.slice(0, mainN);
+const rest = photos.slice(mainN);
+const gallery = p
+  ? JSON.stringify({
+      project: p.title,
+      href: null,
+      figma: p.figma ?? null,
+      photos: photos.map((ph) => ({ src: ph.src ?? null, title: tx(ph.title, lang), caption: tx(ph.caption, lang), made: tx(ph.made, lang), figma: ph.figma ?? null })),
+    })
+  : '';
+---
+
+{
+  !p ? (
+    <Layout lang={lang} title="404 · Murkas" noindex>
+      <NotFound lang={lang} />
+    </Layout>
+  ) : (
+    <PfLayout lang={lang} title={`${p.title} · ${pf.profile.name}`} description={tx(p.short, lang)}>
+      <article class="pf-case" data-gallery={gallery}>
+        <header class="pf-case__head">
+          <a class="pf-back pf-link" href={href('/projects')}>← {t.allWork}</a>
+          <h1 class="pf-case__title">{p.title}</h1>
+          <p class="pf-case__desc muted">{tx(p.description, lang)}</p>
+          <dl class="pf-case__meta">
+            <div><dt>{t.roleL}</dt><dd>{tx(p.roleText, lang)}</dd></div>
+            <div><dt>{t.when}</dt><dd>{tx(p.when, lang)}</dd></div>
+            <div><dt>{t.stackL}</dt><dd>{p.stackShort}</dd></div>
+          </dl>
+          {(p.live || p.figma || p.github) && (
+            <p class="pf-case__links">
+              {p.live && <a class="pf-btn pf-btn--filled pf-btn--sm" href={p.live} target="_blank" rel="noopener">{t.liveSite} <Icon name="arrow_outward" size={18} /></a>}
+              {p.figma && <a class="pf-btn pf-btn--outlined pf-btn--sm" href={p.figma} target="_blank" rel="noopener"><Icon name="figma" size={16} />Figma <Icon name="arrow_outward" size={18} /></a>}
+              {p.github && <a class="pf-btn pf-btn--outlined pf-btn--sm" href={p.github} target="_blank" rel="noopener"><Icon name="github" size={16} />GitHub <Icon name="arrow_outward" size={18} /></a>}
+            </p>
+          )}
+          <p class="pf-tags">
+            {visibleRoles(p).map((r) => <span class="pf-tag pf-tag--role">{roleLabel[r][lang]}</span>)}
+            {p.tags.map((tg) => <a class="pf-tag pf-tag--link" href={`${href('/projects')}?tag=${encodeURIComponent(tg)}`}>{tg}</a>)}
+          </p>
+        </header>
+
+        <section class="pf-gal" aria-label="Photos" data-gal>
+          <div class="pf-gal__track" data-gal-track>
+            {main.map((ph, i) => (
+              <button type="button" class="pf-gal__slide" data-open-photo={i} data-gal-slide>
+                <PfShot photo={ph} alt={tx(ph.title, lang) || p.title} eager={i === 0} />
+              </button>
+            ))}
+          </div>
+          <span class="pf-pill pf-gal__count"><span data-gal-now>1</span> / {main.length}{rest.length > 0 && ` · ${t.main}`}</span>
+          <button type="button" class="pf-pill pf-gal__full" data-gal-full>{t.fullSize}</button>
+          {main.length > 1 && (
+            <>
+              <button type="button" class="pf-round pf-gal__arrow is-prev" data-gal-prev aria-label={t.prev}><Icon name="chevron_left" /></button>
+              <button type="button" class="pf-round pf-round--filled pf-gal__arrow is-next" data-gal-next aria-label={t.next}><Icon name="chevron_right" /></button>
+            </>
+          )}
+          {photos.length > 1 && (
+            <div class="pf-gal__thumbs">
+              {main.map((ph, i) => (
+                <button type="button" class:list={['pf-gal__thumb', { on: i === 0 }]} data-open-photo={i} data-gal-thumb={i}><PfShot photo={ph} /></button>
+              ))}
+              {rest.length > 0 && <span class="pf-gal__divider">{t.morePhotos}<b>+{rest.length}</b></span>}
+              {rest.map((ph, i) => (
+                <button type="button" class="pf-gal__thumb" data-open-photo={mainN + i}><PfShot photo={ph} /></button>
+              ))}
+            </div>
+          )}
+          {rest.length > 0 && (
+            <p class="pf-gal__hint">
+              <span class="muted">{t.galleryHint(mainN)}</span>
+              <button type="button" class="pf-link" data-open-photo="0">{t.photosN(photos.length)} · {t.openAll} →</button>
+            </p>
+          )}
+        </section>
+
+        {p.problem && (
+          <section class="pf-block">
+            <h2 class="pf-block__h">{t.problem}</h2>
+            <p class="pf-block__body muted">{tx(p.problem, lang)}</p>
+          </section>
+        )}
+        {p.did && p.did.length > 0 && (
+          <section class="pf-block">
+            <h2 class="pf-block__h">{t.did}</h2>
+            <dl class="pf-block__body pf-did">
+              {p.did.map((d) => <div><dt>{tx(d.title, lang)}</dt><dd class="muted">{tx(d.text, lang)}</dd></div>)}
+            </dl>
+          </section>
+        )}
+        {p.process && (
+          <section class="pf-block">
+            <h2 class="pf-block__h">{t.processL}</h2>
+            <div class="pf-block__body">
+              {p.process.intro && <p class="muted">{tx(p.process.intro, lang)}</p>}
+              <ul class="pf-proc">
+                {p.process.steps.map((s) => (
+                  <li><PfShot photo={{ src: s.photo }} alt={tx(s.caption, lang)} /><span>{tx(s.caption, lang)}</span></li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        )}
+        {p.result && p.result.length > 0 && (
+          <section class="pf-block">
+            <h2 class="pf-block__h">{t.result}</h2>
+            <ul class="pf-block__body pf-results">
+              {p.result.map((r, i) => <li class={`pf-results__i is-${i % 3}`}><b>{tx(r.title, lang)}</b><span class="muted">{tx(r.text, lang)}</span></li>)}
+            </ul>
+          </section>
+        )}
+
+        {others.length > 0 && (
+          <section class="pf-more" data-more aria-labelledby="more-title">
+            <div class="pf-more__head">
+              <h2 id="more-title" class="pf-h2">{t.moreProjects}</h2>
+              <div class="pf-work__controls">
+                <a class="pf-link" href={href('/projects')}>{t.allProjects} →</a>
+                <button type="button" class="pf-round" data-more-prev aria-label={t.prev}><Icon name="chevron_left" /></button>
+                <button type="button" class="pf-round pf-round--filled" data-more-next aria-label={t.next}><Icon name="chevron_right" /></button>
+              </div>
+            </div>
+            <div class="pf-more__track" data-more-track>
+              {others.map((o) => <PfCard p={o} lang={lang} compact />)}
+            </div>
+            <div class="pf-dots" data-more-dots aria-hidden="true"></div>
+          </section>
+        )}
+      </article>
+      <PfContact lang={lang} />
+      <PfViewer lang={lang} />
+    </PfLayout>
+  )
+}

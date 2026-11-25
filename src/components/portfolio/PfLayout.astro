@@ -1,0 +1,279 @@
+---
+// Каркас страниц портфолио: своя шапка и подвал (не как на фурри-сайте),
+// тема по умолчанию - тёмный арбуз, Ctrl K, Inspect, снекбар.
+import '@fontsource-variable/rubik';
+import '../../styles/theme.css';
+import '../../styles/portfolio.css';
+import Icon from '../Icon.astro';
+import Placeholder from '../Placeholder.astro';
+import { getPortfolio, pfPath, tx, ui, type Lang } from '../../lib/portfolio';
+import { defaultSettings } from '../../lib/settings-core';
+
+interface Props {
+  lang: Lang;
+  title: string;
+  description?: string;
+  /** главная портфолио: якоря в шапке без перехода */
+  home?: boolean;
+  noindex?: boolean;
+}
+const { lang, title, description, home = false, noindex = false } = Astro.props;
+const t = ui[lang];
+const base = Astro.locals.pfBase ?? '/portfolio';
+const pf = await getPortfolio();
+const { profile } = pf;
+const settings = Astro.locals.settings ?? defaultSettings();
+const href = (p = '') => pfPath(base, lang, p);
+const anchor = (id: string) => (home ? `#${id}` : `${href()}#${id}`);
+
+// Ссылка на эту же страницу на другом языке
+const here = Astro.url.pathname.replace(/^\/ru(?=\/|$)/, '') || '/';
+const otherLang: Lang = lang === 'en' ? 'ru' : 'en';
+const otherHref = otherLang === 'ru' ? (here === '/' ? '/ru' : `/ru${here}`) : here;
+// Путь до перезаписи (portfolio.murkas.net/ru/x -> /ru/portfolio/x): показываем то, что в адресной строке
+const shownHere = Astro.originPathname ?? Astro.url.pathname;
+const swap = (p: string) => (p.startsWith('/ru') ? p.replace(/^\/ru/, '') || '/' : p === '/' ? '/ru' : `/ru${p}`);
+const langHref = shownHere !== Astro.url.pathname ? swap(shownHere) : otherHref;
+
+const nav = [
+  { id: 'about', label: t.about },
+  { id: 'skills', label: t.skills },
+  { id: 'work', label: t.work },
+  { id: 'process', label: t.process },
+];
+const themes = ['watermelon', 'redpanda', 'light'] as const;
+---
+
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    {description && <meta name="description" content={description} />}
+    {(noindex || settings.maintenance) && <meta name="robots" content="noindex" />}
+    <meta property="og:title" content={title} />
+    {description && <meta property="og:description" content={description} />}
+    <title>{title}</title>
+    <script is:inline>
+      (function () {
+        var t = 'watermelon';
+        try {
+          t = localStorage.getItem('pf-theme') || t;
+        } catch (e) {}
+        var r = document.documentElement;
+        r.dataset.pfTheme = t;
+        r.dataset.theme = t === 'redpanda' ? 'redpanda' : 'watermelon';
+        r.dataset.mode = t === 'light' ? 'light' : 'dark';
+        r.dataset.motion = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'reduce' : 'full';
+      })();
+    </script>
+  </head>
+  <body class="pf">
+    {
+      settings.maintenance ? (
+        <main class="pf-wrap pf-maint">
+          <Placeholder lang={lang} kind="maint" />
+        </main>
+      ) : (
+        <>
+          <a class="pf-skip" href="#main">Skip to content</a>
+          <header class="pf-nav" data-nav>
+            <div class="pf-wrap pf-nav__in">
+              <a class="pf-brand" href={href()} data-inspect-skip>
+                <span class="pf-brand__dot" aria-hidden="true" />
+                {profile.name}
+              </a>
+              <nav class="pf-nav__links" aria-label="Sections">
+                {nav.map((n) => (
+                  <a href={anchor(n.id)} data-spy={n.id}>
+                    {n.label}
+                  </a>
+                ))}
+              </nav>
+              <div class="pf-nav__tools">
+                <div class="pf-themes" role="radiogroup" aria-label={t.switchTheme}>
+                  {themes.map((th) => (
+                    <button type="button" role="radio" class={`pf-themes__dot is-${th}`} data-theme-set={th} aria-label={t.themes[th]} title={t.themes[th]} />
+                  ))}
+                </div>
+                <button type="button" class="pf-tool" data-inspect-toggle aria-pressed="false" title="I">
+                  <span aria-hidden="true">&lt;/&gt;</span> {t.inspect}
+                </button>
+                <button type="button" class="pf-tool pf-kbd" data-cmd-open aria-label={t.cmdHint}>
+                  Ctrl K
+                </button>
+                <a class="pf-lang" href={langHref} hreflang={otherLang} lang={otherLang}>
+                  <span class:list={{ on: lang === 'en' }}>EN</span> / <span class:list={{ on: lang === 'ru' }}>RU</span>
+                </a>
+                <a class="pf-btn pf-btn--filled pf-nav__cta" href={anchor('contact')}>
+                  <Icon name="send" size={20} />
+                  {t.contact}
+                </a>
+              </div>
+            </div>
+          </header>
+
+          <main id="main" class="pf-wrap pf-main">
+            <slot />
+          </main>
+
+          <footer class="pf-wrap pf-footer">
+            <div class="pf-footer__cols">
+              <div class="pf-footer__brand">
+                <p class="pf-footer__name">{profile.name}</p>
+                <p class="muted">{t.footerAbout}</p>
+                <p class="pf-rate-chip">
+                  <b>
+                    ${profile.rate.from}–{profile.rate.to}
+                  </b>{' '}
+                  <span>
+                    {t.perHour} · {profile.rate.currency}
+                  </span>
+                </p>
+              </div>
+              <div class="pf-footer__col">
+                <p class="pf-footer__h">{t.navigate}</p>
+                {nav.map((n) => (
+                  <a href={anchor(n.id)}>{n.label}</a>
+                ))}
+                <a href={href('/projects')}>{t.allProjects}</a>
+              </div>
+              <div class="pf-footer__col">
+                <p class="pf-footer__h">{t.contact}</p>
+                <span class="pf-footer__row">
+                  <a href={`mailto:${profile.email}`}>{profile.email}</a>
+                  <button type="button" class="pf-mini" data-copy-email>
+                    {t.copy}
+                  </button>
+                </span>
+                <a href={profile.telegram.href} target="_blank" rel="noopener me">
+                  Telegram
+                </a>
+                {profile.linkedin && (
+                  <a href={profile.linkedin.href} target="_blank" rel="noopener me">
+                    LinkedIn
+                  </a>
+                )}
+                {profile.upwork && (
+                  <a href={profile.upwork.href} target="_blank" rel="noopener me">
+                    Upwork
+                  </a>
+                )}
+                <a href={profile.github.href} target="_blank" rel="noopener me">
+                  GitHub
+                </a>
+              </div>
+              <div class="pf-footer__col">
+                <p class="pf-footer__h">{t.more}</p>
+                {profile.cv && (
+                  <span class="pf-footer__row">
+                    <a href={profile.cv} download>
+                      {t.resume}
+                    </a>
+                    <span class="pf-mini">PDF</span>
+                  </span>
+                )}
+                <span class="pf-footer__row">
+                  <a href={profile.fursona} rel="me">
+                    murkas.net
+                  </a>
+                  <span class="pf-mini">{t.fluffier}</span>
+                </span>
+                <a href="#main" data-to-top>
+                  {t.toTop}
+                </a>
+              </div>
+            </div>
+            <div class="pf-footer__bottom">
+              <span class="muted">
+                © 2026 {profile.name} · {t.made}
+              </span>
+              <span class="pf-footer__prefs">
+                <span class="pf-themes" role="radiogroup" aria-label={t.switchTheme}>
+                  {themes.map((th) => (
+                    <button type="button" role="radio" class={`pf-themes__dot is-${th}`} data-theme-set={th} aria-label={t.themes[th]} title={t.themes[th]} />
+                  ))}
+                </span>
+                <a class="pf-lang" href={langHref} hreflang={otherLang} lang={otherLang}>
+                  <span class:list={{ on: lang === 'en' }}>EN</span> / <span class:list={{ on: lang === 'ru' }}>RU</span>
+                </a>
+              </span>
+            </div>
+          </footer>
+
+          <dialog class="pf-cmd" data-cmd aria-label={t.cmdHint}>
+            <div class="pf-cmd__search">
+              <Icon name="search" size={20} />
+              <input type="text" placeholder={t.cmdHint} data-cmd-input autocomplete="off" spellcheck="false" />
+              <kbd>Esc</kbd>
+            </div>
+            <div class="pf-cmd__list" data-cmd-list role="listbox">
+              <p class="pf-cmd__group">{t.cmdProjects}</p>
+              {pf.projects.map((p) => (
+                <a class="pf-cmd__item" href={href(`/${p.slug}`)} data-cmd-item data-key={`${p.title} ${p.tags.join(' ')}`}>
+                  <span>{p.title}</span>
+                  <span class="muted">{p.year}</span>
+                </a>
+              ))}
+              <a class="pf-cmd__item" href={href('/projects')} data-cmd-item data-key="all projects все проекты">
+                <span>{t.allProjects}</span>
+                <span class="muted">→</span>
+              </a>
+              <p class="pf-cmd__group">{t.cmdSections}</p>
+              {[...nav, { id: 'contact', label: t.contact }].map((n) => (
+                <a class="pf-cmd__item" href={anchor(n.id)} data-cmd-item data-key={`${n.id} ${n.label}`}>
+                  <span>{n.label}</span>
+                  <span class="muted">#</span>
+                </a>
+              ))}
+              <p class="pf-cmd__group">{t.cmdActions}</p>
+              <button type="button" class="pf-cmd__item" data-cmd-item data-key="copy email почта" data-copy-email>
+                <span>{t.copyEmail}</span>
+                <span class="muted">{profile.email}</span>
+              </button>
+              {profile.cv && (
+                <a class="pf-cmd__item" href={profile.cv} download data-cmd-item data-key="cv resume резюме">
+                  <span>{t.cv}</span>
+                  <span class="muted">PDF</span>
+                </a>
+              )}
+              <button type="button" class="pf-cmd__item" data-cmd-item data-key="theme тема" data-theme-next>
+                <span>{t.switchTheme}</span>
+                <span class="muted" data-theme-name />
+              </button>
+              <a class="pf-cmd__item" href={langHref} data-cmd-item data-key="language язык english русский">
+                <span>{t.switchLang}</span>
+                <span class="muted">{otherLang.toUpperCase()}</span>
+              </a>
+              <a class="pf-cmd__item" href={profile.fursona} data-cmd-item data-key="murkas fursona фурсона">
+                <span>{t.openFursona}</span>
+                <span class="muted">{t.fluffier}</span>
+              </a>
+              <p class="pf-cmd__empty muted" data-cmd-empty hidden>
+                {t.nothing}
+              </p>
+            </div>
+          </dialog>
+
+          <div class="pf-inspect" data-inspect-box hidden aria-hidden="true">
+            <span class="pf-inspect__tag" data-inspect-tag />
+          </div>
+          <span
+            hidden
+            data-pf-i18n={JSON.stringify({
+              copied: t.copied,
+              openMail: t.openMail,
+              email: profile.email,
+              inspectOn: t.inspectOn,
+              themes: t.themes,
+            })}
+          />
+        </>
+      )
+    }
+    <script>
+      import '../../scripts/portfolio';
+    </script>
+  </body>
+</html>

@@ -1,0 +1,23 @@
+---
+// Картинка проекта или заглушка с камерой, если фото ещё нет.
+import Icon from '../Icon.astro';
+import type { Photo } from '../../data/portfolio';
+
+interface Props {
+  photo?: Photo;
+  alt?: string;
+  class?: string;
+  eager?: boolean;
+}
+const { photo, alt = '', class: cls, eager = false } = Astro.props;
+---
+
+{
+  photo?.src ? (
+    <img class:list={['pf-shot', cls]} src={photo.src} alt={alt} loading={eager ? 'eager' : 'lazy'} decoding="async" />
+  ) : (
+    <span class:list={['pf-shot', 'pf-shot--empty', cls]} role="img" aria-label={alt}>
+      <Icon name="photo_camera" />
+    </span>
+  )
+}

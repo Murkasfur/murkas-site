@@ -22,7 +22,7 @@ export const pages: { key: PageKey; path: string; status: PageStatus }[] = [
   { key: 'events', path: '/events', status: 'live' },
   { key: 'photos', path: '/photos', status: 'live' },
   { key: 'arts', path: '/arts', status: 'live' },
-  { key: 'portfolio', path: '/portfolio', status: 'wip' },
+  { key: 'portfolio', path: '/portfolio', status: 'live' },
 ];
 
 export const pageStatus = (key: PageKey) => pages.find((p) => p.key === key)?.status ?? 'live';

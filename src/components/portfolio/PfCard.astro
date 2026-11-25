@@ -1,0 +1,58 @@
+---
+// Карточка проекта: список всех работ и «Другие проекты».
+import PfShot from './PfShot.astro';
+import Icon from '../Icon.astro';
+import { pfPath, roleLabel, tx, ui, visibleRoles, type Lang } from '../../lib/portfolio';
+import type { Project } from '../../data/portfolio';
+
+interface Props {
+  p: Project;
+  lang: Lang;
+  /** compact - для карусели «Другие проекты» */
+  compact?: boolean;
+}
+const { p, lang, compact = false } = Astro.props;
+const t = ui[lang];
+const href = pfPath(Astro.locals.pfBase ?? '/portfolio', lang, `/${p.slug}`);
+const roles = visibleRoles(p).map((r) => roleLabel[r][lang]);
+const search = [p.title, tx(p.short, 'en'), tx(p.short, 'ru'), ...p.tags, ...p.roles.map((r) => `${roleLabel[r].en} ${roleLabel[r].ru}`)].join(' ').toLowerCase();
+---
+
+<article
+  class:list={['pf-card', { 'pf-card--compact': compact }]}
+  data-card
+  data-roles={p.roles.join(' ')}
+  data-tags={p.tags.join('|')}
+  data-sort={p.sort}
+  data-title={p.title.toLowerCase()}
+  data-search={search}
+>
+  <a class="pf-card__img" href={href} tabindex="-1" aria-hidden="true">
+    <PfShot photo={p.photos[0]} />
+    {p.photos[1]?.src && <PfShot photo={p.photos[1]} class="pf-card__hover" />}
+  </a>
+  <div class="pf-card__body">
+    {compact ? (
+      <p class="pf-card__row"><a class="pf-card__title" href={href}>{p.title}</a><span class="muted">{p.year}</span></p>
+    ) : (
+      <>
+        <p class="pf-card__meta">{roles.map((r) => <span class="pf-tag">{r}</span>)}<span class="pf-card__when">{tx(p.when, lang)}</span></p>
+        <h3 class="pf-card__h">
+          {p.live ? (
+            <a href={p.live} target="_blank" rel="noopener">{p.title} <Icon name="arrow_outward" size={20} /></a>
+          ) : (
+            <a href={href}>{p.title}</a>
+          )}
+        </h3>
+      </>
+    )}
+    <p class="muted pf-card__desc">{tx(p.short, lang)}</p>
+    <p class="pf-tags">{(compact ? p.tags.slice(0, 3) : p.tags).map((tg) => <span class="pf-tag" data-tag={tg}>{tg}</span>)}</p>
+    {!compact && p.metrics && (
+      <dl class="pf-metrics pf-metrics--sm">
+        {p.metrics.slice(0, 3).map((m) => <div><dt>{m.value}</dt><dd>{tx(m.label, lang)}</dd></div>)}
+      </dl>
+    )}
+    {!compact && <a class="pf-link pf-card__more" href={href}>{t.projectPage} →</a>}
+  </div>
+</article>

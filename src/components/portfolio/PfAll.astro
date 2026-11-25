@@ -1,0 +1,67 @@
+---
+// Все работы: поиск, фильтры по роли и стеку, сортировка.
+import PfLayout from './PfLayout.astro';
+import PfCard from './PfCard.astro';
+import Icon from '../Icon.astro';
+import { getPortfolio, pfPath, roleLabel, ui, type Lang } from '../../lib/portfolio';
+import type { Role } from '../../data/portfolio';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const t = ui[lang];
+const href = (p = '') => pfPath(Astro.locals.pfBase ?? '/portfolio', lang, p);
+const pf = await getPortfolio();
+const all = pf.projects;
+const roleOrder: Role[] = ['design', 'frontend', 'backend', 'full', 'dev', 'hardware'];
+const roles = roleOrder.map((r) => ({ r, n: all.filter((p) => p.roles.includes(r)).length })).filter((x) => x.n > 0);
+const stack = pf.stackFilters.filter((f) => all.some((p) => p.tags.some((tg) => tg.toLowerCase().includes(f.toLowerCase()))));
+---
+
+<PfLayout lang={lang} title={`${t.allProjects} · ${pf.profile.name}`} description={t.selectedSub}>
+  <div class="pf-all" data-all>
+    <a class="pf-back pf-link" href={href()}>← {t.home}</a>
+    <h1 class="pf-all__title">{t.allProjects} <span class="accent">{t.projectsCount(all.length)}</span></h1>
+
+    <div class="pf-all__toolbar">
+      <label class="pf-search">
+        <Icon name="search" />
+        <span class="visually-hidden">{t.search}</span>
+        <input type="search" placeholder={t.search} data-q autocomplete="off" />
+        <kbd>/</kbd>
+      </label>
+      <label class="pf-select">
+        <span class="visually-hidden">{t.sort}</span>
+        <select data-sort-select>
+          <option value="new">{t.sort}: {t.newest}</option>
+          <option value="old">{t.sort}: {t.oldest}</option>
+          <option value="az">{t.sort}: {t.az}</option>
+        </select>
+        <Icon name="expand_more" size={18} />
+      </label>
+    </div>
+
+    <div class="pf-filters">
+      <span class="pf-filters__label muted">{t.role}</span>
+      <div class="pf-filters__chips" role="radiogroup" aria-label={t.role}>
+        <button type="button" class="pf-fchip" role="radio" aria-checked="true" data-role="">{t.all} · {all.length}</button>
+        {roles.map(({ r, n }) => (
+          <button type="button" class="pf-fchip" role="radio" aria-checked="false" data-role={r}>{roleLabel[r][lang]} · {n}</button>
+        ))}
+      </div>
+      <span class="pf-filters__label muted">{t.stack}</span>
+      <div class="pf-filters__chips" aria-label={t.stack}>
+        {stack.map((tg) => <button type="button" class="pf-fchip pf-fchip--outline" aria-pressed="false" data-stack={tg}>{tg}</button>)}
+      </div>
+    </div>
+
+    <p class="pf-all__line">
+      <span class="muted" data-showing data-tpl={t.showing(-1, all.length)}>{t.showing(all.length, all.length)}</span>
+      <button type="button" class="pf-link" data-reset hidden>{t.reset}</button>
+    </p>
+
+    <div class="pf-grid" data-grid>
+      {all.map((p) => <PfCard p={p} lang={lang} />)}
+    </div>
+    <p class="pf-empty muted" data-empty hidden>{t.nothing}</p>
+  </div>
+</PfLayout>
