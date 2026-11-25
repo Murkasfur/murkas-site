@@ -415,20 +415,26 @@ if (gal) {
   const slides = $$('[data-gal-slide]', gal);
   const now = $('[data-gal-now]', gal);
   let cur = 0;
+  // сколько прокрутить, чтобы центр кадра совпал с центром ленты
+  const offset = (s: HTMLElement) => {
+    const tr = track.getBoundingClientRect();
+    const r = s.getBoundingClientRect();
+    return r.left + r.width / 2 - (tr.left + tr.width / 2);
+  };
   const go = (i: number) => {
     cur = Math.max(0, Math.min(i, slides.length - 1));
-    track.scrollTo({ left: slides[cur].offsetLeft - track.offsetLeft, behavior: reduce() ? 'auto' : 'smooth' });
+    track.scrollBy({ left: offset(slides[cur]), behavior: reduce() ? 'auto' : 'smooth' });
   };
   const prev = $<HTMLButtonElement>('[data-gal-prev]', gal);
   const next = $<HTMLButtonElement>('[data-gal-next]', gal);
   const sync = () => {
-    // текущий кадр - тот, чей левый край ближе всего к левому краю ленты
-    const left = track.scrollLeft;
+    // текущий кадр - тот, чей центр ближе всего к центру ленты
     let best = 0;
     slides.forEach((s, j) => {
-      if (Math.abs(s.offsetLeft - track.offsetLeft - left) < Math.abs(slides[best].offsetLeft - track.offsetLeft - left)) best = j;
+      if (Math.abs(offset(s)) < Math.abs(offset(slides[best]))) best = j;
     });
     cur = best;
+    slides.forEach((s, j) => s.classList.toggle('is-cur', j === cur));
     if (now) now.textContent = String(cur + 1);
     $$('[data-gal-thumb]', gal).forEach((t, j) => t.classList.toggle('on', j === cur));
     if (prev) prev.disabled = cur === 0;

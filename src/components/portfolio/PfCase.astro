@@ -72,6 +72,7 @@ const gallery = p
         </header>
 
         <section class="pf-gal" aria-label="Photos" data-gal>
+          <div class="pf-gal__stage">
           <div class="pf-gal__track" data-gal-track>
             {main.map((ph, i) => (
               <button type="button" class="pf-gal__slide" data-open-photo={i} data-gal-slide data-cursor-dot>
@@ -87,6 +88,7 @@ const gallery = p
               <button type="button" class="pf-round pf-round--filled pf-gal__arrow is-next" data-gal-next aria-label={t.next}><Icon name="chevron_right" /></button>
             </>
           )}
+          </div>
           {photos.length > 1 && (
             <div class="pf-gal__thumbs">
               {main.map((ph, i) => (
@@ -100,7 +102,6 @@ const gallery = p
           )}
           {rest.length > 0 && (
             <p class="pf-gal__hint">
-              <span class="muted">{t.galleryHint(mainN)}</span>
               <button type="button" class="pf-link" data-open-photo="0">{t.photosN(photos.length)} · {t.openAll} →</button>
             </p>
           )}
