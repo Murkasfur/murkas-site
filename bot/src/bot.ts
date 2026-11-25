@@ -4,6 +4,7 @@ import { api, downloadFile, send, edit, answer, esc, type Update, type Message, 
 import { SETTINGS_KEY, mergeSettings, type Settings } from '../../src/lib/settings-core';
 import { pages, type PageKey } from '../../src/data/site';
 import { computeNow, type NowSource } from '../../src/lib/now-core';
+import { getWeather, describe, deg } from '../../src/lib/weather';
 import { mediaCallback, pendingCommand, rejectedCommand, storageLine, navRows, scopeOf, showViewer, refreshViewerText } from './media';
 import { sniff, sniffAudio, shortId } from '../../src/lib/media-core';
 import {
@@ -146,10 +147,13 @@ async function statusText(env: Env) {
   ).first<{ events: number; published: number; pending: number }>();
   const wip = pages.filter((p) => s.pages[p.key] === 'wip').map((p) => PAGE_NAMES[p.key]);
   const now = await currentNow(env, s);
+  const w = await getWeather();
+  const wd = w && describe(w);
   return `<b>murkas.net</b>
 ${s.maintenance ? '🔴 Сайт закрыт (maintenance)' : '🟢 Сайт открыт'}
 🚧 В работе: ${wip.length ? wip.join(', ') : 'ничего'}
 💬 Сейчас: ${esc(now.ru)} <i>/ ${esc(now.en)}</i> (${SOURCE[now.source]})
+🌡 Погода: ${w && wd ? `${wd.icon} ${deg(w.temp)}, ${wd.ru.toLowerCase()}, ощущается ${deg(w.feels)}` : 'не получилось узнать'}
 🎵 Мой вайб: ${s.vibe ? `${esc(s.vibe.title || 'без названия')}${s.vibe.artist ? ` - ${esc(s.vibe.artist)}` : ''}` : 'без звука'} (/vibe)
 
 📅 Ивентов: ${db?.events ?? 0}
@@ -160,12 +164,13 @@ ${await storageLine(env)}
 }
 
 const SOURCE: Record<NowSource, string> = {
-  manual: 'вручную', event: 'ивент', sleep: 'сон', con: 'конвент', holiday: 'праздник', class: 'пары', default: 'по умолчанию',
+  manual: 'вручную', event: 'ивент', sleep: 'сон', con: 'конвент', holiday: 'праздник', class: 'пары', weather: 'погода', default: 'по умолчанию',
 };
 
 async function currentNow(env: Env, s?: Settings) {
   const settings = s ?? (await getSettings(env));
-  return computeNow(new Date(), (await listEvents(env.DB)).map(toNowEvent), settings);
+  const [events, weather] = await Promise.all([listEvents(env.DB), getWeather()]);
+  return computeNow(new Date(), events.map(toNowEvent), settings, weather);
 }
 
 /** «Текст | Text 2ч» -> пара + срок. Срок: 30м, 2ч, 1д (или 30m, 2h, 1d) */

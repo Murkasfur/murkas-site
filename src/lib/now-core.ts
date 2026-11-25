@@ -14,9 +14,10 @@
 import { terms, routine, type ClassSlot } from '../data/schedule';
 import { holidaysOn } from './holidays';
 import type { Settings } from './settings-core';
+import { weatherStatus, type Weather } from './weather';
 
 type T = { ru: string; en: string };
-export type NowSource = 'manual' | 'event' | 'sleep' | 'con' | 'holiday' | 'class' | 'default';
+export type NowSource = 'manual' | 'event' | 'sleep' | 'con' | 'holiday' | 'class' | 'weather' | 'default';
 export type NowStatus = T & { source: NowSource };
 
 export type NowEvent = {
@@ -84,7 +85,7 @@ function classStatus(slots: ClassSlot[], m: number): NowStatus | null {
   return null;
 }
 
-export function computeNow(at: Date, events: NowEvent[], settings: Settings): NowStatus {
+export function computeNow(at: Date, events: NowEvent[], settings: Settings, weather?: Weather | null): NowStatus {
   // 1. ручной
   const man = settings.manual;
   if (man && (!man.until || Date.parse(man.until) > at.getTime())) return st(man.ru, man.en, 'manual');
@@ -139,6 +140,10 @@ export function computeNow(at: Date, events: NowEvent[], settings: Settings): No
   // 7. российский праздник
   if (hol.ru) return st(`Праздную · ${hol.ru.ru}`, `Celebrating · ${hol.ru.en}`, 'holiday');
 
-  // 8. по умолчанию
+  // 8. непогода, мороз или жара - вместо статуса по умолчанию
+  const ws = weatherStatus(weather);
+  if (ws) return st(ws.ru, ws.en, 'weather');
+
+  // 9. по умолчанию
   return st(settings.now.ru, settings.now.en, 'default');
 }

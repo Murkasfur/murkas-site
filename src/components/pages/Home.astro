@@ -9,18 +9,22 @@ import { useTranslations, localizePath, type Lang, type UiKey } from '../../i18n
 import { loc, type EventItem } from '../../data/mock';
 import { getEvents } from '../../lib/data';
 import { computeNow } from '../../lib/now-core';
+import { getWeather, describe, deg } from '../../lib/weather';
 import { homeTiles } from '../../lib/media';
 import { defaultSettings } from '../../lib/settings-core';
 import { socials } from '../../data/site';
 
 const { lang } = Astro.props as { lang: Lang };
-const events = await getEvents();
+const [events, weather] = await Promise.all([getEvents(), getWeather()]);
 const nowStatus = computeNow(
   new Date(),
   events.map((e) => ({ ...e, title: { ru: loc(e.title, 'ru'), en: loc(e.title, 'en') } })),
   Astro.locals.settings ?? defaultSettings(),
+  weather,
 );
+const wd = weather && describe(weather);
 const t = useTranslations(lang);
+const weatherTip = weather && wd ? `${lang === 'ru' ? wd.ru : wd.en}, ${t('home.feels')} ${deg(weather.feels)}` : '';
 const locale = lang === 'ru' ? 'ru-RU' : 'en-CA';
 
 const today = new Date().toISOString().slice(0, 10);
@@ -97,9 +101,17 @@ const tiles = await homeTiles((Astro.locals.settings ?? defaultSettings()).home,
     <div class="row row--2">
       <!-- Сейчас: время живое, статус считает src/lib/now-core.ts (расписание, ивенты, сон, праздники, /now), погода - позже -->
       <section class="now">
-        <h2 class="md-label-large now__title">{t('home.now')}</h2>
+        <div class="now__head">
+          <h2 class="md-label-large now__title">{t('home.now')}</h2>
+          {weather && wd && (
+            <span class="now__weather md-label-large" title={weatherTip} aria-label={`${t('home.weather')}: ${deg(weather.temp)}, ${weatherTip}`}>
+              <span aria-hidden="true">{wd.icon}</span> {deg(weather.temp)}
+            </span>
+          )}
+        </div>
         <div class="now__time">
           <p class="md-headline-large" data-clock>--:--</p>
+          <p class="md-body-medium now__date" data-today data-locale={locale}></p>
           <p class="md-body-small now__zone" data-zone data-city={t('home.city')}>{t('home.city')}</p>
         </div>
         <span class="now__chip md-label-large">{nowStatus[lang]}</span>
@@ -211,8 +223,19 @@ const tiles = await homeTiles((Astro.locals.settings ?? defaultSettings()).home,
       zone.textContent = `${zone.dataset.city} · ${offset}`;
     }
   };
+  // Дата по Торонто: «ср, 25 ноября»
+  const today = document.querySelector<HTMLElement>('[data-today]');
+  const tickDate = () => {
+    if (!today) return;
+    const s = new Date().toLocaleDateString(today.dataset.locale, { timeZone: 'America/Toronto', weekday: 'short', day: 'numeric', month: 'long' });
+    today.textContent = s.replace('.', '');
+  };
   tick();
-  setInterval(tick, 15_000);
+  tickDate();
+  setInterval(() => {
+    tick();
+    tickDate();
+  }, 15_000);
 
   // «Через N дней» считается в браузере, чтобы не зависеть от даты сборки
   document.querySelectorAll<HTMLElement>('[data-countdown]').forEach((el) => {
@@ -388,6 +411,9 @@ const tiles = await homeTiles((Astro.locals.settings ?? defaultSettings()).home,
     color: var(--md-on-tertiary-fixed);
   }
   .now__title, .now__zone { color: var(--md-on-tertiary-fixed-variant); }
+  .now__head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .now__weather { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; cursor: default; }
+  .now__date:first-letter { text-transform: uppercase; }
   .now__time { display: grid; gap: 2px; }
   .now__chip {
     width: fit-content;
@@ -510,7 +536,8 @@ const tiles = await homeTiles((Astro.locals.settings ?? defaultSettings()).home,
     color: var(--md-tertiary-fixed);
   }
   :global(html[data-mode='dark']) .now__title,
-  :global(html[data-mode='dark']) .now__zone { color: var(--md-tertiary-fixed-dim); }
+  :global(html[data-mode='dark']) .now__zone,
+  :global(html[data-mode='dark']) .now__weather { color: var(--md-tertiary-fixed-dim); }
   :global(html[data-mode='dark']) .now__chip { background: var(--md-on-tertiary-fixed-variant); color: var(--md-tertiary-fixed); }
 
   :global(html[data-mode='dark']) .fursuits { background: var(--md-surface-container-high); color: var(--md-on-surface); }
