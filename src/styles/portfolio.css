@@ -524,12 +524,70 @@ html[data-mode='light'] .pf-fpanel__light { display: inline; }
 .pf-viewer__thumbs img { width: 100%; height: 100%; object-fit: cover; }
 .pf-viewer__hint { text-align: center; font-size: 12px; }
 
-/* Inspect */
-.pf-inspect { position: fixed; z-index: 200; pointer-events: none; outline: 1.5px solid var(--md-primary); background: color-mix(in srgb, var(--md-primary) 10%, transparent); border-radius: 2px; transition: all 0.08s linear; }
-.pf-inspect[hidden] { display: none; }
-.pf-inspect__tag { position: absolute; left: -1px; bottom: calc(100% + 4px); max-width: 520px; padding: 3px 8px; border-radius: 6px; background: var(--md-primary); color: var(--md-on-primary); font: 500 11px/16px var(--font-plain); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pf-inspect.is-low .pf-inspect__tag { bottom: auto; top: calc(100% + 4px); }
+/* Inspect - как Dev Mode в Figma (src/scripts/inspect.ts) */
+.pf-insp { position: fixed; inset: 0; z-index: 880; pointer-events: none; font-family: Inter, system-ui, sans-serif; }
+.pf-insp[hidden], .pf-insp [hidden] { display: none !important; }
+.pf-insp__hover, .pf-insp__sel { position: absolute; left: 0; top: 0; box-sizing: border-box; }
+.pf-insp__hover { outline: 1.5px solid #0d99ff; }
+.pf-insp__sel { outline: 1.5px solid #0d99ff; }
+.pf-insp__sel > i { position: absolute; width: 7px; height: 7px; border: 1px solid #0d99ff; background: #fff; }
+.pf-insp__sel > i:nth-child(1) { left: -4px; top: -4px; }
+.pf-insp__sel > i:nth-child(2) { right: -4px; top: -4px; }
+.pf-insp__sel > i:nth-child(3) { left: -4px; bottom: -4px; }
+.pf-insp__sel > i:nth-child(4) { right: -4px; bottom: -4px; }
+.pf-insp__name { position: absolute; left: -1px; bottom: calc(100% + 6px); max-width: 320px; overflow: hidden; text-overflow: ellipsis; color: #0d99ff; font: 500 11px/14px Inter, system-ui, sans-serif; white-space: pre; text-shadow: 0 0 3px var(--md-surface), 0 0 3px var(--md-surface); }
+.pf-insp__size { position: absolute; left: 50%; top: calc(100% + 6px); transform: translateX(-50%); padding: 1px 5px; border-radius: 3px; background: #0d99ff; color: #fff; font: 500 11px/16px Inter, system-ui, sans-serif; white-space: nowrap; }
+.pf-insp__pads span { position: fixed; background: repeating-linear-gradient(-45deg, rgb(242 72 34 / 0.18) 0 2px, transparent 2px 6px); }
+.pf-insp__meas { position: absolute; inset: 0; }
+.pf-insp__m { position: absolute; background: #f24822; }
+.pf-insp__m.is-h::before, .pf-insp__m.is-h::after { content: ''; position: absolute; top: -3px; width: 1px; height: 7px; background: #f24822; }
+.pf-insp__m.is-h::before { left: 0; } .pf-insp__m.is-h::after { right: 0; }
+.pf-insp__m.is-v::before, .pf-insp__m.is-v::after { content: ''; position: absolute; left: -3px; width: 7px; height: 1px; background: #f24822; }
+.pf-insp__m.is-v::before { top: 0; } .pf-insp__m.is-v::after { bottom: 0; }
+.pf-insp__m b { position: absolute; padding: 0 4px; border-radius: 3px; background: #f24822; color: #fff; font: 500 10px/15px Inter, system-ui, sans-serif; white-space: nowrap; }
+.pf-insp__m.is-h b { left: 50%; top: 4px; transform: translateX(-50%); }
+.pf-insp__m.is-v b { top: 50%; left: 5px; transform: translateY(-50%); }
+
+.pf-insp-bar { position: fixed; left: 50%; bottom: 20px; z-index: 885; display: flex; align-items: center; gap: 12px; padding: 6px 6px 6px 14px; transform: translateX(-50%); border-radius: 12px; background: #2c2c2c; color: #fff; box-shadow: 0 8px 24px rgb(0 0 0 / 0.4); font: 400 12px/16px Inter, system-ui, sans-serif; animation: pf-pop 0.2s var(--ease); white-space: nowrap; }
+.pf-insp-bar[hidden] { display: none; }
+.pf-insp-bar__mode { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 6px; background: #0d99ff; font-weight: 600; }
+.pf-insp-bar__hint { color: rgb(255 255 255 / 0.6); }
+.pf-insp-bar button { height: 28px; padding: 0 12px; border: 0; border-radius: 6px; background: rgb(255 255 255 / 0.1); color: #fff; font: 500 12px/16px Inter, system-ui, sans-serif; cursor: pointer; }
+.pf-insp-bar button:hover { background: rgb(255 255 255 / 0.18); }
+
+.pf-insp-panel { position: fixed; top: 92px; right: 12px; bottom: 12px; z-index: 885; width: 280px; overflow: auto; border-radius: 12px; background: #2c2c2c; color: #fff; box-shadow: 0 12px 32px rgb(0 0 0 / 0.45); font: 400 11px/16px Inter, system-ui, sans-serif; animation: pf-slide-in 0.25s var(--ease); scrollbar-width: thin; }
+.pf-insp-panel[hidden] { display: none; }
+.pf-insp-panel__tabs { position: sticky; top: 0; z-index: 1; display: flex; gap: 14px; padding: 12px 16px; border-bottom: 1px solid #444; background: #2c2c2c; font-weight: 600; color: rgb(255 255 255 / 0.5); }
+.pf-insp-panel__tabs .on { color: #fff; }
+.pf-insp-panel section { padding: 12px 16px; border-bottom: 1px solid #444; }
+.pf-insp-panel h4 { margin: 0 0 8px; font: 600 11px/16px Inter, system-ui, sans-serif; color: #fff; }
+.pf-ip__empty { padding: 20px 16px; color: rgb(255 255 255 / 0.6); }
+.pf-ip__layer { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid #444; }
+.pf-ip__layer b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.pf-ip__layer small { color: rgb(255 255 255 / 0.45); }
+.pf-ip__icon { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 4px; background: rgb(13 153 255 / 0.2); color: #0d99ff; font-weight: 700; }
+.pf-ip__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 8px; }
+.pf-ip__row { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; }
+.pf-ip__row span { color: rgb(255 255 255 / 0.5); }
+.pf-ip__row b { font-weight: 500; font-variant-numeric: tabular-nums; }
+.pf-ip__color { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+.pf-ip__sw { flex: none; width: 16px; height: 16px; border-radius: 3px; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.2); }
+.pf-ip__col { display: grid; }
+.pf-ip__col small { color: rgb(255 255 255 / 0.45); }
+.pf-ip__w { margin-left: auto; color: rgb(255 255 255 / 0.5); }
+.pf-ip__font { display: grid; padding: 3px 0 6px; }
+.pf-ip__font b { font-size: 13px; font-weight: 600; }
+.pf-ip__font span { color: rgb(255 255 255 / 0.6); }
+.pf-ip__codehead { display: flex; justify-content: space-between; align-items: center; }
+.pf-ip__codehead h4 { margin: 0; }
+.pf-ip__copy { height: 24px; padding: 0 10px; border: 0; border-radius: 5px; background: #0d99ff; color: #fff; font: 600 11px/16px Inter, system-ui, sans-serif; cursor: pointer; }
+.pf-ip__code { margin: 8px 0 0; padding: 10px 12px; border-radius: 8px; background: #1e1e1e; color: #f0c674; font: 400 11px/18px ui-monospace, 'SFMono-Regular', Consolas, monospace; white-space: pre-wrap; word-break: break-word; }
+.pf-ip__code .k { color: #9cdcfe; }
 .is-inspecting .pf, .is-inspecting .pf * { cursor: crosshair !important; }
+/* в режиме Inspect ничего не подпрыгивает при наведении - размеры остаются честными */
+.is-inspecting main *:hover, .is-inspecting footer *:hover { transform: none !important; }
+.is-inspecting .pf-insp-panel, .is-inspecting .pf-insp-panel *, .is-inspecting .pf-insp-bar, .is-inspecting .pf-insp-bar *, .is-inspecting [data-inspect-toggle] { cursor: default !important; }
+.is-inspecting .pf-ip__copy, .is-inspecting .pf-insp-bar button, .is-inspecting [data-inspect-toggle] { cursor: pointer !important; }
 
 /* Снекбар (общий скрипт src/scripts/snackbar.ts) */
 .snackbar { position: fixed; left: 50%; bottom: 24px; z-index: 950; display: flex; align-items: center; gap: 4px; width: max-content; max-width: min(560px, calc(100vw - 32px)); min-height: 48px; padding: 6px 6px 6px 16px; border-radius: 12px; background: var(--md-inverse-surface); color: var(--md-inverse-on-surface); box-shadow: 0 4px 14px rgb(0 0 0 / 0.25); font: 400 14px/20px var(--font-plain); opacity: 0; transform: translate(-50%, 16px); pointer-events: none; transition: opacity 0.2s var(--ease), transform 0.25s var(--ease); }

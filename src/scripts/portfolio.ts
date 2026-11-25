@@ -1,6 +1,7 @@
 // Всё интерактивное в портфолио: тема, Ctrl K, Inspect, копирование почты,
 // слайдер «Figma ↔ код», навыки, карусели, просмотр фото, поиск по работам.
 import { showSnackbar } from './snackbar';
+import { setInspect, inspecting, inspectEscape } from './inspect';
 
 const $ = <T extends Element = HTMLElement>(s: string, root: ParentNode = document) => root.querySelector<T>(s);
 const $$ = <T extends Element = HTMLElement>(s: string, root: ParentNode = document) => Array.from(root.querySelectorAll<T>(s));
@@ -180,75 +181,14 @@ cmd?.addEventListener('click', (e) => {
 });
 $$('[data-theme-next]', cmd ?? document).forEach((b) => b.addEventListener('click', () => b.classList.add('is-active')));
 
-/* ---------------- Inspect ---------------- */
-const box = $('[data-inspect-box]');
-const tag = $('[data-inspect-tag]');
-const inspectBtns = $$('[data-inspect-toggle]');
-let inspecting = false;
-let tokenMap: [string, string][] = [];
-const TOKENS = [
-  'surface', 'surface-container-lowest', 'surface-container-low', 'surface-container', 'surface-container-high', 'surface-container-highest',
-  'primary', 'primary-container', 'secondary', 'secondary-container', 'tertiary', 'tertiary-container', 'primary-fixed', 'inverse-surface',
-  'on-surface', 'on-surface-variant', 'on-primary', 'outline-variant',
-];
-const pretty = (s: string) => s.replace(/(^|-)([a-z])/g, (_, d, c) => (d ? ' ' : '') + c.toUpperCase());
-function buildTokens() {
-  const probe = document.createElement('span');
-  document.body.append(probe);
-  tokenMap = TOKENS.map((tk) => {
-    probe.style.color = `var(--md-${tk})`;
-    return [getComputedStyle(probe).color, pretty(tk)] as [string, string];
-  });
-  probe.remove();
-}
-function describe(el: HTMLElement) {
-  const cs = getComputedStyle(el);
-  const r = el.getBoundingClientRect();
-  const parts = [`${Math.round(r.width)} × ${Math.round(r.height)}`];
-  const pads = [cs.paddingTop, cs.paddingRight, cs.paddingBottom, cs.paddingLeft].map((v) => Math.round(parseFloat(v)));
-  if (pads.some(Boolean)) parts.push(`padding ${new Set(pads).size === 1 ? pads[0] : pads.join(' ')}`);
-  if (cs.gap && cs.gap !== 'normal' && parseFloat(cs.gap)) parts.push(`gap ${Math.round(parseFloat(cs.gap))}`);
-  if (parseFloat(cs.borderRadius)) parts.push(`radius ${Math.round(parseFloat(cs.borderRadius))}`);
-  const bg = cs.backgroundColor;
-  if (bg && bg !== 'rgba(0, 0, 0, 0)') parts.push(tokenMap.find(([c]) => c === bg)?.[1] ?? bg);
-  const hasText = Array.from(el.childNodes).some((n) => n.nodeType === 3 && n.textContent!.trim());
-  if (hasText) {
-    const fam = cs.fontFamily.split(',')[0].replace(/["']/g, '').replace(' Variable', '');
-    const lh = cs.lineHeight === 'normal' ? '' : `/${Math.round(parseFloat(cs.lineHeight))}`;
-    parts.push(`${fam} ${Math.round(parseFloat(cs.fontSize))}${lh} · ${cs.fontWeight}`);
-    const fg = tokenMap.find(([c]) => c === cs.color)?.[1];
-    if (fg) parts.push(fg);
-  }
-  return parts.join(' · ');
-}
-function showBox(el: HTMLElement) {
-  if (!box || !tag) return;
-  const r = el.getBoundingClientRect();
-  Object.assign(box.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
-  tag.textContent = describe(el);
-  box.classList.toggle('is-low', r.top < 40);
-  box.hidden = false;
-}
-function onInspectMove(e: PointerEvent) {
-  const el = e.target as HTMLElement;
-  if (!el || el === box || el.closest('[data-inspect-box]') || el === document.body || el === root) return;
-  showBox(el);
-}
-function setInspect(on: boolean) {
-  inspecting = on;
-  root.classList.toggle('is-inspecting', on);
-  inspectBtns.forEach((b) => b.setAttribute('aria-pressed', String(on)));
-  if (on) {
-    buildTokens();
-    addEventListener('pointerover', onInspectMove);
-    showSnackbar(i18n.inspectOn, { ms: 3500 });
-  } else {
-    removeEventListener('pointerover', onInspectMove);
-    if (box) box.hidden = true;
-  }
-}
-inspectBtns.forEach((b) => b.addEventListener('click', () => setInspect(!inspecting)));
-addEventListener('scroll', () => inspecting && box && (box.hidden = true), { passive: true });
+/* ---------------- Inspect (src/scripts/inspect.ts) ---------------- */
+const fineHover = matchMedia('(hover: hover) and (pointer: fine)');
+$$('[data-inspect-toggle]').forEach((b) =>
+  b.addEventListener('click', () => {
+    if (!fineHover.matches) return;
+    setInspect(!inspecting());
+  }),
+);
 
 /* ---------------- Горячие клавиши ---------------- */
 document.addEventListener('keydown', (e) => {
@@ -258,8 +198,8 @@ document.addEventListener('keydown', (e) => {
     return;
   }
   if (typing(e) || e.ctrlKey || e.metaKey || e.altKey) return;
-  if (e.key === 'i' || e.key === 'I' || e.key === 'ш' || e.key === 'Ш') setInspect(!inspecting);
-  else if (e.key === 'Escape' && inspecting && !modals.length) setInspect(false);
+  if ((e.key === 'i' || e.key === 'I' || e.key === 'ш' || e.key === 'Ш') && fineHover.matches) setInspect(!inspecting());
+  else if (e.key === 'Escape' && !modals.length) inspectEscape();
   else if (e.key === '/') {
     const q = $<HTMLInputElement>('[data-q]');
     if (q) {

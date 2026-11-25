@@ -257,9 +257,30 @@ const themes = ['watermelon', 'redpanda', 'light'] as const;
             </div>
           </dialog>
 
-          <div class="pf-inspect" data-inspect-box hidden aria-hidden="true">
-            <span class="pf-inspect__tag" data-inspect-tag />
+          <div
+            class="pf-insp"
+            data-insp={JSON.stringify(t.insp)}
+            hidden
+            aria-hidden="true"
+          >
+            <span class="pf-insp__pads" data-insp-pads />
+            <span class="pf-insp__hover" data-insp-hover hidden />
+            <span class="pf-insp__sel" data-insp-sel hidden>
+              <i /><i /><i /><i />
+              <span class="pf-insp__name" data-insp-name />
+              <span class="pf-insp__size" data-insp-size />
+            </span>
+            <span class="pf-insp__meas" data-insp-meas />
           </div>
+          <div class="pf-insp-bar" data-insp-bar hidden>
+            <span class="pf-insp-bar__mode"><span aria-hidden="true">&lt;/&gt;</span> Dev Mode</span>
+            <span class="pf-insp-bar__hint">{t.insp.hint}</span>
+            <button type="button" data-insp-exit>{t.insp.exit}</button>
+          </div>
+          <aside class="pf-insp-panel" data-insp-panel hidden aria-label={t.insp.title}>
+            <p class="pf-insp-panel__tabs"><span class="on">Inspect</span><span>{t.insp.title}</span></p>
+            <div data-insp-body />
+          </aside>
           <span
             hidden
             data-pf-i18n={JSON.stringify({
