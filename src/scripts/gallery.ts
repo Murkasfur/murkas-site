@@ -1,6 +1,8 @@
 // Галерея (фото и арты): фильтры, сортировка, «Показать ещё» и раскладка masonry.
 // Пока данные лежат в HTML; когда появится API, этот же код будет раскладывать ответ.
 
+import { enhanceSelect } from './select-menu';
+
 const PAGE = 8;
 
 export function initGallery(root: HTMLElement) {
@@ -100,7 +102,10 @@ export function initGallery(root: HTMLElement) {
   root.querySelector('[data-reset]')?.addEventListener('click', () => {
     Object.assign(state, { q: '', character: 'all', cat: 'all', person: 'all', year: 'all' });
     root.querySelectorAll<HTMLInputElement>('[data-q]').forEach((i) => (i.value = ''));
-    root.querySelectorAll<HTMLSelectElement>('[data-person], [data-year]').forEach((s) => (s.value = 'all'));
+    root.querySelectorAll<HTMLSelectElement>('[data-person], [data-year]').forEach((s) => {
+      s.value = 'all';
+      s.dispatchEvent(new Event('select:sync'));
+    });
     root.querySelectorAll<HTMLElement>('[data-character], [data-cat-btn]').forEach((b) =>
       b.setAttribute('aria-pressed', String(b.dataset.value === 'all')),
     );
@@ -121,6 +126,8 @@ export function initGallery(root: HTMLElement) {
       render();
     }
   }).observe(grid);
+
+  root.querySelectorAll<HTMLSelectElement>('.select select').forEach(enhanceSelect);
 
   // ?q=... в адресе (ссылка «12 фото →» со страницы ивентов) - сразу ищем
   const q0 = new URLSearchParams(location.search).get('q');
