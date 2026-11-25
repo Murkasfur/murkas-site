@@ -69,6 +69,8 @@ export type Photo = {
   event?: L;
   photographer?: { name: string; url?: string };
   date: string;
+  /** Если день съёмки неизвестен, а ивент многодневный - последний день ивента */
+  dateEnd?: string;
   /** Когда добавлено на сайт (полная метка времени) - для сортировки */
   added?: string;
   pinned?: boolean;

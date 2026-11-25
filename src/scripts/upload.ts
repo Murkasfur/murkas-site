@@ -303,13 +303,29 @@ export function initUpload() {
     const choose = (li: HTMLLIElement) => {
       options().forEach((o) => o.setAttribute('aria-selected', String(o === li)));
       hiddenInput.value = li.dataset.value ?? '';
-      const taken = dialog!.querySelector<HTMLElement>('[data-taken]');
-      if (taken) taken.hidden = hiddenInput.value !== 'none';
+      syncTaken(li);
       valueBox.innerHTML = li.querySelector('.picker__text')!.innerHTML;
       picker.closest('.field')?.classList.remove('is-invalid');
       setOpen(false);
       btn.focus();
     };
+    // Поле «Дата съёмки»: для «Другой» - любой день, для ивента на несколько дней - только его дни
+    const syncTaken = (li?: HTMLLIElement) => {
+      const taken = dialog!.querySelector<HTMLElement>('[data-taken]');
+      if (!taken) return;
+      const other = li?.dataset.value === 'none';
+      const multi = !!li?.dataset.end;
+      taken.hidden = !other && !multi;
+      const wrap = taken.querySelector<HTMLElement>('[data-datepick]')!;
+      const input = wrap.querySelector<HTMLInputElement>('input[type="hidden"]')!;
+      wrap.dataset.min = multi ? li!.dataset.start! : '';
+      wrap.dataset.max = multi ? li!.dataset.end! : '';
+      if (input.value && ((wrap.dataset.min && input.value < wrap.dataset.min) || (wrap.dataset.max && input.value > wrap.dataset.max))) input.value = '';
+      input.dispatchEvent(new Event('datepick:sync'));
+      const hint = taken.querySelector<HTMLElement>('[data-taken-hint]');
+      if (hint) hint.textContent = (multi ? hint.dataset.multi : hint.dataset.other) ?? '';
+    };
+    syncTaken(options().find((o) => o.getAttribute('aria-selected') === 'true'));
     btn.addEventListener('click', () => setOpen(menu.hidden));
     menu.addEventListener('click', (e) => {
       const li = (e.target as Element).closest<HTMLLIElement>('[role="option"]');
@@ -416,7 +432,7 @@ export function initUpload() {
     return kind === 'photo'
       ? {
           eventId: val('eventId'), personName: val('personName'), personUrl: val('personUrl'),
-          caption: captionEach ? null : val('caption'), takenDate: val('eventId') === 'none' ? val('takenDate') : null,
+          caption: captionEach ? null : val('caption'), takenDate: dialog!.querySelector<HTMLElement>('[data-taken]')?.hidden === false ? val('takenDate') || null : null,
         }
       : {
           personName: val('personName'), personUrl: val('personUrl'), createdDate: val('createdDate'),
@@ -492,6 +508,7 @@ export function initUpload() {
       const sel = dialog!.querySelector<HTMLElement>('[data-picker-menu] [aria-selected="true"]');
       const hid = dialog!.querySelector<HTMLInputElement>('[data-picker] input[type="hidden"]');
       if (sel && hid) hid.value = sel.dataset.value ?? '';
+      dialog!.querySelector<HTMLInputElement>('[name="takenDate"]')?.dispatchEvent(new Event('datepick:sync'));
       dialog!.querySelectorAll('[aria-pressed="true"]:not([data-value="one"])').forEach((c) => c.setAttribute('aria-pressed', 'false'));
       dialog!.querySelectorAll<HTMLInputElement>('input:disabled').forEach((x) => (x.disabled = false));
       closeDialog(dialog!);

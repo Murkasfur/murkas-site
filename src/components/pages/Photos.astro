@@ -17,6 +17,13 @@ const photographers = [...new Set(photos.flatMap((p) => (p.photographer ? [p.pho
 const years = [...new Set(photos.map((p) => p.date.slice(0, 4)))].sort().reverse();
 const locale = lang === 'ru' ? 'ru-RU' : 'en-CA';
 const fullDate = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' }).replace(/\s?г\.$/, '');
+// «14–16 ноября 2026», «30 октября – 2 ноября 2026»
+const dateRange = (a: string, b: string) => {
+  const f = (d: string, o: Intl.DateTimeFormatOptions) => new Date(`${d}T12:00:00`).toLocaleDateString(locale, o).replace(/\s?г\.$/, '');
+  if (a.slice(0, 4) !== b.slice(0, 4)) return `${fullDate(a)} – ${fullDate(b)}`;
+  if (a.slice(0, 7) === b.slice(0, 7)) return lang === 'ru' ? `${+a.slice(8)}–${fullDate(b)}` : `${f(a, { month: 'long', day: 'numeric' })}–${+b.slice(8)}, ${b.slice(0, 4)}`;
+  return `${f(a, { day: 'numeric', month: 'long' })} – ${fullDate(b)}`;
+};
 const charName = (c: string) => (c === 'murkas' ? t('char.murkas') : 'Arbyss');
 const viewer: ViewerItem[] = photos.map((p) => ({
   id: p.id,
@@ -29,7 +36,7 @@ const viewer: ViewerItem[] = photos.map((p) => ({
   fields: [
     ...(p.event ? [{ label: t('viewer.event'), value: loc(p.event, lang), href: localizePath('/events', lang) + (p.eventId ? `#${p.eventId}` : '') }] : []),
     { label: t('viewer.photographer'), value: p.photographer?.name ?? t('viewer.unknown'), href: p.photographer?.url, external: true },
-    { label: t('viewer.shot'), value: fullDate(p.date) + (p.city ? ` · ${loc(p.city, lang)}` : '') },
+    { label: t('viewer.shot'), value: (p.dateEnd ? dateRange(p.date, p.dateEnd) : fullDate(p.date)) + (p.city ? ` · ${loc(p.city, lang)}` : '') },
   ],
   pinned: p.pinned,
   ratio: p.ratio,
@@ -99,10 +106,12 @@ const viewer: ViewerItem[] = photos.map((p) => ({
         <button type="button" class="link-btn" data-reset>{t('common.reset')}</button>
       </div>
       <label class="select">
-        <span class="visually-hidden">{t('common.newest')}</span>
+        <span class="visually-hidden">{t('sort.label')}</span>
         <select data-sort>
-          <option value="new">{t('common.newest')}</option>
-          <option value="old">{t('common.oldest')}</option>
+          <option value="new">{t('sort.addedNew')}</option>
+          <option value="old">{t('sort.addedOld')}</option>
+          <option value="dnew">{t('sort.takenNew')}</option>
+          <option value="dold">{t('sort.takenOld')}</option>
         </select>
         <Icon name="expand_more" size={18} />
       </label>
@@ -123,6 +132,7 @@ const viewer: ViewerItem[] = photos.map((p) => ({
             data-person={p.photographer?.name ?? ''}
             data-year={p.date.slice(0, 4)}
             data-date={p.date}
+            data-added={p.added ?? p.date}
             data-pinned={p.pinned ? '1' : '0'}
             data-search={`${locAll(p.title)} ${locAll(p.event)} ${p.photographer?.name ?? ''}`.toLowerCase()}
           >

@@ -20,6 +20,10 @@ export function initDatePicker(wrap: HTMLElement, lang: string) {
   const now = new Date();
   const todayIso = iso(now.getFullYear(), now.getMonth(), now.getDate());
   let view = { y: now.getFullYear(), m: now.getMonth() };
+  // Границы задаются атрибутами data-min / data-max (например, дни ивента); сегодня - всегда предел
+  const lo = () => wrap.dataset.min || '';
+  const hi = () => (wrap.dataset.max && wrap.dataset.max < todayIso ? wrap.dataset.max : todayIso);
+  const ok = (v: string) => v >= lo() && v <= hi();
   let mode: 'days' | 'years' = 'days';
 
   // Пн-Вс для русского, Вс-Сб для английского
@@ -42,13 +46,13 @@ export function initDatePicker(wrap: HTMLElement, lang: string) {
     const head = `<div class="dp__head">
       <button type="button" class="dp__title" data-dp="mode">${monthName(view.y, view.m)} ${svg(DOWN, 18)}</button>
       ${mode === 'days' ? `<span class="dp__nav">
-        <button type="button" class="icon-btn" data-dp="prev" aria-label="←">${svg(LEFT)}</button>
-        <button type="button" class="icon-btn" data-dp="next" aria-label="→" ${view.y > now.getFullYear() || (view.y === now.getFullYear() && view.m >= now.getMonth()) ? 'disabled' : ''}>${svg(RIGHT)}</button>
+        <button type="button" class="icon-btn" data-dp="prev" aria-label="←" ${lo() && iso(view.y, view.m, 1) <= lo() ? 'disabled' : ''}>${svg(LEFT)}</button>
+        <button type="button" class="icon-btn" data-dp="next" aria-label="→" ${iso(view.y, view.m + 1, 1) > hi() ? 'disabled' : ''}>${svg(RIGHT)}</button>
       </span>` : ''}
     </div>`;
     let body = '';
     if (mode === 'years') {
-      const years = Array.from({ length: 30 }, (_, i) => now.getFullYear() - i);
+      const years = Array.from({ length: 30 }, (_, i) => now.getFullYear() - i).filter((y) => (!lo() || y >= +lo().slice(0, 4)) && y <= +hi().slice(0, 4));
       body = `<div class="dp__years">${years.map((y) => `<button type="button" data-dp-year="${y}" class="${y === view.y ? 'is-sel' : ''}">${y}</button>`).join('')}</div>`;
     } else {
       const first = new Date(view.y, view.m, 1).getDay();
@@ -58,17 +62,18 @@ export function initDatePicker(wrap: HTMLElement, lang: string) {
       for (let d = 1; d <= days; d++) {
         const v = iso(view.y, view.m, d);
         const cls = [v === input.value && 'is-sel', v === todayIso && 'is-today'].filter(Boolean).join(' ');
-        cells.push(`<button type="button" data-dp-day="${v}" class="${cls}" ${v > todayIso ? 'disabled' : ''}>${d}</button>`);
+        cells.push(`<button type="button" data-dp-day="${v}" class="${cls}" ${ok(v) ? '' : 'disabled'}>${d}</button>`);
       }
       body = `<div class="dp__week">${weekdays.map((w) => `<span>${w}</span>`).join('')}</div><div class="dp__grid">${cells.join('')}</div>`;
     }
     pop.innerHTML = `${head}${body}<div class="dp__foot">
       <button type="button" class="md-btn md-btn--text" data-dp="clear">${t.clear}</button>
-      <button type="button" class="md-btn md-btn--text" data-dp="today">${t.today}</button></div>`;
+      <button type="button" class="md-btn md-btn--text" data-dp="today" ${ok(todayIso) ? '' : 'hidden'}>${t.today}</button></div>`;
   };
 
   const open = () => {
-    if (input.value) view = { y: +input.value.slice(0, 4), m: +input.value.slice(5, 7) - 1 };
+    const start = input.value || (lo() ? lo() : '');
+    if (start) view = { y: +start.slice(0, 4), m: +start.slice(5, 7) - 1 };
     mode = 'days';
     render();
     pop.hidden = false;
@@ -105,7 +110,7 @@ export function initDatePicker(wrap: HTMLElement, lang: string) {
     if (a === 'prev') view = view.m ? { y: view.y, m: view.m - 1 } : { y: view.y - 1, m: 11 };
     if (a === 'next') view = view.m === 11 ? { y: view.y + 1, m: 0 } : { y: view.y, m: view.m + 1 };
     if (a === 'clear') return set('');
-    if (a === 'today') return set(todayIso);
+    if (a === 'today') return ok(todayIso) ? set(todayIso) : undefined;
     render();
     if (a === 'mode' && mode === 'years') pop.querySelector<HTMLElement>('.is-sel')?.scrollIntoView({ block: 'center' });
   });
@@ -121,7 +126,7 @@ export function initDatePicker(wrap: HTMLElement, lang: string) {
       const d = new Date(`${cur}T12:00:00`);
       d.setDate(d.getDate() + step);
       const v = iso(d.getFullYear(), d.getMonth(), d.getDate());
-      if (v > todayIso) return;
+      if (!ok(v)) return;
       if (d.getMonth() !== view.m || d.getFullYear() !== view.y) {
         view = { y: d.getFullYear(), m: d.getMonth() };
         render();

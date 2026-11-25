@@ -9,7 +9,7 @@ type Row = {
   city_ru: string | null; city_en: string | null; original_url: string | null; pinned: number; width: number | null; height: number | null;
   r2_key: string | null; mime: string | null; published_at: string | null; uploaded_at: string;
   person_name: string | null; person_url: string | null; p_name: string | null; p_url: string | null;
-  ev_title_ru: string | null; ev_title_en: string | null; ev_city_ru: string | null; ev_city_en: string | null; ev_start: string | null;
+  ev_title_ru: string | null; ev_title_en: string | null; ev_city_ru: string | null; ev_city_en: string | null; ev_start: string | null; ev_end: string | null;
 };
 
 const pair = (ru: string | null, en: string | null): L | undefined => (ru ? (en && en !== ru ? { ru, en } : ru) : en ?? undefined);
@@ -21,7 +21,7 @@ export const mediaUrl = (r2Key: string | null, w?: 400 | 800 | 1600) =>
 async function rows(kind: 'photo' | 'art') {
   const { results } = await env.DB.prepare(
     `SELECT m.*, p.name AS p_name, p.url AS p_url,
-            e.title_ru AS ev_title_ru, e.title_en AS ev_title_en, e.city_ru AS ev_city_ru, e.city_en AS ev_city_en, e.start_date AS ev_start
+            e.title_ru AS ev_title_ru, e.title_en AS ev_title_en, e.city_ru AS ev_city_ru, e.city_en AS ev_city_en, e.start_date AS ev_start, e.end_date AS ev_end
      FROM media m
      LEFT JOIN people p ON p.id = m.person_id
      LEFT JOIN events e ON e.id = m.event_id
@@ -58,6 +58,8 @@ export async function listPhotos(): Promise<Photo[]> {
         eventId: r.event_id ?? undefined,
         photographer: person(r),
         date: day(r.taken_date) ?? r.ev_start ?? localDay(r.uploaded_at)!,
+        // день неизвестен, а ивент шёл несколько дней - показываем весь диапазон
+        dateEnd: !day(r.taken_date) && r.ev_start && r.ev_end && r.ev_end > r.ev_start ? r.ev_end : undefined,
         added: r.published_at ?? r.uploaded_at,
         pinned: !!r.pinned,
         caption: r.title_ru ? pair(r.caption_ru, r.caption_en) : undefined,

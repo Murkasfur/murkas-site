@@ -25,6 +25,8 @@ const today = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
 const events = isPhoto ? (await getEvents()).filter((e) => e.start && e.start <= today).reverse() : [];
 const day = (d: string) =>
   new Date(`${d}T12:00:00`).toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-CA', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/\s?г\.$/, '');
+// Многодневный ивент - диапазон дат, иначе один день
+const span = (e: { start?: string; end?: string }) => (e.end && e.end > e.start! ? `${day(e.start!)} – ${day(e.end)}` : day(e.start!));
 
 const siteKey = (env as { TURNSTILE_SITE_KEY?: string }).TURNSTILE_SITE_KEY ?? '';
 // Тексты для скрипта
@@ -84,14 +86,14 @@ const charName = (c: string) => (c === 'both' ? (lang === 'ru' ? 'Оба' : 'Bot
             <input type="hidden" name="eventId" value={events[0]?.id ?? ''} />
             <button type="button" class="field__box picker__btn" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="up-event-label" data-picker-btn>
               <span class="picker__value" data-picker-value data-placeholder={t('up.eventPick')}>
-                {events[0] ? <><span class="picker__title">{loc(events[0].title, lang)}</span><span class="picker__meta">{day(events[0].start!)} · {loc(events[0].city, lang)}</span></> : <span class="picker__placeholder">{t('up.eventPick')}</span>}
+                {events[0] ? <><span class="picker__title">{loc(events[0].title, lang)}</span><span class="picker__meta">{span(events[0])} · {loc(events[0].city, lang)}</span></> : <span class="picker__placeholder">{t('up.eventPick')}</span>}
               </span>
               <Icon name="expand_more" />
             </button>
             <ul class="picker__menu" role="listbox" aria-labelledby="up-event-label" tabindex="-1" hidden data-picker-menu>
               {events.map((e, i) => (
-                <li role="option" tabindex="-1" data-value={e.id} aria-selected={i === 0 ? 'true' : 'false'}>
-                  <span class="picker__text"><span class="picker__title">{loc(e.title, lang)}</span><span class="picker__meta">{day(e.start!)} · {loc(e.city, lang)}</span></span>
+                <li role="option" tabindex="-1" data-value={e.id} data-start={e.start} data-end={e.end && e.end > e.start! ? e.end : undefined} aria-selected={i === 0 ? 'true' : 'false'}>
+                  <span class="picker__text"><span class="picker__title">{loc(e.title, lang)}</span><span class="picker__meta">{span(e)} · {loc(e.city, lang)}</span></span>
                   <Icon name="check" size={20} />
                 </li>
               ))}
@@ -113,7 +115,7 @@ const charName = (c: string) => (c === 'both' ? (lang === 'ru' ? 'Оба' : 'Bot
             </button>
             <div class="dp" role="dialog" hidden data-date-pop />
           </div>
-          <p class="field__hint">{t('up.takenHint')}</p>
+          <p class="field__hint" data-taken-hint data-other={t('up.takenHint')} data-multi={t('up.takenHintMulti')}>{t('up.takenHint')}</p>
         </div>
         <div class="field" data-field="personName">
           <label class="field__label" for="up-person">{t('up.photographer')}<span class="req" aria-hidden="true"> *</span></label>
