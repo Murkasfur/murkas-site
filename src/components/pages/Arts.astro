@@ -98,10 +98,12 @@ const fmt = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(locale, 
         <button type="button" class="link-btn" data-reset>{t('common.reset')}</button>
       </div>
       <label class="select">
-        <span class="visually-hidden">{t('common.newest')}</span>
+        <span class="visually-hidden">{t('sort.label')}</span>
         <select data-sort>
-          <option value="new">{t('common.newest')}</option>
-          <option value="old">{t('common.oldest')}</option>
+          <option value="new">{t('sort.addedNew')}</option>
+          <option value="old">{t('sort.addedOld')}</option>
+          <option value="dnew">{t('sort.createdNew')}</option>
+          <option value="dold">{t('sort.createdOld')}</option>
         </select>
         <Icon name="expand_more" size={18} />
       </label>
@@ -122,6 +124,7 @@ const fmt = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(locale, 
             data-person={a.artist.name}
             data-year={a.created?.slice(0, 4) ?? ''}
             data-date={a.created ?? ''}
+            data-added={a.added ?? a.uploaded ?? a.created ?? ''}
             data-pinned={a.pinned ? '1' : '0'}
             data-search={`${locAll(a.title)} ${a.artist.name}`.toLowerCase()}
           >

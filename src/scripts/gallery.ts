@@ -38,9 +38,14 @@ export function initGallery(root: HTMLElement) {
     const list = items.filter(matches).sort((a, b) => {
       const pin = Number(b.dataset.pinned === '1') - Number(a.dataset.pinned === '1');
       if (pin) return pin;
-      const da = a.dataset.date || '';
-      const db = b.dataset.date || '';
-      return state.sort === 'new' ? db.localeCompare(da) : da.localeCompare(db);
+      // new/old - по дате добавления на сайт, dnew/dold - по дате съёмки/создания
+      const key = state.sort.startsWith('d') ? 'date' : 'added';
+      const da = a.dataset[key] || '';
+      const db = b.dataset[key] || '';
+      // Без даты - всегда в конце
+      if (!da !== !db) return da ? -1 : 1;
+      const desc = state.sort === 'new' || state.sort === 'dnew';
+      return desc ? db.localeCompare(da) : da.localeCompare(db);
     });
     const visible = list.slice(0, state.limit);
     // Окно просмотра листает в том же порядке и с теми же фильтрами

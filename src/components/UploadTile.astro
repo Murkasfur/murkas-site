@@ -320,7 +320,52 @@ const charName = (c: string) => (c === 'both' ? (lang === 'ru' ? 'Оба' : 'Bot
   .thumbs.is-each :global(.thumb__add) { aspect-ratio: auto; height: 48px; grid-auto-flow: column; justify-content: center; gap: 8px; }
 
   .check { display: flex; gap: 14px; align-items: start; cursor: pointer; }
-  .check input { width: 18px; height: 18px; margin: 3px 3px 0; accent-color: var(--md-primary); }
+  /* Чекбокс Material 3: 18px, рамка 2px, скругление 2px, слой состояния 40px кругом */
+  .check input {
+    position: relative;
+    flex: none;
+    width: 18px;
+    height: 18px;
+    /* по центру первой строки подписи (строка 24px) */
+    margin: 3px 0 0 11px;
+    border: 2px solid var(--md-on-surface-variant);
+    border-radius: 2px;
+    background: transparent;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s;
+  }
+  .check input:checked {
+    border-color: var(--md-primary);
+    background-color: var(--md-primary);
+  }
+  /* галочка цветом on-primary из темы (в тёмной теме она тёмная) */
+  .check input::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: var(--md-on-primary);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
+    opacity: 0;
+    transform: scale(0.6);
+    transition: opacity 0.15s, transform 0.15s;
+  }
+  .check input:checked::after { opacity: 1; transform: none; }
+  /* слой состояния - круг 40px вокруг (18 + 2*11); отсчёт от внутренней части, поэтому -13 */
+  .check input::before {
+    content: '';
+    position: absolute;
+    inset: -13px;
+    border-radius: 50%;
+    background: transparent;
+    transition: background-color 0.15s;
+  }
+  .check:hover input::before { background: color-mix(in srgb, var(--md-on-surface) 8%, transparent); }
+  .check:hover input:checked::before { background: color-mix(in srgb, var(--md-primary) 8%, transparent); }
+  .check input:focus-visible { outline: none; }
+  .check input:focus-visible::before,
+  .check:active input::before { background: color-mix(in srgb, var(--md-primary) 12%, transparent); }
   .check > span { display: grid; gap: 2px; }
 
   .field { display: grid; gap: 6px; }

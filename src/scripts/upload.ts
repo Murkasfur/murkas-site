@@ -562,4 +562,26 @@ export function initUpload() {
     open();
     if (e.dataTransfer?.files) addFiles(e.dataTransfer.files);
   });
+
+  // ---------- вставка из буфера (Ctrl+V / Cmd+V) ----------
+  // Скриншот, картинка «Копировать изображение» из браузера или файлы из проводника
+  window.addEventListener('paste', (e) => {
+    const data = e.clipboardData;
+    if (!data) return;
+    const files = Array.from(data.files).filter((f) => f.type.startsWith('image/'));
+    if (!files.length)
+      for (const it of Array.from(data.items)) {
+        const f = it.kind === 'file' && it.type.startsWith('image/') ? it.getAsFile() : null;
+        if (f) files.push(f);
+      }
+    if (!files.length) return; // обычный текст - пусть вставляется в поле как есть
+    // Скриншоты всегда называются image.png - даём имя со временем, чтобы различать
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '');
+    const named = files.map((f, i) =>
+      f.name && f.name !== 'image.png' ? f : new File([f], `paste-${stamp}${files.length > 1 ? `-${i + 1}` : ''}.${(f.type.split('/')[1] || 'png').replace('jpeg', 'jpg')}`, { type: f.type, lastModified: Date.now() }),
+    );
+    e.preventDefault();
+    if (!dialog.open) open();
+    addFiles(named);
+  });
 }

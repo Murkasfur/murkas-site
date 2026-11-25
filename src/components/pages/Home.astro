@@ -74,7 +74,7 @@ const tiles = await homeTiles((Astro.locals.settings ?? defaultSettings()).home,
       </section>
 
       <!-- Мой вайб -->
-      <section class="vibe">
+      <section class:list={['vibe', { 'vibe--audio': vibe }]}>
         <h2 class="md-label-large vibe__title">{t('home.vibe')}</h2>
         <button type="button" class="disc" aria-pressed="false" aria-label={[vibeTitle, vibeArtist].filter(Boolean).join(' - ')}>
           {vibe && <span class="disc__ring" aria-hidden="true"></span>}
@@ -92,6 +92,16 @@ const tiles = await homeTiles((Astro.locals.settings ?? defaultSettings()).home,
           <p class="md-title-small vibe__name">{vibeTitle}</p>
           {vibeArtist && <p class="md-body-small vibe__artist">{vibeArtist}</p>}
         </div>
+        {vibe && (
+          <div class="vol">
+            <button type="button" class="vol__btn" data-vol-mute aria-label={t('home.mute')}>
+              <span data-vol-icon="up"><Icon name="volume_up" size={20} /></span>
+              <span data-vol-icon="down" hidden><Icon name="volume_down" size={20} /></span>
+              <span data-vol-icon="off" hidden><Icon name="volume_off" size={20} /></span>
+            </button>
+            <input type="range" class="vol__range" min="0" max="100" step="1" value="80" data-vol aria-label={t('home.volume')} style="--v: 0.8" />
+          </div>
+        )}
         {vibe && <audio data-vibe-audio src={`/audio/${vibe.audio}`} preload="none"></audio>}
       </section>
 
@@ -204,6 +214,40 @@ const tiles = await homeTiles((Astro.locals.settings ?? defaultSettings()).home,
       set(false);
       disc.classList.remove('is-loading');
     });
+
+    // Громкость: ползунок + кнопка «без звука», запоминаем в браузере
+    const range = document.querySelector<HTMLInputElement>('[data-vol]');
+    const mute = document.querySelector<HTMLButtonElement>('[data-vol-mute]');
+    const KEY = 'murkas-volume';
+    let last = 0.8; // к чему вернуться после «без звука»
+    const apply = (v: number, save = true) => {
+      v = Math.min(1, Math.max(0, v));
+      audio.volume = v;
+      if (v > 0) last = v;
+      if (range) {
+        range.value = String(Math.round(v * 100));
+        range.style.setProperty('--v', String(v));
+      }
+      const icon = v === 0 ? 'off' : v < 0.5 ? 'down' : 'up';
+      document.querySelectorAll<HTMLElement>('[data-vol-icon]').forEach((el) => (el.hidden = el.dataset.volIcon !== icon));
+      mute?.setAttribute('aria-pressed', String(v === 0));
+      if (save) {
+        try {
+          localStorage.setItem(KEY, String(v));
+        } catch {
+          /* приватный режим - не запоминаем */
+        }
+      }
+    };
+    let saved = NaN;
+    try {
+      saved = parseFloat(localStorage.getItem(KEY) ?? '');
+    } catch {
+      /* нет доступа к хранилищу */
+    }
+    apply(Number.isFinite(saved) ? saved : 0.8, false);
+    range?.addEventListener('input', () => apply(+range.value / 100));
+    mute?.addEventListener('click', () => apply(audio.volume > 0 ? 0 : last || 0.8));
   } else if (disc) {
     disc.addEventListener('click', () => disc.setAttribute('aria-pressed', String(disc.getAttribute('aria-pressed') !== 'true')));
   }
@@ -395,6 +439,86 @@ const tiles = await homeTiles((Astro.locals.settings ?? defaultSettings()).home,
   .disc[style*='--p'] .disc__ring { opacity: 1; }
   .disc.is-loading .disc__ring { animation: pulse 1s ease-in-out infinite alternate; }
   @keyframes pulse { from { opacity: 0.35; } to { opacity: 1; } }
+  /* С треком диск чуть меньше, чтобы под ним поместилась громкость */
+  .vibe--audio { gap: 6px; padding-bottom: 14px; }
+  .vibe--audio .disc { width: 136px; height: 136px; }
+
+  /* ---------- Громкость: слайдер Material 3 (дорожка 16px, ручка-палочка с зазором, точка на конце) ---------- */
+  .vol { display: flex; align-items: center; gap: 6px; align-self: stretch; }
+  .vol__btn {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    flex: none;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--md-on-primary-fixed-variant);
+    cursor: pointer;
+  }
+  .vol__btn:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
+  .vol__btn:focus-visible { outline: 2px solid var(--md-primary); outline-offset: 1px; }
+  .vol__range {
+    --active: var(--md-primary);
+    --inactive: var(--md-primary-fixed-dim);
+    /* позиция ручки в px внутри дорожки (ручка 4px) */
+    --x: calc(var(--v, 0.8) * (100% - 4px) + 2px);
+    flex: 1;
+    min-width: 0;
+    height: 28px;
+    margin: 0;
+    background: none;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+  }
+  .vol__range:focus { outline: none; }
+  .vol__range::-webkit-slider-runnable-track {
+    height: 16px;
+    border-radius: 8px;
+    background:
+      radial-gradient(circle at calc(100% - 6px) 50%, var(--active) 0 2px, transparent 2.5px),
+      linear-gradient(to right,
+        var(--active) 0 calc(var(--x) - 6px),
+        transparent calc(var(--x) - 6px) calc(var(--x) + 6px),
+        var(--inactive) calc(var(--x) + 6px));
+    background-clip: content-box;
+  }
+  .vol__range::-moz-range-track {
+    height: 16px;
+    border-radius: 8px;
+    background:
+      radial-gradient(circle at calc(100% - 6px) 50%, var(--active) 0 2px, transparent 2.5px),
+      linear-gradient(to right,
+        var(--active) 0 calc(var(--x) - 6px),
+        transparent calc(var(--x) - 6px) calc(var(--x) + 6px),
+        var(--inactive) calc(var(--x) + 6px));
+  }
+  .vol__range::-webkit-slider-thumb {
+    width: 4px;
+    height: 28px;
+    margin-top: -6px;
+    border: 0;
+    border-radius: 2px;
+    background: var(--active);
+    -webkit-appearance: none;
+    transition: width 0.15s;
+  }
+  .vol__range::-moz-range-thumb {
+    width: 4px;
+    height: 28px;
+    border: 0;
+    border-radius: 2px;
+    background: var(--active);
+  }
+  /* при нажатии ручка становится тоньше - как в M3 */
+  .vol__range:active::-webkit-slider-thumb { width: 2px; }
+  .vol__range:active::-moz-range-thumb { width: 2px; }
+  .vol__range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px color-mix(in srgb, var(--active) 30%, transparent); }
+  .vol__range:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px color-mix(in srgb, var(--active) 30%, transparent); }
+
   .vibe__name { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
 
   /* ---------- Сейчас ---------- */
@@ -529,6 +653,8 @@ const tiles = await homeTiles((Astro.locals.settings ?? defaultSettings()).home,
     color: var(--md-primary-fixed);
   }
   :global(html[data-mode='dark']) .vibe__artist { color: var(--md-primary-fixed-dim); }
+  :global(html[data-mode='dark']) .vol__btn { color: var(--md-primary-fixed-dim); }
+  :global(html[data-mode='dark']) .vol__range { --active: var(--md-primary-fixed-dim); --inactive: var(--md-on-primary-fixed-variant); }
 
   :global(html[data-mode='dark']) .now {
     background: var(--md-on-tertiary-fixed);
