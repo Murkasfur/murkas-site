@@ -2,6 +2,7 @@
 // слайдер «Figma ↔ код», навыки, карусели, просмотр фото, поиск по работам.
 import { showSnackbar } from './snackbar';
 import { setInspect, inspecting, inspectEscape } from './inspect';
+import { enhanceSelect } from './select-menu';
 
 const $ = <T extends Element = HTMLElement>(s: string, root: ParentNode = document) => root.querySelector<T>(s);
 const $$ = <T extends Element = HTMLElement>(s: string, root: ParentNode = document) => Array.from(root.querySelectorAll<T>(s));
@@ -52,11 +53,11 @@ type I18n = { copied: string; openMail: string; email: string; inspectOn: string
 const i18n: I18n = JSON.parse($('[data-pf-i18n]')?.dataset.pfI18n ?? '{}');
 
 /* ---------------- Тема ---------------- */
-const THEMES = ['watermelon', 'redpanda', 'light'] as const;
+const THEMES = ['watermelon', 'light'] as const;
 type Theme = (typeof THEMES)[number];
 function setTheme(t: Theme) {
   root.dataset.pfTheme = t;
-  root.dataset.theme = t === 'redpanda' ? 'redpanda' : 'watermelon';
+  root.dataset.theme = 'watermelon';
   root.dataset.mode = t === 'light' ? 'light' : 'dark';
   try {
     localStorage.setItem('pf-theme', t);
@@ -484,6 +485,11 @@ const all = $('[data-all]');
 if (all) {
   const q = $<HTMLInputElement>('[data-q]', all)!;
   const sortSel = $<HTMLSelectElement>('[data-sort-select]', all)!;
+  // вместо системного списка - меню в стиле M3 (тот же скрипт, что на murkas.net)
+  enhanceSelect(sortSel);
+  const sortWrap = sortSel.closest<HTMLElement>('.select');
+  const sortBtn = sortWrap?.querySelector<HTMLElement>('.select__btn');
+  if (sortBtn && sortWrap?.dataset.prefix) sortBtn.dataset.prefix = sortWrap.dataset.prefix;
   const grid = $('[data-grid]', all)!;
   const cards = $$('[data-card]', grid);
   const roleBtns = $$<HTMLButtonElement>('[data-role]', all);
@@ -554,6 +560,7 @@ if (all) {
     stack.clear();
     q.value = '';
     sortSel.value = 'new';
+    sortSel.dispatchEvent(new Event('select:sync'));
     apply();
   });
   apply();

@@ -42,7 +42,8 @@ const nav = [
   { id: 'work', label: t.work },
   { id: 'process', label: t.process },
 ];
-const themes = ['watermelon', 'redpanda', 'light'] as const;
+// Темы: тёмный и светлый арбуз (красная панда пока убрана)
+const themes = ['watermelon', 'light'] as const;
 ---
 
 <html lang={lang}>
@@ -62,9 +63,10 @@ const themes = ['watermelon', 'redpanda', 'light'] as const;
         try {
           t = localStorage.getItem('pf-theme') || t;
         } catch (e) {}
+        if (t !== 'light') t = 'watermelon';
         var r = document.documentElement;
         r.dataset.pfTheme = t;
-        r.dataset.theme = t === 'redpanda' ? 'redpanda' : 'watermelon';
+        r.dataset.theme = 'watermelon';
         r.dataset.mode = t === 'light' ? 'light' : 'dark';
         r.dataset.motion = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'reduce' : 'full';
       })();

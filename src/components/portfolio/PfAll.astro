@@ -29,12 +29,12 @@ const stack = pf.stackFilters.filter((f) => all.some((p) => p.tags.some((tg) => 
         <input type="search" placeholder={t.search} data-q autocomplete="off" />
         <kbd>/</kbd>
       </label>
-      <label class="pf-select">
+      <label class="pf-select select" data-prefix={`${t.sort}: `}>
         <span class="visually-hidden">{t.sort}</span>
         <select data-sort-select>
-          <option value="new">{t.sort}: {t.newest}</option>
-          <option value="old">{t.sort}: {t.oldest}</option>
-          <option value="az">{t.sort}: {t.az}</option>
+          <option value="new">{t.newest}</option>
+          <option value="old">{t.oldest}</option>
+          <option value="az">{t.az}</option>
         </select>
         <Icon name="expand_more" size={18} />
       </label>
