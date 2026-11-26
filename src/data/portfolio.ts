@@ -274,30 +274,30 @@ export const pricing = {
   ] as { title: L; note?: L }[],
   /** Скидка на запуск: percent% первым spots клиентам. taken - сколько мест уже занято */
   launch: { percent: 30, spots: 3, taken: 0 },
-  /** Три коротких карточки «Как я работаю с заказами» */
+  /** Три коротких карточки «How it works» */
   terms: [
     {
       title: { en: 'Payment', ru: 'Оплата' },
       items: [
         { en: '30–50% upfront, the rest by milestones', ru: '30–50% предоплата, остальное по этапам' },
         { en: 'Hosting, domain, fonts and plugins are paid by the client', ru: 'Хостинг, домен, шрифты и плагины оплачивает клиент' },
-        { en: 'Rush jobs at 2–3× the rate', ru: 'Срочные заказы - по ставке ×2–3' },
+        { en: 'Source files and rights after full payment', ru: 'Исходники и права - после полной оплаты' },
       ],
     },
     {
       title: { en: 'Edits', ru: 'Правки' },
       items: [
-        { en: 'Big changes are free while we’re still in Figma', ru: 'Пока всё в Figma, крупные изменения бесплатны' },
-        { en: '3 rounds of small and medium edits after the prototype', ru: '3 круга мелких и средних правок после прототипа' },
-        { en: 'After that - hourly, from $20/h', ru: 'Дальше - почасово, от $20/ч' },
+        { en: 'Big changes are free while it’s in Figma', ru: 'Пока всё в Figma, крупные изменения бесплатны' },
+        { en: 'After the prototype: 3 rounds of small and medium edits, then from $20/h', ru: 'После прототипа: 3 круга мелких и средних правок, дальше от $20/ч' },
+        { en: 'My bugs are fixed free for 30 days after launch', ru: 'Свои баги чиню бесплатно 30 дней после запуска' },
       ],
     },
     {
       title: { en: 'Working together', ru: 'Как работаем' },
       items: [
-        { en: 'I reply within 24 hours whenever I can · Toronto, EST', ru: 'Отвечаю в течение 24 часов, когда могу · Торонто, EST' },
-        { en: '30 days of free fixes for my own bugs after launch', ru: '30 дней после запуска бесплатно чиню свои баги' },
-        { en: 'The project goes into my portfolio (opt-out +20%)', ru: 'Проект попадает в портфолио (без показа +20%)' },
+        { en: 'I reply within 24 hours · Toronto, EST', ru: 'Отвечаю в течение 24 часов · Торонто, EST' },
+        { en: 'Rush jobs at 2–3× the rate', ru: 'Срочные заказы - по ставке ×2–3' },
+        { en: 'Every project goes into my portfolio - opting out is +20%, agreed before we start', ru: 'Каждый проект попадает в портфолио - без показа +20%, договариваемся до старта' },
       ],
     },
   ] as { title: L; items: L[] }[],
@@ -306,28 +306,28 @@ export const pricing = {
     {
       title: { en: 'Payment', ru: 'Оплата' },
       items: [
-        { en: '30–50% upfront, the rest by milestones. Source files and rights after full payment', ru: '30–50% предоплата, остальное по этапам. Исходники и права - после полной оплаты' },
-        { en: 'Third-party costs (hosting, domain, fonts, plugins) are paid by the client', ru: 'Сторонние расходы (хостинг, домен, шрифты, плагины) оплачивает клиент' },
-        { en: 'Rush jobs are possible at 2–3× the usual rate', ru: 'Срочные заказы возможны по ставке ×2–3' },
-        { en: 'Launch offer: −30% for my first 3 clients. Projects only - not hourly work, changes or rush jobs', ru: 'Скидка на запуск: −30% первым 3 клиентам. Только на проекты - не на почасовую работу, правки и срочные заказы' },
-        { en: 'Returning clients get −10% from the 3rd project', ru: 'Постоянным клиентам - −10% с 3-го проекта' },
-        { en: 'If prices go up, your discount % stays. I can change or end discount offers at any time - projects already agreed keep their price', ru: 'Если цены вырастут, процент скидки сохранится. Скидки я могу менять или отменять в любой момент - уже согласованные проекты остаются по своей цене' },
+        { en: '30–50% upfront, the rest by milestones', ru: '30–50% предоплата, остальное по этапам' },
+        { en: 'Hosting, domain, Webflow plan, paid fonts, plugins and stock photos are paid by the client', ru: 'Хостинг, домен, тариф Webflow, платные шрифты, плагины и стоковые фото оплачивает клиент' },
+        { en: 'Source files and rights after full payment', ru: 'Исходники и права - после полной оплаты' },
+        { en: 'Launch offer: −30% for my first 3 clients, on projects only - not on hourly work, changes or rush jobs', ru: 'Скидка на запуск: −30% первым 3 клиентам, только на проекты - не на почасовую работу, правки и срочные заказы' },
+        { en: 'Returning clients: −10% from the 3rd project on, also projects only. Discounts don’t stack - the bigger one applies', ru: 'Постоянным клиентам: −10% с 3-го проекта, тоже только на проекты. Скидки не суммируются - действует бо́льшая' },
+        { en: 'If my prices go up, your discount percentage stays the same. I can change or end discount offers at any time - projects we’ve already agreed on keep their price', ru: 'Если мои цены вырастут, процент вашей скидки не изменится. Скидки я могу менять или отменять в любой момент - уже согласованные проекты остаются по своей цене' },
       ],
     },
     {
       title: { en: 'Edits', ru: 'Правки' },
       items: [
-        { en: 'While the design is in Figma, big changes within the agreed scope are free - that’s what this stage is for', ru: 'Пока дизайн в Figma, крупные изменения в рамках согласованного объёма бесплатны - этот этап для того и нужен' },
-        { en: 'After the prototype is approved, 3 rounds of small and medium edits are included', ru: 'После утверждения прототипа включены 3 круга мелких и средних правок' },
-        { en: 'Big changes after the prototype get a new estimate. Extra rounds - hourly, from $20/h', ru: 'Крупные изменения после прототипа - новая оценка. Дополнительные круги - почасово, от $20/ч' },
+        { en: 'While the design is in Figma, big changes within the agreed scope are free', ru: 'Пока дизайн в Figma, крупные изменения в рамках согласованного объёма бесплатны' },
+        { en: 'After the prototype is approved: 3 rounds of small and medium edits. Big changes get a new estimate, extra rounds from $20/h', ru: 'После утверждения прототипа: 3 круга мелких и средних правок. Крупные изменения - новая оценка, дополнительные круги от $20/ч' },
+        { en: 'My own bugs are fixed free for 30 days after launch. New features are a new estimate', ru: 'Свои баги чиню бесплатно 30 дней после запуска. Новые функции - новая оценка' },
       ],
     },
     {
       title: { en: 'Working together', ru: 'Как работаем' },
       items: [
-        { en: 'I reply within 24 hours whenever I can. Time zone: Toronto, EST', ru: 'Отвечаю в течение 24 часов, когда могу. Часовой пояс: Торонто, EST' },
-        { en: 'If the client is silent for 30 days, the project is paused', ru: 'Если клиент молчит 30 дней, проект ставится на паузу' },
-        { en: '30 days of free fixes for my own bugs after launch', ru: '30 дней после запуска бесплатно чиню свои баги' },
+        { en: 'I reply within 24 hours whenever I can · Toronto, EST (UTC−5)', ru: 'Отвечаю в течение 24 часов, когда могу · Торонто, EST (UTC−5)' },
+        { en: 'Rush jobs are possible at 2–3× the usual rate', ru: 'Срочные заказы возможны по ставке ×2–3' },
+        { en: 'If you go silent for 30 days, the project is paused. The deposit is kept, and picking it up again gets a new estimate', ru: 'Если вы молчите 30 дней, проект ставится на паузу. Предоплата остаётся у меня, а продолжение - по новой оценке' },
         { en: 'Other people’s sites - after a quick look at the code and design, so I can say honestly if I can build on it', ru: 'Чужие сайты - после быстрого просмотра кода и дизайна, чтобы честно сказать, смогу ли с ними работать' },
         { en: 'Web3 only with established companies, paid in USD - never in tokens', ru: 'Web3 - только с состоявшимися компаниями и оплатой в USD, не токенами' },
       ],
@@ -335,9 +335,9 @@ export const pricing = {
     {
       title: { en: 'Portfolio & credit', ru: 'Портфолио и подпись' },
       items: [
-        { en: 'Every project goes into my portfolio. Opting out costs +20% and must be agreed before we start', ru: 'Каждый проект попадает в портфолио. Без показа - +20% к цене, договариваемся до старта' },
-        { en: 'Sites I build have a small “Site by Roma Stirmanov” link in the footer', ru: 'На сайтах, которые я делаю, в подвале есть небольшая ссылка «Site by Roma Stirmanov»' },
-        { en: 'It can be removed for free by agreement. If it’s removed without asking, your personal discount on future projects is $20 smaller', ru: 'Её можно убрать бесплатно по договорённости. Если убрать без спроса, персональная скидка на будущие проекты станет на $20 меньше' },
+        { en: 'Every project goes into my portfolio and on this site', ru: 'Каждый проект попадает в портфолио и на этот сайт' },
+        { en: 'Opting out is possible for +20% to the price, agreed before the work starts', ru: 'Без показа - за +20% к цене, договариваемся до начала работы' },
+        { en: 'Sites I build carry a small “Site by Roma Stirmanov” link in the footer. It can be removed for free by agreement. If it’s removed without asking, your personal discount on future projects is $20 smaller', ru: 'На сайтах, которые я делаю, в подвале есть небольшая ссылка «Site by Roma Stirmanov». Её можно убрать бесплатно по договорённости. Если убрать без спроса, персональная скидка на будущие проекты станет на $20 меньше' },
       ],
     },
   ] as { title: L; items: L[] }[],

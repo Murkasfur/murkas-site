@@ -73,10 +73,10 @@ const finderData = {
         </ul>
       </div>
       {left > 0 && (
-        <div class="pf-terms pf-launch">
-          <h3>{t.launchTitle}</h3>
-          <p class="pf-launch__big">−{launch.percent}%</p>
-          <p class="muted">{t.launchText(launch.percent, launch.spots)}</p>
+        <div class="pf-launch">
+          <span class="pf-launch__chip">{t.launchTitle}</span>
+          <p class="pf-launch__title">{t.launchText(launch.percent, launch.spots)}</p>
+          <p class="pf-launch__note">{t.launchNote}</p>
           <p class="pf-launch__spots">
             <span class="pf-launch__dots" aria-hidden="true">{Array.from({ length: launch.spots }, (_, i) => <i class:list={{ on: i < left }} />)}</span>
             {t.spotsLeft(left, launch.spots)}
@@ -88,14 +88,14 @@ const finderData = {
 
   <div class="pf-howrow">
     <div class="pf-howrow__head">
-      <h3 class="pf-h3">{t.termsTitle}</h3>
-      <button type="button" class="pf-link" data-terms-open>{t.allTerms} →</button>
+      <h3 class="pf-howrow__title">{t.termsTitle}</h3>
+      <button type="button" class="pf-textbtn" data-terms-open>{t.allTerms} →</button>
     </div>
     <div class="pf-howcards">
       {pricing.terms.map((c, i) => (
         <article class={`pf-howcard pf-howcard--${i % 3}`}>
           <h4>{tx(c.title, lang)}</h4>
-          <ul>{c.items.map((it) => <li>{tx(it, lang)}</li>)}</ul>
+          <ul>{c.items.map((it) => <li><i aria-hidden="true"></i>{tx(it, lang)}</li>)}</ul>
         </article>
       ))}
     </div>
@@ -141,19 +141,17 @@ const finderData = {
   <dialog class="pf-dialog pf-allterms" data-terms aria-labelledby="terms-title">
     <div class="pf-dialog__head">
       <div>
-        <h2 id="terms-title" class="pf-h2">{t.allTerms}</h2>
-        <p class="muted">{t.termsTitle}</p>
+        <h2 id="terms-title" class="pf-allterms__title">{t.allTerms}</h2>
+        <p class="muted">{t.termsSub}</p>
       </div>
       <button type="button" class="pf-round" data-close aria-label={t.close}><Icon name="close" /></button>
     </div>
-    <div class="pf-allterms__groups">
-      {pricing.allTerms.map((g) => (
-        <section>
-          <h3>{tx(g.title, lang)}</h3>
-          <ul>{g.items.map((it) => <li><Icon name="check" size={16} /><span>{tx(it, lang)}</span></li>)}</ul>
-        </section>
-      ))}
-    </div>
+    {pricing.allTerms.map((g, i) => (
+      <section class={`pf-allterms__group pf-allterms__group--${i % 4}`}>
+        <h3>{tx(g.title, lang)}</h3>
+        <ul>{g.items.map((it) => <li><i aria-hidden="true"></i><span>{tx(it, lang)}</span></li>)}</ul>
+      </section>
+    ))}
   </dialog>
   <p class="pf-finder__fallback"><span class="muted">{t.fallbackA}</span> <a class="pf-link" href="#contact">{t.fallbackB}</a></p>
 </section>
