@@ -3,8 +3,8 @@
 
 import { enhanceSelect } from './select-menu';
 
-// Сколько карточек показывать сразу и сколько добавлять по кнопке
-const PAGE = 24;
+// Сколько карточек показывать сразу и сколько добавлять за раз
+const PAGE = 48;
 
 export function initGallery(root: HTMLElement) {
   const items = Array.from(root.querySelectorAll<HTMLElement>('[data-item]'));
@@ -33,7 +33,8 @@ export function initGallery(root: HTMLElement) {
     );
   };
 
-  const render = () => {
+  // append: дописать новые карточки в уже стоящие колонки, не пересобирая сетку
+  const render = (append = false) => {
     // Закреплённые всегда первыми, дальше по дате
     const list = items.filter(matches).sort((a, b) => {
       const pin = Number(b.dataset.pinned === '1') - Number(a.dataset.pinned === '1');
@@ -52,14 +53,31 @@ export function initGallery(root: HTMLElement) {
     document.dispatchEvent(new CustomEvent('gallery:list', { detail: list.map((el) => el.dataset.id || '') }));
 
     // Раскладка по рядам: следующий элемент - в самую короткую колонку
-    const cols = Array.from({ length: columnCount() }, () => {
-      const c = document.createElement('div');
-      c.className = 'masonry__col';
-      return c;
-    });
-    grid.replaceChildren(...cols);
-    const heights = cols.map(() => 0);
-    for (const el of visible) {
+    let cols = Array.from(grid.querySelectorAll<HTMLElement>(':scope > .masonry__col'));
+    let heights: number[];
+    let toPlace = visible;
+    if (append && cols.length === columnCount()) {
+      // Уже показанные остаются на месте, добавляем только новые
+      toPlace = visible.filter((el) => !el.isConnected);
+      heights = cols.map((c) => c.getBoundingClientRect().height);
+    } else {
+      // Пока сетка пересобирается, держим её высоту - иначе страница
+      // на мгновение становится короткой и браузер прыгает наверх
+      const y = window.scrollY;
+      grid.style.minHeight = `${grid.offsetHeight}px`;
+      cols = Array.from({ length: columnCount() }, () => {
+        const c = document.createElement('div');
+        c.className = 'masonry__col';
+        return c;
+      });
+      grid.replaceChildren(...cols);
+      heights = cols.map(() => 0);
+      requestAnimationFrame(() => {
+        grid.style.minHeight = '';
+        if (Math.abs(window.scrollY - y) > 2) window.scrollTo({ top: y, behavior: 'instant' });
+      });
+    }
+    for (const el of toPlace) {
       const i = heights.indexOf(Math.min(...heights));
       cols[i].appendChild(el);
       heights[i] += el.getBoundingClientRect().height + 16;
@@ -123,10 +141,25 @@ export function initGallery(root: HTMLElement) {
     rerender();
   });
 
-  more?.addEventListener('click', () => {
+  let io: IntersectionObserver | null = null;
+  const loadMore = () => {
+    if (!more || more.hidden) return;
     state.limit += PAGE;
-    render();
-  });
+    render(true);
+    // Если кнопка всё ещё рядом (экран высокий) - проверим ещё раз
+    if (io) {
+      io.unobserve(more);
+      requestAnimationFrame(() => io?.observe(more));
+    }
+  };
+  more?.addEventListener('click', loadMore);
+  // Подгружаем заранее, когда до кнопки осталось меньше пары экранов
+  if (more && 'IntersectionObserver' in window) {
+    io = new IntersectionObserver((entries) => entries.some((e) => e.isIntersecting) && loadMore(), {
+      rootMargin: '0px 0px 1200px 0px',
+    });
+    io.observe(more);
+  }
 
   // Перераскладка при смене ширины (меняется число колонок)
   let lastCols = columnCount();
