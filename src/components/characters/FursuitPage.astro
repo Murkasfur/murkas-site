@@ -138,7 +138,7 @@ const status = (s: string) => ui(`status.${s}` as UiKey);
       {facts.length > 0 && (
         <dl class="ch-kv">
           {facts.map((f) => (
-            <div><dt class="md-body-medium muted">{f.label}</dt><dd class="md-title-small">{f.url ? <a class="ch-link" href={f.url} target="_blank" rel="noopener noreferrer">{f.value} →</a> : f.value}</dd></div>
+            <div><dt class="md-body-medium muted">{f.label}</dt><dd class="md-title-small">{f.url ? <a class="ch-link" href={f.url} target="_blank" rel="noopener noreferrer">{f.value}<Ico name="arrow_outward" size={16} /></a> : f.value}</dd></div>
           ))}
         </dl>
       )}

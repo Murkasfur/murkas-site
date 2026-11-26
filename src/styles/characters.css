@@ -3,8 +3,8 @@
 
 /* ---------- Цвета персонажей ---------- */
 .ch-theme--watermelon {
-  --ch-bg: var(--md-secondary, #006b24);
-  --ch-art: var(--md-secondary-container, #068730);
+  --ch-bg: #006b24;
+  --ch-art: #068730;
   --ch-stroke: #002106;
   --ch-accent: #c4f267;
   --ch-on: #fff;
@@ -45,7 +45,7 @@ a.ch-chip:hover { background: color-mix(in srgb, var(--md-on-surface) 8%, transp
 .ch-btn-outline { border-color: color-mix(in srgb, var(--ch-on, #fff) 70%, transparent); color: var(--ch-on, var(--md-on-surface)); }
 
 .ch-box { padding: 20px 24px; border-radius: 24px; background: var(--md-surface-container); display: grid; gap: 8px; align-content: start; }
-.ch-box--pink { background: var(--md-error-container); color: var(--md-on-error-container); }
+.ch-box--pink { background: var(--ch-no-bg); color: var(--ch-no-on); }
 .ch-box--outlined { background: var(--md-surface-container-low); border: 1px solid var(--md-outline-variant); }
 .ch-box ul, .ch-rule ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
 
@@ -55,9 +55,20 @@ a.ch-chip:hover { background: color-mix(in srgb, var(--md-on-surface) 8%, transp
 /* Семантика правил: можно - зелёный, спроси - лайм, нельзя - розовый, инфо - серый */
 .ch-rule { padding: 24px; border-radius: 28px; display: grid; gap: 12px; align-content: start; }
 .ch-rule h3 { display: flex; align-items: center; gap: 10px; }
-.ch-rule--ok   { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
-.ch-rule--ask  { background: #c4f267; color: #141f00; }
-.ch-rule--no   { background: var(--md-error-container); color: var(--md-on-error-container); }
+/* цвета правил одной парой переменных: в тёмной теме - приглушённые версии */
+:root {
+  --ch-ok-bg: #068730; --ch-ok-on: #f7fff2;
+  --ch-ask-bg: #c4f267; --ch-ask-on: #141f00;
+  --ch-no-bg: #ffdad6; --ch-no-on: #93000a;
+}
+:root[data-mode='dark'] {
+  --ch-ok-bg: #153d20; --ch-ok-on: #b6f2c0;
+  --ch-ask-bg: #2e3a12; --ch-ask-on: #dcf7a0;
+  --ch-no-bg: #4a1714; --ch-no-on: #ffb4ab;
+}
+.ch-rule--ok   { background: var(--ch-ok-bg); color: var(--ch-ok-on); }
+.ch-rule--ask  { background: var(--ch-ask-bg); color: var(--ch-ask-on); }
+.ch-rule--no   { background: var(--ch-no-bg); color: var(--ch-no-on); }
 .ch-rule--info { background: var(--md-surface-container-high); color: var(--md-on-surface); }
 
 /* ---------- Карточки персонажей / образов (списки) ---------- */
@@ -200,9 +211,9 @@ a.ch-chip:hover { background: color-mix(in srgb, var(--md-on-surface) 8%, transp
 .ch-strip__pills::-webkit-scrollbar { display: none; }
 .ch-strip__more { flex: none; }
 .ch-pill { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 14px 0 10px; border-radius: 8px; white-space: nowrap; font: 500 14px/20px var(--font-plain); }
-.ch-pill--ok   { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
-.ch-pill--ask  { background: #c4f267; color: #141f00; }
-.ch-pill--no   { background: var(--md-error-container); color: var(--md-on-error-container); }
+.ch-pill--ok   { background: var(--ch-ok-bg); color: var(--ch-ok-on); }
+.ch-pill--ask  { background: var(--ch-ask-bg); color: var(--ch-ask-on); }
+.ch-pill--no   { background: var(--ch-no-bg); color: var(--ch-no-on); }
 .ch-pill--info { background: var(--md-surface-container-high); color: var(--md-on-surface); }
 
 .ch-suit { display: grid; grid-template-columns: 640px minmax(0, 1fr); gap: 24px; align-items: stretch; }
@@ -261,7 +272,7 @@ a.ch-chip:hover { background: color-mix(in srgb, var(--md-on-surface) 8%, transp
 .ch-meet__then > span:first-child { display: grid; }
 .ch-status { justify-self: start; display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 8px; font: 500 12px/16px var(--font-plain); background: var(--md-surface-container-high); color: var(--md-on-surface); white-space: nowrap; }
 .ch-status--full { background: var(--md-secondary); color: var(--md-on-secondary); }
-.ch-status--partial { background: #c4f267; color: #141f00; }
+.ch-status--partial { background: var(--ch-ask-bg); color: var(--ch-ask-on); }
 .ch-history { display: grid; gap: 16px; padding: 24px; border: 1px solid var(--md-outline-variant); border-radius: 28px; background: var(--md-surface-container-low); }
 .ch-history__steps { list-style: none; margin: 0; padding: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(180px, 1fr); gap: 16px; overflow-x: auto; }
 .ch-history__steps li { display: grid; gap: 4px; padding: 12px 16px; border-radius: 16px; background: var(--md-surface-container); }
