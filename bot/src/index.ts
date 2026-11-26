@@ -10,6 +10,7 @@ import { handleUpdate } from './bot';
 
 const COMMANDS = [
   { command: 'status', description: 'Что сейчас на сайте' },
+  { command: 'characters', description: 'Персонажи и фурсьюты' },
   { command: 'events', description: 'Ивенты' },
   { command: 'addevent', description: 'Добавить ивент' },
   { command: 'now', description: 'Статус «Сейчас»' },

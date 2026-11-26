@@ -1,0 +1,213 @@
+---
+// Страница образа (Figma: 6 · Фурсьюты → «Фурсьюты · Фуллсьют», «… нет фото» и мобильные).
+// Порядок: шапка → короткая памятка → фото + карточка → памятка → дополнения → где встретить + история.
+import Page from '../Page.astro';
+import Ico, { type IcoName } from './Ico.astro';
+import UploadTile from '../UploadTile.astro';
+import { useTranslations, localizePath, type Lang, type UiKey } from '../../i18n/ui';
+import {
+  T, fill, pair, parseList, parsePills, parseNotes, parseTimeline, parseLink, type LookRow, type RuleKind,
+} from '../../lib/characters-core';
+import { fileUrl, type CharacterWithLooks, type MediaThumb, type EventLite } from '../../lib/characters';
+import '../../styles/characters.css';
+
+interface Props {
+  lang: Lang;
+  data: { look: LookRow; character: CharacterWithLooks; siblings: LookRow[]; photos: MediaThumb[]; events: { went: EventLite[]; upcoming: EventLite[] } };
+}
+const { lang, data } = Astro.props;
+const { look: l, character: c, siblings, photos, events } = data;
+const t = T[lang];
+const ui = useTranslations(lang);
+const L = (ru: string | null, en: string | null) => pair(ru, en)?.[lang] ?? '';
+const list = (v: string | null) => parseList(v).map((p) => p[lang]);
+
+const charName = L(c.name_ru, c.name_en);
+const lookName = L(l.name_ru, l.name_en);
+const maker = parseLink(l.maker);
+const parts = list(l.parts);
+const features = list(l.features);
+const pills = parsePills(l.pills);
+const rules = { ok: list(l.rules_ok), ask: list(l.rules_ask), no: list(l.rules_no) };
+const notes = parseNotes(l.notes);
+const addons = list(l.addons);
+const timeline = parseTimeline(l.timeline);
+
+const angles = (['front', 'side', 'back', 'motion'] as const)
+  .map((k) => ({ k, file: l[`angle_${k}` as keyof LookRow] as string | null }))
+  .filter((a) => a.file);
+const main = l.cover_file ? { src: fileUrl(l.cover_file, 1600)!, full: fileUrl(l.cover_file)! } : photos[0] ? { src: photos[0].full, full: photos[0].full } : null;
+const extra = photos.filter((p) => !main || p.full !== main.src).slice(0, angles.length ? 0 : 4);
+
+const PILL_ICON: Record<RuleKind, IcoName> = { ok: 'photo_camera', ask: 'favorite', no: 'block', info: 'info' };
+const pillIcon = (kind: RuleKind, text: string) => (/нет|no\b/i.test(text) && kind === 'no' ? 'chat' : PILL_ICON[kind]);
+
+const facts = [
+  maker && { label: t.maker, value: maker.name, url: maker.url },
+  l.since_ru && { label: t.since, value: L(l.since_ru, l.since_en) },
+  l.type_ru && { label: t.type, value: L(l.type_ru, l.type_en) },
+  l.species_ru && { label: t.species, value: L(l.species_ru, l.species_en) },
+].filter(Boolean) as { label: string; value: string; url?: string | null }[];
+
+// ивенты
+const MON = lang === 'ru' ? ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'] : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const d = (s: string) => { const [, m, dd] = s.split('-').map(Number); return lang === 'ru' ? `${dd} ${MON[m - 1]}` : `${MON[m - 1]} ${dd}`; };
+const when = (e: EventLite) => e.start_date ? (e.end_date && e.end_date !== e.start_date ? `${d(e.start_date)} – ${d(e.end_date)}` : d(e.start_date)) : (L(e.approx_ru, e.approx_en) || 'TBA');
+const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Toronto' });
+const next = events.upcoming[0];
+const then = events.upcoming[1];
+const days = next?.start_date ? Math.max(0, Math.round((Date.parse(next.start_date) - Date.parse(today)) / 864e5)) : null;
+const wentN = events.went.length;
+const status = (s: string) => ui(`status.${s}` as UiKey);
+---
+
+<Page lang={lang} page="fursuits" title={`${charName} · ${lookName} · Murkas`} description={L(l.subtitle_ru, l.subtitle_en) || undefined}>
+  <nav class="ch-crumbs md-label-large" aria-label="breadcrumbs">
+    <a href={localizePath('/fursuits', lang)}>{t.fursuits}</a><span>/</span>
+    <a href={localizePath(`/characters/${c.id}`, lang)}>{charName}</a><span>/</span>
+    <span aria-current="page">{lookName}</span>
+  </nav>
+
+  <header class="ch-suit-head">
+    <div class="ch-head">
+      <h1 class="md-display-small">{charName} · {lookName.toLowerCase()}</h1>
+      {l.subtitle_ru && <p class="md-body-large muted">{L(l.subtitle_ru, l.subtitle_en)}</p>}
+    </div>
+    {siblings.length > 1 && (
+      <nav class="ch-segmented" aria-label={t.look}>
+        {siblings.map((s) => (
+          <a href={localizePath(`/fursuits/${s.id}`, lang)} aria-current={s.id === l.id ? 'page' : undefined}>
+            {s.id === l.id && <Ico name="check" size={18} />}{L(s.name_ru, s.name_en)}
+          </a>
+        ))}
+      </nav>
+    )}
+  </header>
+
+  {pills.length > 0 && (
+    <div class="ch-strip">
+      <span class="md-title-small muted ch-strip__label">{t.ifYouMeet}</span>
+      <div class="ch-strip__pills">
+        {pills.map((p) => <span class:list={['ch-pill', `ch-pill--${p.kind}`]}><Ico name={pillIcon(p.kind, p.text.ru)} size={18} />{p.text[lang]}</span>)}
+      </div>
+      <a class="md-btn md-btn--text ch-strip__more" href="#memo"><Ico name="expand_more" size={20} />{t.fullMemo}</a>
+    </div>
+  )}
+
+  <section class="ch-suit">
+    <div class="ch-gallery">
+      {main ? (
+        <>
+          <a class="ch-gallery__main" href={main.full} target="_blank" rel="noopener"><img src={main.src} alt={`${charName} · ${lookName}`} decoding="async" /></a>
+          {angles.length > 0 && (
+            <ul class="ch-angles">
+              {angles.map((a) => <li><a href={fileUrl(a.file)} target="_blank" rel="noopener"><img src={fileUrl(a.file, 400)} alt="" loading="lazy" /></a><span class="md-label-medium">{t.angles[a.k]}</span></li>)}
+            </ul>
+          )}
+          {extra.length > 0 && (
+            <ul class="ch-angles">{extra.map((p) => <li><a href={p.full} target="_blank" rel="noopener"><img src={p.src} alt="" loading="lazy" /></a></li>)}</ul>
+          )}
+        </>
+      ) : (
+        <div class="ch-empty">
+          <span class="ch-empty__icon"><Ico name="add_photo" size={32} /></span>
+          <p class="md-title-large">{fill(t.noPhotos, { look: lookName.toLowerCase() })}</p>
+          <p class="md-body-medium muted">{t.noPhotosText}</p>
+        </div>
+      )}
+    </div>
+
+    <div class="ch-info">
+      <div class="ch-info__title">
+        <h2 class="md-display-small">{charName}</h2>
+        {l.status_ru && <span class="ch-chip ch-chip--status">{L(l.status_ru, l.status_en)}</span>}
+      </div>
+      {facts.length > 0 && (
+        <dl class="ch-kv">
+          {facts.map((f) => (
+            <div><dt class="md-body-medium muted">{f.label}</dt><dd class="md-title-small">{f.url ? <a class="ch-link" href={f.url} target="_blank" rel="noopener noreferrer">{f.value} →</a> : f.value}</dd></div>
+          ))}
+        </dl>
+      )}
+      {parts.length > 0 && (
+        <div class="ch-info__block">
+          <h3 class="md-title-small">{t.parts}</h3>
+          <div class="ch-chips">{parts.map((x) => <span class="ch-chip">{x}</span>)}</div>
+          {l.parts_note_ru && <p class="md-body-small muted">{L(l.parts_note_ru, l.parts_note_en)}</p>}
+        </div>
+      )}
+      {features.length > 0 && (
+        <div class="ch-info__block">
+          <h3 class="md-title-small">{t.features}</h3>
+          <div class="ch-chips">{features.map((x) => <span class="ch-chip">{x}</span>)}</div>
+        </div>
+      )}
+      <div class="ch-info__foot">
+        {wentN > 0 && (
+          <div class="ch-info__stats">
+            <p><span class="ch-num">{wentN}</span> <span class="md-body-medium">{wentN === 1 ? t.event1 : t.events}</span></p>
+            <p class="md-body-small muted">{events.went.slice(0, 3).map((e) => L(e.title_ru, e.title_en)).join(' · ')}</p>
+          </div>
+        )}
+        <UploadTile lang={lang} title={t.upload} hint={ui('upload.dropHint')} />
+      </div>
+    </div>
+  </section>
+
+  {(rules.ok.length > 0 || rules.ask.length > 0 || rules.no.length > 0 || notes.length > 0) && (
+    <section class="ch-memo" id="memo">
+      <div class="ch-head">
+        <h2 class="md-headline-small">{t.memoTitle}</h2>
+        <p class="md-body-medium muted">{t.memoSub}</p>
+      </div>
+      <div class="ch-mainrule">
+        <Ico name="favorite" class="ch-mainrule__icon" />
+        <div><p class="md-title-large">{t.mainRule}</p><p class="md-body-large muted">{t.mainRuleText}</p></div>
+      </div>
+      <div class="ch-grid3">
+        {rules.ok.length > 0 && <div class="ch-rule ch-rule--ok"><h3 class="md-title-medium"><Ico name="photo_camera" size={20} />{t.memoOk}</h3><ul class="md-body-medium">{rules.ok.map((x) => <li>{x}</li>)}</ul></div>}
+        {rules.ask.length > 0 && <div class="ch-rule ch-rule--ask"><h3 class="md-title-medium"><Ico name="favorite" size={20} />{t.memoAsk}</h3><ul class="md-body-medium">{rules.ask.map((x) => <li>{x}</li>)}</ul></div>}
+        {rules.no.length > 0 && <div class="ch-rule ch-rule--no"><h3 class="md-title-medium"><Ico name="block" size={20} />{t.memoNo}</h3><ul class="md-body-medium">{rules.no.map((x) => <li>{x}</li>)}</ul></div>}
+      </div>
+      {notes.length > 0 && (
+        <div class="ch-grid2">
+          {notes.map((n, i) => <div class="ch-rule ch-rule--info"><h3 class="md-title-medium"><Ico name={i === 0 ? 'visibility' : 'favorite'} size={20} />{n.title[lang]}</h3><p class="md-body-medium">{n.text[lang]}</p></div>)}
+        </div>
+      )}
+    </section>
+  )}
+
+  {addons.length > 0 && (
+    <section class="ch-addons">
+      <h2 class="md-headline-small">{t.addons}</h2>
+      <ul class="ch-addons__list">{addons.map((x) => <li class="ch-addon md-title-small"><span class="ch-addon__thumb"><Ico name="photo_camera" size={20} /></span>{x}</li>)}</ul>
+    </section>
+  )}
+
+  <section class="ch-bottom">
+    {next && (
+      <div class="ch-meet">
+        <div class="ch-meet__head">
+          <span class="md-title-small"><Ico name="event" size={18} />{t.where}</span>
+          <a class="md-label-large ch-link" href={localizePath('/events', lang)}>{t.all} <Ico name="arrow_outward" size={16} /></a>
+        </div>
+        <p class="md-label-medium muted">{days === null ? '' : days === 0 ? t.today : fill(t.inDays, { n: days })}</p>
+        <p class="md-title-large">{L(next.title_ru, next.title_en)}</p>
+        <p class="md-body-small muted"><Ico name="place" size={14} /> {when(next)} · {L(next.city_ru, next.city_en)}</p>
+        <span class:list={['ch-status', `ch-status--${next.status}`]}>{status(next.status)}</span>
+        {then && (
+          <div class="ch-meet__then">
+            <span><span class="md-title-small">{fill(t.then, { name: L(then.title_ru, then.title_en) })}</span><span class="md-body-small muted">{when(then)}</span></span>
+            <span class:list={['ch-status', `ch-status--${then.status}`]}>{status(then.status)}</span>
+          </div>
+        )}
+      </div>
+    )}
+    {timeline.length > 0 && (
+      <div class="ch-history">
+        <h2 class="md-title-large">{t.history}</h2>
+        <ol class="ch-history__steps">{timeline.map((s) => <li><span class="md-label-medium ch-history__when">{s.when}</span><span class="md-body-medium">{s.text[lang]}</span></li>)}</ol>
+      </div>
+    )}
+  </section>
+</Page>

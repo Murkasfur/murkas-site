@@ -12,6 +12,7 @@ import {
   listEvents, getEvent, insertEvent, updateEvent, deleteEvent, toNowEvent, KINDS, kindLabel, type Kind,
   type EventDraft, type EventRow, type Status,
 } from './events';
+import { charactersCommand, charText, charFile, charCallback, type CharState } from './characters';
 
 // ---------- состояние диалога (таблица bot_state) ----------
 
@@ -24,7 +25,8 @@ type State =
   | { flow: 'hero' }
   | { flow: 'vibe'; field: 'title' | 'artist' | 'cover' }
   | { flow: 'mediaEdit'; id: string; field: 'title' | 'caption' | 'author' | 'date'; msgId: number; scope: string | null }
-  | { flow: 'default' };
+  | { flow: 'default' }
+  | CharState;
 
 const getState = async (env: Env, chat: number) => {
   const row = await env.DB.prepare(`SELECT state FROM bot_state WHERE chat_id = ?`).bind(chat).first<{ state: string }>();
@@ -57,6 +59,9 @@ const HELP = `<b>Бот murkas.net</b> 🐾
 /pages - какие страницы готовы, а какие «в работе»
 /now - ручной статус в «Сейчас» (сверх расписания)
 /default - статус, когда ничего не происходит
+
+<b>Персонажи и фурсьюты</b>
+/characters - все тексты, фото, памятки и состав костюмов
 
 <b>Ивенты</b>
 /events - список, нажми на ивент чтобы изменить
@@ -239,6 +244,7 @@ export async function handleUpdate(env: Env, u: Update) {
 async function onFile(env: Env, msg: Message) {
   const chat = msg.chat.id;
   const st = await getState(env, chat);
+  if (st?.flow === 'char' || st?.flow === 'charNew') return charFile(env, msg, st);
   if (st?.flow === 'vibe' && st.field === 'cover') return onVibeCover(env, msg);
   if (st?.flow !== 'hero') return send(env, chat, 'Чтобы поставить картинку в «Привет, это» на главной, сначала /hero. Обложку для «Мой вайб» - через /vibe');
   const file = msg.document ?? msg.photo![msg.photo!.length - 1]; // у фото последний размер - самый большой
@@ -425,6 +431,9 @@ async function onText(env: Env, msg: Message) {
         await setState(env, chat, { flow: 'default' });
         return send(env, chat, `По умолчанию: <b>${esc(s.now.ru)}</b> <i>/ ${esc(s.now.en)}</i>\nПоказывается, когда нет пар, ивентов, сна и праздников.\n\nНапиши новый: <i>Русский | English</i>`, [[CANCEL_BTN]]);
       }
+      case 'characters':
+      case 'fursuits':
+        return charactersCommand(env, chat);
       case 'events': {
         const [t, kb] = await eventsList(env);
         return send(env, chat, t, kb);
@@ -473,6 +482,7 @@ async function onText(env: Env, msg: Message) {
 
   const st = await getState(env, chat);
   if (!st) return send(env, chat, 'Выбери, что сделать: /help');
+  if (st.flow === 'char' || st.flow === 'charNew') return charText(env, chat, st, text);
 
   if (st.flow === 'now') return saveManual(env, chat, text);
   if (st.flow === 'default') return saveDefault(env, chat, text);
@@ -628,6 +638,7 @@ async function onCallback(env: Env, cb: CallbackQuery) {
   if (!msg) return answer(env, cb);
   const chat = msg.chat.id;
   const [kind, a, b] = data.split(':');
+  if (kind === 'ch') return charCallback(env, cb);
 
   switch (kind) {
     case 'x':

@@ -1,0 +1,10 @@
+---
+// Страница образа: /fursuits/arbyss-fullsuit
+import FursuitPage from '../../../components/characters/FursuitPage.astro';
+import { getLook } from '../../../lib/characters';
+
+const data = await getLook(Astro.params.id ?? '');
+if (!data) return Astro.rewrite('/404');
+---
+
+<FursuitPage lang="ru" data={data} />

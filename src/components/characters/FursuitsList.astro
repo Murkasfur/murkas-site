@@ -1,0 +1,49 @@
+---
+// «Фурсьюты» - все образы, сгруппированные по персонажам (Figma: 6 · Фурсьюты → «Фурсьюты · список»)
+import Page from '../Page.astro';
+import Ico from './Ico.astro';
+import { localizePath, type Lang } from '../../i18n/ui';
+import { T, fill, pair } from '../../lib/characters-core';
+import { listCharacters, fileUrl } from '../../lib/characters';
+import '../../styles/characters.css';
+
+const { lang } = Astro.props as { lang: Lang };
+const t = T[lang];
+const L = (ru: string | null, en: string | null) => pair(ru, en)?.[lang] ?? '';
+const chars = (await listCharacters()).filter((c) => c.looks.length > 0);
+---
+
+<Page lang={lang} page="fursuits" title={`${t.suitsTitle} · Murkas`}>
+  <header class="ch-head">
+    <h1 class="md-display-small">{t.suitsTitle}</h1>
+    <p class="md-body-large muted">{t.suitsSubtitle}</p>
+  </header>
+
+  {chars.length === 0 && <p class="md-body-large muted">{t.empty}</p>}
+
+  {chars.map((c) => (
+    <section class="ch-group">
+      <div class="ch-group__head">
+        <h2 class="md-headline-small">{L(c.name_ru, c.name_en)}</h2>
+        <a class="md-btn md-btn--text" href={localizePath(`/characters/${c.id}`, lang)}>{fill(t.aboutChar, { name: L(c.name_ru, c.name_en) })}</a>
+      </div>
+      <ul class="ch-cards ch-cards--suits">
+        {c.looks.map((l) => (
+          <li>
+            <a class:list={['ch-card', `ch-theme--${c.theme}`]} href={localizePath(`/fursuits/${l.id}`, lang)}>
+              <span class="ch-card__art">
+                {l.cover_file ? <img src={fileUrl(l.cover_file, 800)} alt="" loading="lazy" decoding="async" /> : <Ico name="photo_camera" />}
+              </span>
+              <span class="ch-card__text">
+                <span class="md-title-medium ch-on">{L(c.name_ru, c.name_en)}</span>
+                <span class="ch-card__name ch-card__name--sm ch-accent">{L(l.name_ru, l.name_en)}</span>
+                {l.subtitle_ru && <span class="md-body-large ch-on ch-clamp">{L(l.subtitle_ru, l.subtitle_en)}</span>}
+                {l.status_ru && <span class="ch-chips"><span class="ch-chip ch-chip--on-theme">{L(l.status_ru, l.status_en)}</span></span>}
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  ))}
+</Page>

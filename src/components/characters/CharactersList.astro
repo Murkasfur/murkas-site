@@ -1,0 +1,47 @@
+---
+// «Персонажи» - список (Figma: 5 · Персонажи → «Персонажи · список» и мобильная версия)
+import Page from '../Page.astro';
+import Ico from './Ico.astro';
+import { localizePath, type Lang } from '../../i18n/ui';
+import { T, pair } from '../../lib/characters-core';
+import { listCharacters, fileUrl } from '../../lib/characters';
+import '../../styles/characters.css';
+
+const { lang } = Astro.props as { lang: Lang };
+const t = T[lang];
+const L = (ru: string | null, en: string | null) => pair(ru, en)?.[lang] ?? '';
+const chars = await listCharacters();
+---
+
+<Page lang={lang} page="characters" title={`${t.charsTitle} · Murkas`}>
+  <header class="ch-head">
+    <h1 class="md-display-small">{t.charsTitle}</h1>
+    <p class="md-body-large muted">{t.charsSubtitle}</p>
+  </header>
+
+  {chars.length === 0 ? (
+    <p class="md-body-large muted">{t.empty}</p>
+  ) : (
+    <ul class="ch-cards">
+      {chars.map((c) => (
+        <li>
+          <a class:list={['ch-card', `ch-theme--${c.theme}`]} href={localizePath(`/characters/${c.id}`, lang)}>
+            <span class="ch-card__art">
+              {c.hero_file ? <img src={fileUrl(c.hero_file, 800)} alt="" loading="lazy" decoding="async" /> : <Ico name="photo_camera" />}
+            </span>
+            <span class="ch-card__text">
+              {c.label_ru && <span class="md-title-medium ch-on">{L(c.label_ru, c.label_en)}</span>}
+              <span class="ch-card__name ch-accent">{L(c.name_ru, c.name_en)}</span>
+              {c.tagline_ru && <span class="md-title-large ch-on">{L(c.tagline_ru, c.tagline_en)}</span>}
+              {c.looks.length > 0 && (
+                <span class="ch-chips">
+                  {c.looks.map((l) => <span class="ch-chip ch-chip--on-theme">{L(l.name_ru, l.name_en)}</span>)}
+                </span>
+              )}
+            </span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  )}
+</Page>

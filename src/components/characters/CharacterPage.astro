@@ -1,0 +1,227 @@
+---
+// Страница персонажа (Figma: 5 · Персонажи → «Персонаж · Arbyss» и мобильная версия).
+// Пустые поля и блоки не показываются - заполняются в боте: /characters
+import Page from '../Page.astro';
+import Ico from './Ico.astro';
+import { localizePath, type Lang } from '../../i18n/ui';
+import { T, fill, pair, parseList, parsePalette, parseLink, paragraphs, type CharacterRow } from '../../lib/characters-core';
+import { fileUrl, type CharacterWithLooks, type MediaThumb } from '../../lib/characters';
+import '../../styles/characters.css';
+
+interface Props {
+  lang: Lang;
+  data: { character: CharacterWithLooks; others: CharacterWithLooks[]; arts: MediaThumb[] };
+}
+const { lang, data } = Astro.props;
+const { character: c, others, arts } = data;
+const t = T[lang];
+const L = (ru: string | null, en: string | null) => pair(ru, en)?.[lang] ?? '';
+const list = (v: string | null) => parseList(v).map((p) => p[lang]);
+const name = L(c.name_ru, c.name_en);
+
+const story = paragraphs(L(c.story_ru, c.story_en));
+const traits = list(c.traits);
+const likes = list(c.likes);
+const dislikes = list(c.dislikes);
+const palette = parsePalette(c.palette);
+const marks = list(c.marks);
+const art = { ok: list(c.art_ok), ask: list(c.art_ask), no: list(c.art_no) };
+const facts = list(c.facts);
+const artist = parseLink(c.hero_artist);
+const artsUrl = `${localizePath('/arts', lang)}?character=${c.id}`;
+
+const facts3 = [
+  c.species_ru && { label: t.species, value: L(c.species_ru, c.species_en) },
+  c.pronouns_ru && { label: t.pronouns, value: L(c.pronouns_ru, c.pronouns_en) },
+  c.looks.length > 0 && { label: t.looks, value: String(c.looks.length) },
+].filter(Boolean) as { label: string; value: string }[];
+
+const sections = [
+  story.length && { id: 'story', label: t.story },
+  (traits.length || likes.length || dislikes.length) && { id: 'personality', label: t.character },
+  palette.length && { id: 'palette', label: t.palette },
+  (marks.length || art.ok.length || art.ask.length || art.no.length) && { id: 'artists', label: t.forArtists },
+  c.looks.length && { id: 'looks', label: t.looks },
+  facts.length && { id: 'facts', label: t.facts },
+  arts.length && { id: 'arts', label: t.arts },
+].filter(Boolean) as { id: string; label: string }[];
+const label = (o: CharacterRow) => [L(o.species_ru, o.species_en) || L(o.tagline_ru, o.tagline_en)].filter(Boolean).join('');
+---
+
+<Page lang={lang} page="characters" title={`${name} · Murkas`} description={L(c.summary_ru, c.summary_en) || undefined}>
+  <nav class="ch-crumbs md-label-large" aria-label="breadcrumbs">
+    <a href={localizePath('/characters', lang)}>{t.charsTitle}</a><span>/</span><span aria-current="page">{name}</span>
+  </nav>
+
+  <section class:list={['ch-hero', `ch-theme--${c.theme}`]}>
+    <div class="ch-hero__art">
+      {c.hero_file ? <img src={fileUrl(c.hero_file, 1600)} alt={name} decoding="async" /> : <Ico name="photo_camera" size={48} />}
+      {artist && (
+        artist.url
+          ? <a class="ch-credit md-label-large" title={fill(t.artBy, { name: artist.name })} href={artist.url} target="_blank" rel="noopener noreferrer"><Ico name="palette" size={18} /><span class="ch-credit__text">{fill(t.artBy, { name: artist.name })}</span></a>
+          : <span class="ch-credit md-label-large" title={fill(t.artBy, { name: artist.name })}><Ico name="palette" size={18} /><span class="ch-credit__text">{fill(t.artBy, { name: artist.name })}</span></span>
+      )}
+    </div>
+    <div class="ch-hero__intro">
+      <div class="ch-hero__name">
+        {c.label_ru && <span class="md-title-medium ch-on">{L(c.label_ru, c.label_en)}</span>}
+        <h1 class="ch-hero__title ch-accent">{name}</h1>
+        {c.tagline_ru && <p class="md-title-large ch-on">{L(c.tagline_ru, c.tagline_en)}</p>}
+      </div>
+      {facts3.length > 0 && (
+        <dl class="ch-facts">
+          {facts3.map((f) => <div class="ch-fact"><dt class="md-label-medium ch-on">{f.label}</dt><dd class="md-title-large ch-accent">{f.value}</dd></div>)}
+        </dl>
+      )}
+      {c.summary_ru && <p class="md-body-large ch-on">{L(c.summary_ru, c.summary_en)}</p>}
+      <div class="ch-hero__actions">
+        {c.ref_file && <a class="md-btn md-btn--filled" href={fileUrl(c.ref_file)} download><Ico name="download" size={20} />{t.downloadRef}</a>}
+        <a class="md-btn ch-btn-outline" href={artsUrl}>{t.allArts}</a>
+      </div>
+    </div>
+  </section>
+
+  {sections.length > 1 && (
+    <nav class="ch-anchors" aria-label={name}>
+      {sections.map((s) => <a class="ch-chip" href={`#${s.id}`}>{s.label}</a>)}
+    </nav>
+  )}
+
+  {story.length > 0 && (
+    <section class="ch-sec" id="story">
+      <div class="ch-sec__head"><h2 class="md-headline-small">{t.story}</h2><p class="md-body-small muted">{t.storySub}</p></div>
+      <div class="ch-sec__body ch-prose md-body-large">
+        <p>{story[0]}</p>
+        {story.length > 1 && (
+          <details class="ch-more">
+            <summary class="md-label-large"><span class="when-closed">{t.readMore}</span><span class="when-open">{t.readLess}</span><Ico name="expand_more" size={20} /></summary>
+            {story.slice(1).map((p) => <p>{p}</p>)}
+          </details>
+        )}
+      </div>
+    </section>
+  )}
+
+  {(traits.length > 0 || likes.length > 0 || dislikes.length > 0) && (
+    <section class="ch-sec" id="personality">
+      <div class="ch-sec__head"><h2 class="md-headline-small">{t.character}</h2></div>
+      <div class="ch-sec__body">
+        {traits.length > 0 && <div class="ch-chips">{traits.map((x) => <span class="ch-chip ch-chip--tonal">{x}</span>)}</div>}
+        {(likes.length > 0 || dislikes.length > 0) && (
+          <div class="ch-grid2">
+            {likes.length > 0 && <div class="ch-box ch-box--pink"><h3 class="md-title-large">{t.likes}</h3><ul class="md-body-medium">{likes.map((x) => <li>{x}</li>)}</ul></div>}
+            {dislikes.length > 0 && <div class="ch-box"><h3 class="md-title-large">{t.dislikes}</h3><ul class="md-body-medium">{dislikes.map((x) => <li>{x}</li>)}</ul></div>}
+          </div>
+        )}
+      </div>
+    </section>
+  )}
+
+  {palette.length > 0 && (
+    <section class="ch-sec" id="palette">
+      <div class="ch-sec__head"><h2 class="md-headline-small">{t.palette}</h2><p class="md-body-small muted">{t.paletteSub}</p></div>
+      <div class="ch-sec__body">
+        <ul class="ch-swatches" data-copied={t.copied}>
+          {palette.map((p) => (
+            <li>
+              <button type="button" class="ch-swatch" data-copy={p.hex} aria-label={`${p.name[lang]} ${p.hex}`}>
+                <span class="ch-swatch__color" style={`background:${p.hex}`}></span>
+                <span class="md-label-large">{p.name[lang]}</span>
+                <span class="md-body-small muted">{p.hex}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  )}
+
+  {(marks.length > 0 || art.ok.length > 0 || art.ask.length > 0 || art.no.length > 0) && (
+    <section class="ch-sec" id="artists">
+      <div class="ch-sec__head"><h2 class="md-headline-small">{t.forArtists}</h2><p class="md-body-small muted">{t.forArtistsSub}</p></div>
+      <div class="ch-sec__body">
+        {marks.length > 0 && <div class="ch-box ch-box--outlined"><h3 class="md-title-large">{t.marks}</h3><ul class="md-body-medium">{marks.map((x) => <li>{x}</li>)}</ul></div>}
+        <div class="ch-grid3">
+          {art.ok.length > 0 && <div class="ch-rule ch-rule--ok"><h3 class="md-title-large">{t.artOk}</h3><ul class="md-body-medium">{art.ok.map((x) => <li>{x}</li>)}</ul></div>}
+          {art.ask.length > 0 && <div class="ch-rule ch-rule--ask"><h3 class="md-title-large">{t.artAsk}</h3><ul class="md-body-medium">{art.ask.map((x) => <li>{x}</li>)}</ul></div>}
+          {art.no.length > 0 && <div class="ch-rule ch-rule--no"><h3 class="md-title-large">{t.artNo}</h3><ul class="md-body-medium">{art.no.map((x) => <li>{x}</li>)}</ul></div>}
+        </div>
+      </div>
+    </section>
+  )}
+
+  {c.looks.length > 0 && (
+    <section class="ch-sec" id="looks">
+      <div class="ch-sec__head"><h2 class="md-headline-small">{t.looksTitle}</h2><p class="md-body-small muted">{t.looksSub}</p></div>
+      <div class="ch-sec__body">
+        <ul class="ch-looks">
+          {c.looks.map((l) => (
+            <li>
+              <a class="ch-look" href={localizePath(`/fursuits/${l.id}`, lang)}>
+                <span class="ch-look__photo">{l.cover_file ? <img src={fileUrl(l.cover_file, 800)} alt="" loading="lazy" /> : <Ico name="photo_camera" />}</span>
+                <span class="ch-look__text">
+                  <span><span class="md-title-large">{L(l.name_ru, l.name_en)}</span>{l.type_ru && <span class="md-body-small muted ch-look__sub">{L(l.type_ru, l.type_en)}</span>}</span>
+                  <Ico name="arrow_forward" class="ch-look__arrow" />
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  )}
+
+  {facts.length > 0 && (
+    <section class="ch-sec" id="facts">
+      <div class="ch-sec__head"><h2 class="md-headline-small">{t.facts}</h2></div>
+      <div class="ch-sec__body">
+        <ol class="ch-factlist">{facts.map((x, i) => <li class="ch-box"><span class="ch-factlist__n">{String(i + 1).padStart(2, '0')}</span><span class="md-body-medium">{x}</span></li>)}</ol>
+      </div>
+    </section>
+  )}
+
+  {arts.length > 0 && (
+    <section class="ch-sec" id="arts">
+      <div class="ch-sec__head"><h2 class="md-headline-small">{t.arts}</h2><p class="md-body-small muted">{t.artsSub}</p></div>
+      <div class="ch-sec__body">
+        <ul class="ch-masonry">
+          {arts.map((a) => <li><a href={a.full} target="_blank" rel="noopener"><img src={a.src} alt={a.artist ?? ''} loading="lazy" style={`aspect-ratio:1/${a.ratio}`} /></a></li>)}
+        </ul>
+        <a class="md-btn md-btn--text ch-more-link" href={artsUrl}>{fill(t.allArtsWith, { name })}</a>
+      </div>
+    </section>
+  )}
+
+  {others.length > 0 && (
+    <section class="ch-sec" id="others">
+      <div class="ch-sec__head"><h2 class="md-headline-small">{t.otherChars}</h2></div>
+      <div class="ch-sec__body ch-others">
+        {others.map((o) => (
+          <a class="ch-other" href={localizePath(`/characters/${o.id}`, lang)}>
+            <span class:list={['ch-other__avatar', `ch-theme--${o.theme}`]}>
+              {o.hero_file ? <img src={fileUrl(o.hero_file, 400)} alt="" loading="lazy" /> : L(o.name_ru, o.name_en).slice(0, 1)}
+            </span>
+            <span><span class="md-title-medium">{L(o.name_ru, o.name_en)}</span><span class="md-body-medium muted ch-other__sub">{label(o)}</span></span>
+            <Ico name="arrow_forward" size={20} class="ch-other__arrow" />
+          </a>
+        ))}
+      </div>
+    </section>
+  )}
+</Page>
+
+<script>
+  import { showSnackbar } from '../../scripts/snackbar';
+  document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((b) =>
+    b.addEventListener('click', async () => {
+      const hex = b.dataset.copy!;
+      const msg = (b.closest('[data-copied]') as HTMLElement | null)?.dataset.copied ?? '{hex}';
+      try {
+        await navigator.clipboard.writeText(hex);
+        showSnackbar(msg.replace('{hex}', hex));
+      } catch {
+        showSnackbar(hex);
+      }
+    }),
+  );
+</script>

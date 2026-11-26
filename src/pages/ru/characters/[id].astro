@@ -1,0 +1,10 @@
+---
+// Страница персонажа: /characters/arbyss
+import CharacterPage from '../../../components/characters/CharacterPage.astro';
+import { getCharacter } from '../../../lib/characters';
+
+const data = await getCharacter(Astro.params.id ?? '');
+if (!data) return Astro.rewrite('/404');
+---
+
+<CharacterPage lang="ru" data={data} />
