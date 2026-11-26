@@ -2,7 +2,7 @@
 // Лежит в R2 под audio/ (кладёт только бот). Поддерживает Range-запросы:
 // без них плеер в Safari/iOS не играет, а в остальных нельзя перематывать.
 import type { APIRoute } from 'astro';
-import { env } from 'cloudflare:workers';
+import { env, waitUntil } from 'cloudflare:workers';
 import { AUDIO_NAME } from '../../lib/media-core';
 
 export const prerender = false;
@@ -11,6 +11,32 @@ export const GET: APIRoute = async ({ params, request }) => {
   const file = params.file ?? '';
   if (!AUDIO_NAME.test(file)) return new Response('Not found', { status: 404 });
   const key = `audio/${file}`;
+
+  // Кэш Cloudflare на краю: первый запрос кладёт весь файл, дальше куски (Range) отдаются
+  // из кэша почти мгновенно, без похода в R2 за каждым кусочком
+  const cache = (globalThis as { caches?: { default?: Cache } }).caches?.default;
+  const cacheKey = new Request(new URL(request.url).origin + '/audio/' + file);
+  if (cache) {
+    const hit = await cache.match(new Request(cacheKey, { headers: request.headers }));
+    if (hit) return hit;
+  }
+
+  if (cache) {
+    waitUntil(
+      env.MEDIA.get(key)
+        .then((o) => {
+          if (!o) return;
+          const ch = new Headers();
+          o.writeHttpMetadata(ch);
+          ch.set('accept-ranges', 'bytes');
+          ch.set('etag', o.httpEtag);
+          ch.set('content-length', String(o.size));
+          ch.set('cache-control', 'public, max-age=31536000, immutable');
+          return cache.put(cacheKey, new Response(o.body, { headers: ch }));
+        })
+        .catch(() => {}),
+    );
+  }
 
   const head = await env.MEDIA.head(key);
   if (!head) return new Response('Not found', { status: 404, headers: { 'cache-control': 'public, max-age=60' } });

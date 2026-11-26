@@ -99,11 +99,10 @@ const themes = ['watermelon', 'light'] as const;
                 ))}
               </nav>
               <div class="pf-nav__tools">
-                <div class="pf-themes" role="radiogroup" aria-label={t.switchTheme}>
-                  {themes.map((th) => (
-                    <button type="button" role="radio" class={`pf-themes__dot is-${th}`} data-theme-set={th} aria-label={t.themes[th]} title={t.themes[th]} />
-                  ))}
-                </div>
+<button type="button" class="pf-theme-toggle" data-theme-next aria-label={t.switchTheme} title={t.switchTheme}>
+                  <span class="pf-theme-toggle__dark"><Icon name="light_mode" size={20} /></span>
+                  <span class="pf-theme-toggle__light"><Icon name="dark_mode" size={20} /></span>
+                </button>
                 <button type="button" class="pf-tool" data-inspect-toggle aria-pressed="false" title="I">
                   <span aria-hidden="true">&lt;/&gt;</span> {t.inspect}
                 </button>
@@ -197,11 +196,10 @@ const themes = ['watermelon', 'light'] as const;
                 © 2026 {profile.name} · {t.made}
               </span>
               <span class="pf-footer__prefs">
-                <span class="pf-themes" role="radiogroup" aria-label={t.switchTheme}>
-                  {themes.map((th) => (
-                    <button type="button" role="radio" class={`pf-themes__dot is-${th}`} data-theme-set={th} aria-label={t.themes[th]} title={t.themes[th]} />
-                  ))}
-                </span>
+<button type="button" class="pf-theme-toggle" data-theme-next aria-label={t.switchTheme} title={t.switchTheme}>
+                  <span class="pf-theme-toggle__dark"><Icon name="light_mode" size={20} /></span>
+                  <span class="pf-theme-toggle__light"><Icon name="dark_mode" size={20} /></span>
+                </button>
                 <a class="pf-lang" href={langHref} hreflang={otherLang} lang={otherLang}>
                   <span class:list={{ on: lang === 'en' }}>EN</span> / <span class:list={{ on: lang === 'ru' }}>RU</span>
                 </a>

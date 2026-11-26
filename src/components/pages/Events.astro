@@ -38,12 +38,17 @@ const ym = (e: EventItem) => key(e).slice(0, 7);
 const monthName = (k: string) => cap(f.fmt(`${k}-01`, { month: 'long' }));
 const monthYear = (k: string) => cap(f.fmt(`${k}-01`, { month: 'long', year: 'numeric' }));
 const addMonth = (k: string) => { const [y, m] = k.split('-').map(Number); return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`; };
+const prevMonth = (k: string) => { const [y, m] = k.split('-').map(Number); return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`; };
 
-// прошлые месяцы (до текущего) по годам. В текущем году показываем и пустые месяцы -
-// от первого месяца с ивентами до прошлого месяца, с подписью «Ивентов не было»
+// Свежие ивенты видны сразу над «Сегодня»: текущий месяц, а в первой половине месяца - ещё и прошлый.
+// Всё, что раньше, свёрнуто по годам.
+const recentFrom = Number(today.slice(8, 10)) >= 15 ? curYM : prevMonth(curYM);
+
+// прошлые месяцы (до свежих) по годам. В текущем году показываем и пустые месяцы -
+// от первого месяца с ивентами до свежих, с подписью «Ивентов не было»
 type Month = { key: string; items: EventItem[] };
 const pastYears: { year: string; count: number; months: Month[] }[] = [];
-for (const e of past.filter((x) => ym(x) < curYM)) {
+for (const e of past.filter((x) => ym(x) < recentFrom)) {
   const y = key(e).slice(0, 4);
   let yr = pastYears.find((x) => x.year === y);
   if (!yr) pastYears.push((yr = { year: y, count: 0, months: [] }));
@@ -55,9 +60,13 @@ for (const e of past.filter((x) => ym(x) < curYM)) {
 const thisYear = pastYears.find((y) => y.year === curYear);
 if (thisYear) {
   const filled: Month[] = [];
-  for (let k = thisYear.months[0].key; k < curYM; k = addMonth(k)) filled.push(thisYear.months.find((m) => m.key === k) ?? { key: k, items: [] });
+  for (let k = thisYear.months[0].key; k < recentFrom; k = addMonth(k)) filled.push(thisYear.months.find((m) => m.key === k) ?? { key: k, items: [] });
   thisYear.months = filled;
 }
+
+// свежие прошлые месяцы (до текущего), пустые тоже показываем
+const recentMonths: Month[] = [];
+for (let k = recentFrom; k < curYM; k = addMonth(k)) recentMonths.push({ key: k, items: past.filter((e) => ym(e) === k) });
 
 // текущий месяц: прошедшие ивенты этого месяца, «Сегодня», ближайшие этого месяца - под одним заголовком
 const curPast = past.filter((e) => ym(e) === curYM);
@@ -110,7 +119,7 @@ const suitTotal = suits.reduce((a, x) => a + x.n, 0);
   <div class="layout">
     <div class="timeline" data-filter-list>
       {pastYears.map((y) => (
-        <details class="earlier year" open={y.year === curYear}>
+        <details class="earlier year">
           <summary class="earlier__bar">
             <span class="md-title-small">{y.year} <span class="earlier__count">{y.count}</span></span>
             <span class="earlier__toggle md-label-large">
@@ -131,6 +140,17 @@ const suitTotal = suits.reduce((a, x) => a + x.n, 0);
             ))}
           </div>
         </details>
+      ))}
+
+      {recentMonths.map((m) => (
+        <section class:list={['month', { 'month--empty': m.items.length === 0 }]}>
+          <h2 class="month__title md-title-small">{monthYear(m.key)}</h2>
+          {m.items.length > 0 ? (
+            <ul class="list">{m.items.map((e) => <EventCard e={e} lang={lang} past />)}</ul>
+          ) : (
+            <p class="month__none md-body-medium">{t('events.none')}</p>
+          )}
+        </section>
       ))}
 
       <section class="month month--current">

@@ -105,11 +105,17 @@ html[data-motion='reduce'] .pf * { transition: none !important; animation: none 
 .pf-nav__links a:hover, .pf-nav__links a[aria-current] { color: var(--md-on-surface); }
 .pf-nav__links a[aria-current]::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; border-radius: 2px; background: var(--md-primary); }
 .pf-nav__tools { display: flex; align-items: center; gap: 10px; }
-.pf-themes { display: inline-flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--chip); }
-.pf-themes__dot { width: 20px; height: 20px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; transition: box-shadow 0.15s; }
-.pf-themes__dot.is-watermelon { background: radial-gradient(circle at 70% 30%, #ff516a 0 4px, #131312 4.5px); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.25); }
-.pf-themes__dot.is-light { background: radial-gradient(circle at 70% 30%, #be0039 0 4px, #fdf8f7 4.5px); box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.2); }
-.pf-themes__dot[aria-checked='true'] { outline: 2px solid var(--md-primary); outline-offset: 2px; }
+/* Переключатель темы: стандартная icon button из M3 (без заливки, иконка показывает тему, в которую переключит) */
+.pf-theme-toggle {
+  display: inline-grid; place-items: center; width: 40px; height: 40px; padding: 0;
+  border: 0; border-radius: 999px; background: none; cursor: pointer;
+  color: var(--md-on-surface-variant); transition: background-color 0.15s;
+}
+.pf-theme-toggle:hover { background: color-mix(in srgb, var(--md-on-surface-variant) 8%, transparent); }
+.pf-theme-toggle:active { background: color-mix(in srgb, var(--md-on-surface-variant) 12%, transparent); }
+.pf-theme-toggle:focus-visible { outline: 2px solid var(--md-primary); outline-offset: 2px; }
+.pf-theme-toggle > span { display: inline-grid; }
+:root[data-mode='dark'] .pf-theme-toggle__light, :root:not([data-mode='dark']) .pf-theme-toggle__dark { display: none; }
 .pf-tool {
   display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px;
   border: 1px solid var(--md-outline); border-radius: 999px; background: none; cursor: pointer;
@@ -654,7 +660,7 @@ html[data-mode='light'] .pf-fpanel__light { display: inline; }
   .pf-main { gap: 64px; padding-top: 24px; }
   .pf-nav__in { height: 64px; gap: 12px; }
   .pf-brand { font-size: 17px; }
-  .pf-tool:not(.pf-kbd), .pf-nav .pf-themes, .pf-kbd { display: none; }
+  .pf-tool:not(.pf-kbd), .pf-nav .pf-theme-toggle, .pf-kbd { display: none; }
   .pf-nav__cta { height: 40px; padding: 0 16px; }
   .pf-skills, .pf-steps, .pf-services, .pf-results, .pf-proc, .pf-case__meta { grid-template-columns: 1fr; }
   .pf-contact { padding: 32px 24px; border-radius: 28px; }

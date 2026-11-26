@@ -83,6 +83,7 @@ const tiles = await homeTiles((Astro.locals.settings ?? defaultSettings()).home,
             <span class="disc__spindle"></span>
           </span>
           <span class="disc__sheen"></span>
+          {vibe && <span class="disc__time md-label-large" aria-hidden="true" data-disc-time></span>}
           <span class="disc__hint">
             <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11-6.86a1 1 0 0 0 0-1.72l-11-6.86A1 1 0 0 0 8 5.14Z" /></svg>
             <span class="md-label-large">{t('home.play')}</span>
@@ -107,7 +108,7 @@ const tiles = await homeTiles((Astro.locals.settings ?? defaultSettings()).home,
             </div>
           </div>
         )}
-        {vibe && <audio data-vibe-audio src={`/audio/${vibe.audio}`} preload="none"></audio>}
+        {vibe && <audio data-vibe-audio src={`/audio/${vibe.audio}`} preload="metadata"></audio>}
       </section>
 
       <div class="socials-slot"><SocialsCard lang={lang} /></div>
@@ -224,9 +225,93 @@ const tiles = await homeTiles((Astro.locals.settings ?? defaultSettings()).home,
   const audio = document.querySelector<HTMLAudioElement>('[data-vibe-audio]');
   if (disc && audio) {
     const set = (on: boolean) => disc.setAttribute('aria-pressed', String(on));
+    // Трек грузится по кусочкам (Range): заранее начинаем качать, как только к диску тянутся -
+    // наведение, касание или фокус. Так к клику начало уже в буфере
+    const warm = () => {
+      if (audio.preload !== 'auto') audio.preload = 'auto';
+    };
+    for (const ev of ['pointerenter', 'touchstart', 'focus']) disc.addEventListener(ev, warm, { once: true, passive: true });
+
+    let dragged = false; // после скретча клик не должен ставить на паузу
     disc.addEventListener('click', () => {
+      if (dragged) return void (dragged = false);
       if (audio.paused) audio.play().catch(() => set(false));
       else audio.pause();
+    });
+
+    // Скретч: крутим пластинку пальцем или мышью - трек перематывается.
+    // Один оборот = SEC_PER_TURN секунд, по часовой - вперёд, против - назад
+    const SEC_PER_TURN = 8;
+    const vinyl = disc.querySelector<HTMLElement>('.disc__vinyl')!;
+    const timeEl = disc.querySelector<HTMLElement>('[data-disc-time]');
+    const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+    const angleAt = (e: PointerEvent) => {
+      const r = disc.getBoundingClientRect();
+      return (Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180) / Math.PI;
+    };
+    const currentRotation = () => {
+      const m = getComputedStyle(vinyl).transform;
+      if (!m || m === 'none') return 0;
+      const [a, b] = m.slice(m.indexOf('(') + 1, -1).split(',').map(Number);
+      return (Math.atan2(b, a) * 180) / Math.PI;
+    };
+    let drag: { id: number; last: number; rot: number; start: number; moved: number; wasPlaying: boolean; target: number } | null = null;
+    let raf = 0;
+    const flush = () => {
+      raf = 0;
+      if (!drag || !audio.duration) return;
+      audio.currentTime = drag.target;
+      disc.style.setProperty('--p', String(drag.target / audio.duration));
+      if (timeEl) timeEl.textContent = `${fmt(drag.target)} / ${fmt(audio.duration)}`;
+    };
+    disc.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      warm();
+      drag = { id: e.pointerId, last: angleAt(e), rot: currentRotation(), start: audio.currentTime, moved: 0, wasPlaying: !audio.paused, target: audio.currentTime };
+    });
+    disc.addEventListener('pointermove', (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const a = angleAt(e);
+      let d = a - drag.last;
+      if (d > 180) d -= 360;
+      if (d < -180) d += 360;
+      drag.last = a;
+      drag.moved += d;
+      // небольшое движение при клике скретчем не считаем
+      if (!disc.classList.contains('is-scratching')) {
+        if (Math.abs(drag.moved) < 8 || !audio.duration) return;
+        disc.setPointerCapture(e.pointerId);
+        disc.classList.add('is-scratching');
+        if (drag.wasPlaying) audio.pause();
+      }
+      drag.rot += d;
+      vinyl.style.transform = `rotate(${drag.rot}deg)`;
+      drag.target = Math.min(audio.duration - 0.25, Math.max(0, drag.start + (drag.moved / 360) * SEC_PER_TURN));
+      if (!raf) raf = requestAnimationFrame(flush);
+    });
+    const endDrag = (e: PointerEvent) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const d = drag;
+      drag = null;
+      if (!disc.classList.contains('is-scratching')) return;
+      cancelAnimationFrame(raf);
+      raf = 0;
+      audio.currentTime = d.target;
+      dragged = e.type === 'pointerup';
+      disc.classList.remove('is-scratching');
+      // продолжаем вращение с того же угла: анимация стартует «в прошлом»
+      const turn = (((d.rot % 360) + 360) % 360) / 360;
+      vinyl.style.transform = '';
+      vinyl.style.animationDelay = `${-turn * 3}s`;
+      if (d.wasPlaying) audio.play().catch(() => set(false));
+    };
+    disc.addEventListener('pointerup', endDrag);
+    disc.addEventListener('pointercancel', endDrag);
+    // Клавиатура: стрелки перематывают на 5 секунд
+    disc.addEventListener('keydown', (e) => {
+      if (!audio.duration || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+      e.preventDefault();
+      audio.currentTime = Math.min(audio.duration, Math.max(0, audio.currentTime + (e.key === 'ArrowRight' ? 5 : -5)));
     });
     audio.addEventListener('play', () => set(true));
     audio.addEventListener('pause', () => set(false));
@@ -401,6 +486,28 @@ const tiles = await homeTiles((Astro.locals.settings ?? defaultSettings()).home,
     background: none;
   }
   .disc:focus-visible { outline: 3px solid var(--md-primary); outline-offset: 4px; }
+  /* с треком диск можно крутить - не даём странице скроллиться под пальцем */
+  .vibe--audio .disc { touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+  .vibe--audio .disc.is-scratching { cursor: grabbing; }
+  .disc.is-scratching .disc__vinyl { animation: none; }
+  .disc__cover { pointer-events: none; -webkit-user-drag: none; }
+  .disc__time {
+    position: absolute;
+    left: 50%;
+    bottom: -4px;
+    translate: -50% 0;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--md-inverse-surface);
+    color: var(--md-inverse-on-surface);
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.15s;
+    pointer-events: none;
+    font-variant-numeric: tabular-nums;
+  }
+  .disc.is-scratching .disc__time { opacity: 1; }
+  .disc.is-scratching .disc__ring { opacity: 1; }
   .disc__vinyl {
     position: absolute;
     inset: 0;

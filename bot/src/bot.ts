@@ -285,6 +285,15 @@ async function vibeScreen(env: Env): Promise<[string, Keyboard]> {
   ];
 }
 
+/** Убирает ID3v2-тег в начале MP3: там обычно обложка на сотни КБ, и плеер ждёт её,
+ *  прежде чем начать играть. Название, исполнитель и обложка у нас и так лежат отдельно */
+function stripId3(b: Uint8Array): Uint8Array {
+  if (b.length < 10 || b[0] !== 0x49 || b[1] !== 0x44 || b[2] !== 0x33) return b;
+  const size = ((b[6] & 0x7f) << 21) | ((b[7] & 0x7f) << 14) | ((b[8] & 0x7f) << 7) | (b[9] & 0x7f);
+  const end = 10 + size + (b[5] & 0x10 ? 10 : 0);
+  return end < b.length ? b.subarray(end) : b;
+}
+
 /** Прислали аудио: кладём в R2 audio/ и ставим в «Мой вайб» */
 async function onAudio(env: Env, msg: Message) {
   const chat = msg.chat.id;
@@ -295,7 +304,7 @@ async function onAudio(env: Env, msg: Message) {
   const type = bytes && sniffAudio(bytes);
   if (!bytes || !type) return send(env, chat, 'Не получилось прочитать аудио. Нужен MP3, M4A, OGG, FLAC или WAV.');
   const name = `${shortId(10)}.${type.ext}`;
-  await env.MEDIA.put(`audio/${name}`, bytes, { httpMetadata: { contentType: type.mime } });
+  await env.MEDIA.put(`audio/${name}`, type.ext === 'mp3' ? stripId3(bytes) : bytes, { httpMetadata: { contentType: type.mime } });
 
   // обложка, вшитая в файл (Telegram отдаёт её уменьшенной копией)
   let cover: string | null = null;

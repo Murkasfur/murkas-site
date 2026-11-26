@@ -16,6 +16,17 @@
   --ch-accent: #ffd7b5;
   --ch-on: #fff;
 }
+/* Тёмная тема - как карточка на главной: тёмная заливка и светящаяся рамка */
+:root[data-mode='dark'] .ch-theme--watermelon {
+  --ch-bg: #002106;
+  --ch-art: color-mix(in srgb, #70dd7a 22%, transparent);
+  --ch-stroke: color-mix(in srgb, #70dd7a 45%, transparent);
+}
+:root[data-mode='dark'] .ch-theme--redpanda {
+  --ch-bg: #2b0d04;
+  --ch-art: color-mix(in srgb, #ff9a6e 22%, transparent);
+  --ch-stroke: color-mix(in srgb, #ff9a6e 45%, transparent);
+}
 .ch-on { color: var(--ch-on); }
 .ch-accent { color: var(--ch-accent); }
 
