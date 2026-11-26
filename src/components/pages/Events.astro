@@ -7,11 +7,13 @@ import Page from '../Page.astro';
 import Icon from '../Icon.astro';
 import UploadTile from '../UploadTile.astro';
 import EventCard from '../EventCard.astro';
+import DateChip from '../DateChip.astro';
 import { useTranslations, localizePath, type Lang, type UiKey } from '../../i18n/ui';
 import { loc, type EventItem, type EventKind, type Suit } from '../../data/mock';
 import { getEvents } from '../../lib/data';
 import { photoStats } from '../../lib/events';
 import { eventFormat } from '../../lib/event-format';
+import { listSpecialDates, upcomingSpecialDates, type SpecialDate } from '../../lib/special-dates';
 
 const { lang } = Astro.props as { lang: Lang };
 const t = useTranslations(lang);
@@ -27,6 +29,9 @@ const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Toront
 const key = (e: EventItem) => e.start ?? e.sortKey ?? '9999';
 const endKey = (e: EventItem) => e.end ?? key(e);
 const sorted = [...events].sort((a, b) => key(a).localeCompare(key(b)));
+// важные даты (ДР, праздники) - ближайший раз каждой, вставляются в будущие месяцы
+const specials = upcomingSpecialDates(await listSpecialDates(env.DB).catch(() => []), today);
+type Item = { k: string; e?: EventItem; d?: SpecialDate };
 
 // Лента идёт сверху вниз по времени к «Сегодня»: прошлые годы (свёрнуты), текущий год
 // по месяцам, текущий месяц вокруг «Сегодня», дальше будущие месяцы.
@@ -71,12 +76,24 @@ for (let k = recentFrom; k < curYM; k = addMonth(k)) recentMonths.push({ key: k,
 // текущий месяц: прошедшие ивенты этого месяца, «Сегодня», ближайшие этого месяца - под одним заголовком
 const curPast = past.filter((e) => ym(e) === curYM);
 const curNext = upcoming.filter((e) => e.start && ym(e) === curYM);
+const todaySpecials = specials.filter((d) => d.isToday);
+const curItems: Item[] = [
+  ...curNext.map((e) => ({ k: key(e), e })),
+  ...specials.filter((d) => !d.isToday && d.date.slice(0, 7) === curYM).map((d) => ({ k: d.date, d })),
+].sort((a, b) => a.k.localeCompare(b.k));
 
 // будущие - по месяцам или примерным периодам («Весна 2027»)
-const groups = new Map<string, EventItem[]>();
-for (const e of upcoming.filter((x) => !curNext.includes(x))) {
-  const k = cap(e.start ? f.fmt(e.start, { month: 'long', year: 'numeric' }) : loc(e.approx, lang));
-  groups.set(k, [...(groups.get(k) ?? []), e]);
+// (важные даты - в свой месяц, вперемешку с ивентами по порядку)
+const later: Item[] = [
+  ...upcoming.filter((x) => !curNext.includes(x)).map((e) => ({ k: key(e), e })),
+  ...specials.filter((d) => d.date.slice(0, 7) > curYM).map((d) => ({ k: d.date, d })),
+].sort((a, b) => a.k.localeCompare(b.k));
+const groups = new Map<string, Item[]>();
+for (const it of later) {
+  const k = it.d
+    ? monthYear(it.d.date.slice(0, 7))
+    : cap(it.e!.start ? f.fmt(it.e!.start, { month: 'long', year: 'numeric' }) : loc(it.e!.approx, lang));
+  groups.set(k, [...(groups.get(k) ?? []), it]);
 }
 
 // ближайший
@@ -161,13 +178,14 @@ const suitTotal = suits.reduce((a, x) => a + x.n, 0);
           <p class="month__none md-body-medium">{t('events.noneYet')}</p>
         )}
         <div class="today"><span class="today__pill md-label-large">{tf('events.todayOn', { d: f.fmt(today, { day: 'numeric', month: 'long' }) })}</span></div>
-        {curNext.length > 0 && <ul class="list">{curNext.map((e) => <EventCard e={e} lang={lang} />)}</ul>}
+        {todaySpecials.length > 0 && <ul class="list">{todaySpecials.map((d) => <DateChip d={d} lang={lang} />)}</ul>}
+        {curItems.length > 0 && <ul class="list">{curItems.map((it) => (it.e ? <EventCard e={it.e} lang={lang} /> : <DateChip d={it.d!} lang={lang} />))}</ul>}
       </section>
 
       {[...groups].map(([label, items]) => (
         <section class="month">
           <h2 class="month__title md-title-small">{label}</h2>
-          <ul class="list">{items.map((e) => <EventCard e={e} lang={lang} />)}</ul>
+          <ul class="list">{items.map((it) => (it.e ? <EventCard e={it.e} lang={lang} /> : <DateChip d={it.d!} lang={lang} />))}</ul>
         </section>
       ))}
       <p class="empty md-body-large muted" hidden data-empty>{t('common.empty')}</p>
@@ -254,6 +272,8 @@ const suitTotal = suits.reduce((a, x) => a + x.n, 0);
       if (ok) shown += 1;
     });
     const filtering = !!q || kind !== 'all';
+    // важные даты - не ивенты, при поиске и фильтре прячем
+    list?.querySelectorAll<HTMLElement>('[data-special]').forEach((el) => (el.hidden = filtering));
     // при поиске прячем месяцы без совпадений (и пустые), текущий месяц с «Сегодня» остаётся
     list?.querySelectorAll<HTMLElement>('.month:not(.month--current)').forEach((m) => (m.hidden = filtering && !m.querySelector('[data-search]:not([hidden])')));
     list?.querySelectorAll<HTMLElement>('.month__none').forEach((n) => (n.hidden = filtering));

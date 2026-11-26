@@ -13,6 +13,7 @@ import {
   type EventDraft, type EventRow, type Status,
 } from './events';
 import { charactersCommand, charText, charFile, charCallback, type CharState } from './characters';
+import { datesCommand, datesText, datesCallback, type DateState } from './dates';
 
 // ---------- состояние диалога (таблица bot_state) ----------
 
@@ -26,7 +27,8 @@ type State =
   | { flow: 'vibe'; field: 'title' | 'artist' | 'cover' }
   | { flow: 'mediaEdit'; id: string; field: 'title' | 'caption' | 'author' | 'date'; msgId: number; scope: string | null }
   | { flow: 'default' }
-  | CharState;
+  | CharState
+  | DateState;
 
 const getState = async (env: Env, chat: number) => {
   const row = await env.DB.prepare(`SELECT state FROM bot_state WHERE chat_id = ?`).bind(chat).first<{ state: string }>();
@@ -66,6 +68,7 @@ const HELP = `<b>Бот murkas.net</b> 🐾
 <b>Ивенты</b>
 /events - список, нажми на ивент чтобы изменить
 /addevent - добавить новый
+/dates - важные даты: дни рождения и праздники
 
 <b>Загрузки</b>
 /pending - что ждёт проверки
@@ -140,6 +143,7 @@ async function eventsList(env: Env): Promise<[string, Keyboard]> {
     { text: `${key(e) < today ? '· ' : ''}${dateText(e)} - ${e.title_ru}`.slice(0, 60), callback_data: `ev:${e.id}` },
   ]);
   kb.push([{ text: '➕ Добавить ивент', callback_data: 'ea' }]);
+  kb.push([{ text: '⭐ Важные даты', callback_data: 'sd:l' }]);
   const old = all.length - shown.length;
   return [`<b>Ивенты</b> (${all.length})${old ? `\nСтарше месяца не показываю: ${old}` : ''}\nНажми, чтобы изменить:`, kb];
 }
@@ -444,6 +448,8 @@ async function onText(env: Env, msg: Message) {
       case 'characters':
       case 'fursuits':
         return charactersCommand(env, chat);
+      case 'dates':
+        return datesCommand(env, chat);
       case 'events': {
         const [t, kb] = await eventsList(env);
         return send(env, chat, t, kb);
@@ -493,6 +499,7 @@ async function onText(env: Env, msg: Message) {
   const st = await getState(env, chat);
   if (!st) return send(env, chat, 'Выбери, что сделать: /help');
   if (st.flow === 'char' || st.flow === 'charNew') return charText(env, chat, st, text);
+  if (st.flow === 'sd' || st.flow === 'sdNew') return datesText(env, chat, st, text);
 
   if (st.flow === 'now') return saveManual(env, chat, text);
   if (st.flow === 'default') return saveDefault(env, chat, text);
@@ -649,6 +656,7 @@ async function onCallback(env: Env, cb: CallbackQuery) {
   const chat = msg.chat.id;
   const [kind, a, b] = data.split(':');
   if (kind === 'ch') return charCallback(env, cb);
+  if (kind === 'sd') return datesCallback(env, cb);
 
   switch (kind) {
     case 'x':

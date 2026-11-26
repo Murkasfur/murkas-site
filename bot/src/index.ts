@@ -13,6 +13,7 @@ const COMMANDS = [
   { command: 'characters', description: 'Персонажи и фурсьюты' },
   { command: 'events', description: 'Ивенты' },
   { command: 'addevent', description: 'Добавить ивент' },
+  { command: 'dates', description: 'Важные даты (ДР, праздники)' },
   { command: 'now', description: 'Статус «Сейчас»' },
   { command: 'default', description: 'Статус по умолчанию' },
   { command: 'pages', description: 'Готовые и «в работе» страницы' },
