@@ -4,6 +4,7 @@
 import Page from '../Page.astro';
 import Ico, { type IcoName } from './Ico.astro';
 import UploadTile from '../UploadTile.astro';
+import Lightbox, { type ViewerItem } from '../Lightbox.astro';
 import { useTranslations, localizePath, type Lang, type UiKey } from '../../i18n/ui';
 import {
   T, fill, pair, parseList, parsePills, parseNotes, parseTimeline, parseLink, type LookRow, type RuleKind,
@@ -38,6 +39,18 @@ const angles = (['front', 'side', 'back', 'motion'] as const)
   .filter((a) => a.file);
 const main = l.cover_file ? { src: fileUrl(l.cover_file, 1600)!, full: fileUrl(l.cover_file)! } : photos[0] ? { src: photos[0].full, full: photos[0].full } : null;
 const extra = photos.filter((p) => !main || p.full !== main.src).slice(0, angles.length ? 0 : 4);
+
+// окно просмотра как на остальном сайте: главное фото, ракурсы, остальные фото
+const title = `${charName} · ${lookName}`;
+const vItem = (id: string, thumb: string, full: string, ratio: number, caption?: string): ViewerItem => ({
+  id, title, caption, chips: [], fields: [], ratio, src: full, thumb, download: full, icon: 'photo_camera',
+});
+const mainId = l.cover_file ? 'cover' : photos[0]?.id;
+const viewer: ViewerItem[] = [
+  ...(main && mainId ? [vItem(mainId, main.src, main.full, photos[0] && !l.cover_file ? photos[0].ratio : 1)] : []),
+  ...angles.map((a) => vItem(`angle-${a.k}`, fileUrl(a.file, 400)!, fileUrl(a.file, 1600)!, 1, t.angles[a.k])),
+  ...extra.map((p) => vItem(p.id, p.src, p.full, p.ratio)),
+];
 
 const PILL_ICON: Record<RuleKind, IcoName> = { ok: 'photo_camera', ask: 'favorite', no: 'block', info: 'info' };
 const pillIcon = (kind: RuleKind, text: string) => (/нет|no\b/i.test(text) && kind === 'no' ? 'chat' : PILL_ICON[kind]);
@@ -98,14 +111,14 @@ const status = (s: string) => ui(`status.${s}` as UiKey);
     <div class="ch-gallery">
       {main ? (
         <>
-          <a class="ch-gallery__main" href={main.full} target="_blank" rel="noopener"><img src={main.src} alt={`${charName} · ${lookName}`} decoding="async" /></a>
+          <button type="button" class="ch-gallery__main" data-item data-id={mainId} aria-label={title}><img src={main.src} alt={title} decoding="async" /></button>
           {angles.length > 0 && (
             <ul class="ch-angles">
-              {angles.map((a) => <li><a href={fileUrl(a.file)} target="_blank" rel="noopener"><img src={fileUrl(a.file, 400)} alt="" loading="lazy" /></a><span class="md-label-medium">{t.angles[a.k]}</span></li>)}
+              {angles.map((a) => <li><button type="button" data-item data-id={`angle-${a.k}`} aria-label={t.angles[a.k]}><img src={fileUrl(a.file, 400)} alt="" loading="lazy" /></button><span class="md-label-medium">{t.angles[a.k]}</span></li>)}
             </ul>
           )}
           {extra.length > 0 && (
-            <ul class="ch-angles">{extra.map((p) => <li><a href={p.full} target="_blank" rel="noopener"><img src={p.src} alt="" loading="lazy" /></a></li>)}</ul>
+            <ul class="ch-angles">{extra.map((p) => <li><button type="button" data-item data-id={p.id} aria-label={title}><img src={p.src} alt="" loading="lazy" /></button></li>)}</ul>
           )}
         </>
       ) : (
@@ -210,4 +223,6 @@ const status = (s: string) => ui(`status.${s}` as UiKey);
       </div>
     )}
   </section>
+
+  {viewer.length > 0 && <Lightbox lang={lang} items={viewer} />}
 </Page>

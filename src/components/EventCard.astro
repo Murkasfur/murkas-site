@@ -21,7 +21,10 @@ const more = (e.photos ?? 0) - (e.previews?.length ?? 0);
 ---
 
 <li class:list={['evc', { 'evc--past': past }]} id={e.id} data-search={search} data-kind={e.kind ?? ''}>
-  <span class:list={['tile', past ? 'tile--past' : e.start ? 'tile--exact' : 'tile--tba']}>
+  <span
+    class:list={['tile', past ? 'tile--past' : e.start ? 'tile--exact' : 'tile--tba', { 'tile--photo': past && !!e.previews?.length }]}
+    style={past && e.previews?.length ? `--bg: url('${e.previews[0]}')` : undefined}
+  >
     <span class="tile__big">{tile.big}</span>
     <span class="tile__small">{tile.small}</span>
   </span>
@@ -78,6 +81,9 @@ const more = (e.photos ?? 0) - (e.previews?.length ?? 0);
   .tile--tba { border: 1.5px dashed var(--md-outline); background: var(--md-surface-container); color: var(--md-on-surface-variant); }
   .tile--past { background: var(--md-surface-container); color: var(--md-on-surface-variant); }
   .tile--past .tile__big { color: var(--md-on-surface-variant); }
+  /* прошедший ивент с фото: фото фоном, затемнено, чтобы дата читалась */
+  .tile--photo { background: linear-gradient(rgb(0 0 0 / 0.45), rgb(0 0 0 / 0.55)), var(--bg) center / cover; color: #fff; }
+  .tile--photo .tile__big, .tile--photo .tile__small { color: #fff; text-shadow: 0 1px 2px rgb(0 0 0 / 0.4); }
 
   .evc__body { display: grid; align-content: center; gap: 4px; min-width: 0; }
   .evc__title { font: 500 16px/24px var(--font-plain); color: var(--md-on-surface); }

@@ -24,20 +24,48 @@ const photos = await photoStats(env.DB).catch(() => ({ total: 0, guests: 0 }));
 
 // «Сегодня» - по Торонто
 const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Toronto' });
-const weekAgo = new Date(Date.parse(today) - 7 * 864e5).toISOString().slice(0, 10);
 const key = (e: EventItem) => e.start ?? e.sortKey ?? '9999';
 const endKey = (e: EventItem) => e.end ?? key(e);
 const sorted = [...events].sort((a, b) => key(a).localeCompare(key(b)));
 
-// лента идёт сверху вниз по времени к «Сегодня»: старые выше, свежие ближе к сегодняшнему дню
+// Лента идёт сверху вниз по времени к «Сегодня»: прошлые годы (свёрнуты), текущий год
+// по месяцам, текущий месяц вокруг «Сегодня», дальше будущие месяцы.
 const past = sorted.filter((e) => endKey(e) < today);
-const recent = past.filter((e) => endKey(e) >= weekAgo);
-const earlier = past.filter((e) => endKey(e) < weekAgo);
 const upcoming = sorted.filter((e) => endKey(e) >= today);
+const curYM = today.slice(0, 7);
+const curYear = today.slice(0, 4);
+const ym = (e: EventItem) => key(e).slice(0, 7);
+const monthName = (k: string) => cap(f.fmt(`${k}-01`, { month: 'long' }));
+const monthYear = (k: string) => cap(f.fmt(`${k}-01`, { month: 'long', year: 'numeric' }));
+const addMonth = (k: string) => { const [y, m] = k.split('-').map(Number); return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`; };
+
+// прошлые месяцы (до текущего) по годам. В текущем году показываем и пустые месяцы -
+// от первого месяца с ивентами до прошлого месяца, с подписью «Ивентов не было»
+type Month = { key: string; items: EventItem[] };
+const pastYears: { year: string; count: number; months: Month[] }[] = [];
+for (const e of past.filter((x) => ym(x) < curYM)) {
+  const y = key(e).slice(0, 4);
+  let yr = pastYears.find((x) => x.year === y);
+  if (!yr) pastYears.push((yr = { year: y, count: 0, months: [] }));
+  yr.count += 1;
+  const m = yr.months.find((x) => x.key === ym(e));
+  if (m) m.items.push(e);
+  else yr.months.push({ key: ym(e), items: [e] });
+}
+const thisYear = pastYears.find((y) => y.year === curYear);
+if (thisYear) {
+  const filled: Month[] = [];
+  for (let k = thisYear.months[0].key; k < curYM; k = addMonth(k)) filled.push(thisYear.months.find((m) => m.key === k) ?? { key: k, items: [] });
+  thisYear.months = filled;
+}
+
+// текущий месяц: прошедшие ивенты этого месяца, «Сегодня», ближайшие этого месяца - под одним заголовком
+const curPast = past.filter((e) => ym(e) === curYM);
+const curNext = upcoming.filter((e) => e.start && ym(e) === curYM);
 
 // будущие - по месяцам или примерным периодам («Весна 2027»)
 const groups = new Map<string, EventItem[]>();
-for (const e of upcoming) {
+for (const e of upcoming.filter((x) => !curNext.includes(x))) {
   const k = cap(e.start ? f.fmt(e.start, { month: 'long', year: 'numeric' }) : loc(e.approx, lang));
   groups.set(k, [...(groups.get(k) ?? []), e]);
 }
@@ -81,21 +109,40 @@ const suitTotal = suits.reduce((a, x) => a + x.n, 0);
 
   <div class="layout">
     <div class="timeline" data-filter-list>
-      {earlier.length > 0 && (
-        <details class="earlier">
+      {pastYears.map((y) => (
+        <details class="earlier year" open={y.year === curYear}>
           <summary class="earlier__bar">
-            <span class="md-title-small">{t('events.earlier')} <span class="earlier__count">{earlier.length}</span></span>
+            <span class="md-title-small">{y.year} <span class="earlier__count">{y.count}</span></span>
             <span class="earlier__toggle md-label-large">
               <span class="when-closed">{t('events.show')}</span><span class="when-open">{t('events.hide')}</span>
               <Icon name="expand_more" size={20} />
             </span>
           </summary>
-          <ul class="list">{earlier.map((e) => <EventCard e={e} lang={lang} past />)}</ul>
+          <div class="year__months">
+            {y.months.map((m) => (
+              <section class:list={['month', { 'month--empty': m.items.length === 0 }]}>
+                <h2 class="month__title md-title-small">{monthName(m.key)}</h2>
+                {m.items.length > 0 ? (
+                  <ul class="list">{m.items.map((e) => <EventCard e={e} lang={lang} past />)}</ul>
+                ) : (
+                  <p class="month__none md-body-medium">{t('events.none')}</p>
+                )}
+              </section>
+            ))}
+          </div>
         </details>
-      )}
-      {recent.length > 0 && <ul class="list">{recent.map((e) => <EventCard e={e} lang={lang} past />)}</ul>}
+      ))}
 
-      <div class="today"><span class="today__pill md-label-large">{tf('events.todayOn', { d: f.fmt(today, { day: 'numeric', month: 'long' }) })}</span></div>
+      <section class="month month--current">
+        <h2 class="month__title md-title-small">{monthYear(curYM)}</h2>
+        {curPast.length > 0 ? (
+          <ul class="list">{curPast.map((e) => <EventCard e={e} lang={lang} past />)}</ul>
+        ) : (
+          <p class="month__none md-body-medium">{t('events.noneYet')}</p>
+        )}
+        <div class="today"><span class="today__pill md-label-large">{tf('events.todayOn', { d: f.fmt(today, { day: 'numeric', month: 'long' }) })}</span></div>
+        {curNext.length > 0 && <ul class="list">{curNext.map((e) => <EventCard e={e} lang={lang} />)}</ul>}
+      </section>
 
       {[...groups].map(([label, items]) => (
         <section class="month">
@@ -186,13 +233,15 @@ const suitTotal = suits.reduce((a, x) => a + x.n, 0);
       el.hidden = !ok;
       if (ok) shown += 1;
     });
-    list?.querySelectorAll<HTMLElement>('.month').forEach((m) => (m.hidden = !m.querySelector('[data-search]:not([hidden])')));
-    const earlier = list?.querySelector<HTMLDetailsElement>('.earlier');
-    if (earlier) {
-      const any = !!earlier.querySelector('[data-search]:not([hidden])');
-      earlier.hidden = !any;
-      if (q || kind !== 'all') earlier.open = any;
-    }
+    const filtering = !!q || kind !== 'all';
+    // при поиске прячем месяцы без совпадений (и пустые), текущий месяц с «Сегодня» остаётся
+    list?.querySelectorAll<HTMLElement>('.month:not(.month--current)').forEach((m) => (m.hidden = filtering && !m.querySelector('[data-search]:not([hidden])')));
+    list?.querySelectorAll<HTMLElement>('.month__none').forEach((n) => (n.hidden = filtering));
+    list?.querySelectorAll<HTMLDetailsElement>('.year').forEach((y) => {
+      const any = !!y.querySelector('[data-search]:not([hidden])');
+      y.hidden = filtering && !any;
+      if (filtering) y.open = any;
+    });
     const empty = list?.querySelector<HTMLElement>('[data-empty]');
     if (empty) empty.hidden = shown > 0;
   };
@@ -250,7 +299,7 @@ const suitTotal = suits.reduce((a, x) => a + x.n, 0);
   .earlier[open] .earlier__toggle :global(svg) { transform: rotate(180deg); }
   .earlier .when-open, .earlier[open] .when-closed { display: none; }
   .earlier[open] .when-open { display: inline; }
-  .earlier .list { margin-top: 16px; }
+  .earlier > .list { margin-top: 16px; }
 
   .today { display: flex; align-items: center; gap: 12px; margin: 8px 0; }
   .today::after { content: ''; flex: 1; height: 2px; border-radius: 2px; background: var(--md-tertiary-container); }
@@ -261,6 +310,10 @@ const suitTotal = suits.reduce((a, x) => a + x.n, 0);
     color: var(--md-on-tertiary-fixed, #141f00);
   }
   .month { display: grid; gap: 16px; }
+  .year__months { display: grid; gap: 24px; margin-top: 16px; }
+  .month--empty { gap: 4px; }
+  .month__none { color: var(--md-on-surface-variant); padding: 12px 16px; border: 1px dashed var(--md-outline-variant); border-radius: 16px; }
+  .month__none[hidden] { display: none; }
   .month[hidden] { display: none; }
   .month__title { color: var(--md-on-surface-variant); }
 

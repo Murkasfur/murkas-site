@@ -208,11 +208,11 @@ a.ch-chip:hover { background: color-mix(in srgb, var(--md-on-surface) 8%, transp
 .ch-suit { display: grid; grid-template-columns: 640px minmax(0, 1fr); gap: 24px; align-items: stretch; }
 .ch-gallery { display: grid; gap: 12px; align-content: start; }
 .ch-gallery:has(.ch-empty) { align-content: stretch; }
-.ch-gallery__main { display: block; aspect-ratio: 640 / 440; border-radius: 28px; overflow: hidden; background: var(--md-surface-container-high); }
+.ch-gallery__main { display: block; width: 100%; padding: 0; border: 0; cursor: zoom-in; aspect-ratio: 640 / 440; border-radius: 28px; overflow: hidden; background: var(--md-surface-container-high); }
 .ch-gallery__main img { width: 100%; height: 100%; object-fit: cover; }
 .ch-angles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .ch-angles li { display: grid; gap: 6px; }
-.ch-angles a { display: block; aspect-ratio: 151 / 120; border-radius: 20px; overflow: hidden; background: var(--md-surface-container-high); }
+.ch-angles button { display: block; width: 100%; padding: 0; border: 0; cursor: zoom-in; aspect-ratio: 151 / 120; border-radius: 20px; overflow: hidden; background: var(--md-surface-container-high); }
 .ch-angles img { width: 100%; height: 100%; object-fit: cover; }
 
 .ch-empty {
@@ -314,7 +314,7 @@ a.ch-chip:hover { background: color-mix(in srgb, var(--md-on-surface) 8%, transp
   .ch-gallery__main { aspect-ratio: 358 / 300; }
   .ch-angles { display: flex; overflow-x: auto; scrollbar-width: none; }
   .ch-angles li { flex: 0 0 120px; }
-  .ch-angles a { aspect-ratio: 120 / 96; }
+  .ch-angles button { aspect-ratio: 120 / 96; }
   .ch-empty { min-height: 0; padding: 32px 20px; }
   .ch-info { padding: 20px; }
   .ch-info__foot { flex-direction: column; align-items: stretch; }
