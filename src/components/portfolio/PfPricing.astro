@@ -4,10 +4,13 @@
 import Icon from '../Icon.astro';
 import { getPortfolio, tx, ui, type Lang } from '../../lib/portfolio';
 
-interface Props { lang: Lang }
-const { lang } = Astro.props;
+interface Props { lang: Lang; page?: boolean }
+const { lang, page = false } = Astro.props;
 const t = ui[lang];
 const { pricing, finder, profile } = await getPortfolio();
+const launch = pricing.launch;
+const left = Math.max(0, launch.spots - launch.taken);
+const H = page ? 'h1' : 'h2';
 const def = finder.defaults;
 // $1,000 -> $1 000 в русской версии
 const money = (v: string) => (lang === 'ru' ? v.replace(/(\d),(\d{3})/g, '$1 $2') : v);
@@ -28,14 +31,15 @@ const finderData = {
   msg: { hello: t.msgHello, pick: t.msgPick, answers: t.msgAnswers, subject: t.mailSubject, from: t.from },
   tg: profile.telegram.href,
   email: profile.email,
+  launch: { percent: launch.percent, left },
 };
 ---
 
 <section id="prices" class="pf-section pf-prices" aria-labelledby="prices-title">
   <div class="pf-prices__head">
     <div>
-      <h2 id="prices-title" class="pf-h2">{t.pricesTitle}</h2>
-      <p class="pf-sub muted">{t.pricesSub}</p>
+      <H id="prices-title" class:list={[page ? 'pf-h1' : 'pf-h2']}>{t.pricesTitle}</H>
+      <p class="pf-sub muted">{page ? t.pricingPageSub : t.pricesSub}</p>
     </div>
     <p class="pf-rate-chip"><span>{t.hourly}</span> <b>{pricing.hourly}</b></p>
   </div>
@@ -68,14 +72,32 @@ const finderData = {
           ))}
         </ul>
       </div>
-      <div class="pf-terms pf-terms--how">
-        <h3>{t.howItWorks}</h3>
-        <ol>
-          {pricing.howItWorks.map((h, i) => (
-            <li><span class="pf-terms__n">{String(i + 1).padStart(2, '0')}</span><span>{tx(h, lang)}</span></li>
-          ))}
-        </ol>
-      </div>
+      {left > 0 && (
+        <div class="pf-terms pf-launch">
+          <h3>{t.launchTitle}</h3>
+          <p class="pf-launch__big">−{launch.percent}%</p>
+          <p class="muted">{t.launchText(launch.percent, launch.spots)}</p>
+          <p class="pf-launch__spots">
+            <span class="pf-launch__dots" aria-hidden="true">{Array.from({ length: launch.spots }, (_, i) => <i class:list={{ on: i < left }} />)}</span>
+            {t.spotsLeft(left, launch.spots)}
+          </p>
+        </div>
+      )}
+    </div>
+  </div>
+
+  <div class="pf-howrow">
+    <div class="pf-howrow__head">
+      <h3 class="pf-h3">{t.termsTitle}</h3>
+      <button type="button" class="pf-link" data-terms-open>{t.allTerms} →</button>
+    </div>
+    <div class="pf-howcards">
+      {pricing.terms.map((c, i) => (
+        <article class={`pf-howcard pf-howcard--${i % 3}`}>
+          <h4>{tx(c.title, lang)}</h4>
+          <ul>{c.items.map((it) => <li>{tx(it, lang)}</li>)}</ul>
+        </article>
+      ))}
     </div>
   </div>
 
@@ -104,7 +126,7 @@ const finderData = {
       <p class="pf-finder__kicker">{t.bestFit}</p>
       <h3 class="pf-finder__name" data-f-title>{tx(first.title, lang)}</h3>
       <p class="muted" data-f-why>{tx(first.why, lang)}</p>
-      <p class="pf-finder__price"><b data-f-from>{t.from} {money(first.from)}</b><span class="muted" data-f-range>{tx(first.range, lang)}</span></p>
+      <p class="pf-finder__price"><b data-f-from>{t.from} {money(first.from)}</b><s class="pf-finder__old" data-f-old hidden></s><span class="pf-finder__off" data-f-off hidden>−{launch.percent}% {t.launchShort}</span><span class="muted pf-finder__range" data-f-range>{tx(first.range, lang)}</span></p>
       <p class="pf-finder__when" data-f-when hidden></p>
       <ul class="pf-finder__inc" data-f-inc>
         {first.includes.map((i) => <li><Icon name="check" size={16} />{tx(i, lang)}</li>)}
@@ -116,5 +138,22 @@ const finderData = {
       <p class="pf-finder__note muted">{t.answersNote}</p>
     </div>
   </div>
+  <dialog class="pf-dialog pf-allterms" data-terms aria-labelledby="terms-title">
+    <div class="pf-dialog__head">
+      <div>
+        <h2 id="terms-title" class="pf-h2">{t.allTerms}</h2>
+        <p class="muted">{t.termsTitle}</p>
+      </div>
+      <button type="button" class="pf-round" data-close aria-label={t.close}><Icon name="close" /></button>
+    </div>
+    <div class="pf-allterms__groups">
+      {pricing.allTerms.map((g) => (
+        <section>
+          <h3>{tx(g.title, lang)}</h3>
+          <ul>{g.items.map((it) => <li><Icon name="check" size={16} /><span>{tx(it, lang)}</span></li>)}</ul>
+        </section>
+      ))}
+    </div>
+  </dialog>
   <p class="pf-finder__fallback"><span class="muted">{t.fallbackA}</span> <a class="pf-link" href="#contact">{t.fallbackB}</a></p>
 </section>

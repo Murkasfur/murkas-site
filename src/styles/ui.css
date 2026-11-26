@@ -165,6 +165,9 @@ img { display: block; max-width: 100%; }
   cursor: pointer;
 }
 
+.filters-btn, .filters-sheet__head, .filters-sheet__handle, .filters-scrim { display: none; }
+.filters-sheet { display: contents; }
+.filters-btn__n { min-width: 18px; padding: 0 5px; border-radius: 9px; background: var(--md-primary); color: var(--md-on-primary); font: 500 11px/18px var(--font-plain); text-align: center; }
 .filters-row {
   display: flex;
   justify-content: space-between;
@@ -540,3 +543,38 @@ html[data-motion='reduce']::view-transition-new(*) { animation: none !important;
 .select__menu li:hover, .select__menu li:focus-visible { background: color-mix(in srgb, var(--md-on-surface) 8%, transparent); }
 .select__menu li[aria-selected='true'] { background: var(--md-tertiary-container); color: var(--md-on-tertiary-container); font-weight: 500; }
 .select__menu li[aria-selected='true'] svg { visibility: visible; }
+
+/* ---------- Телефон (макеты «Mobile» в Figma, ширина 390) ---------- */
+@media (max-width: 600px) {
+  :root { --page-pad: 16px; }
+  /* Ряды чипов листаются вбок, а не переносятся */
+  .chip-row--scroll { flex-wrap: nowrap; overflow-x: auto; margin-inline: calc(var(--page-pad) * -1); padding-inline: var(--page-pad); scrollbar-width: none; }
+  .chip-row--scroll::-webkit-scrollbar { display: none; }
+  .chip-row--scroll > * { flex: none; }
+
+  /* Персонаж: подпись сверху, сегменты на всю ширину */
+  .labeled { flex-direction: column; align-items: stretch; gap: 8px; }
+  .labeled .segmented { display: flex; }
+  .labeled .segmented button { flex: 1; }
+
+  /* Фильтры фото и артов: кнопка «Фильтры» открывает шторку снизу */
+  .filters-row { flex-wrap: nowrap; }
+  .filters-btn { display: inline-flex; gap: 6px; }
+  .filters-sheet { display: none; }
+  .filters-sheet.is-open {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 960;
+    display: grid; gap: 16px; max-height: 85dvh; overflow: auto;
+    padding: 12px 20px calc(24px + env(safe-area-inset-bottom));
+    border-radius: 28px 28px 0 0; background: var(--md-surface-container-low);
+    animation: ui-sheet-in 0.28s var(--ease); transition: translate 0.2s;
+  }
+  .filters-sheet__handle { display: block; justify-self: center; width: 32px; height: 4px; border-radius: 2px; background: var(--md-on-surface-variant); opacity: 0.4; }
+  .filters-sheet__head { display: flex; justify-content: space-between; align-items: center; }
+  .filters-sheet .chip-row { flex-direction: column; align-items: stretch; }
+  .filters-sheet .select, .filters-sheet .select__btn { width: 100%; }
+  .filters-sheet .select__menu { position: static; width: 100%; margin-top: 6px; box-shadow: none; max-height: none; }
+  .filters-sheet .link-btn { align-self: flex-start; padding: 8px 0; }
+  .filters-scrim:not([hidden]) { display: block; position: fixed; inset: 0; z-index: 950; background: rgb(0 0 0 / 0.4); }
+  html.sheet-open { overflow: hidden; }
+}
+@keyframes ui-sheet-in { from { transform: translateY(100%); } }

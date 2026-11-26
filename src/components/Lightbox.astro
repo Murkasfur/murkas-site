@@ -44,8 +44,12 @@ const t = useTranslations(lang);
     <button type="button" class="arrow arrow--next" data-next aria-label={t('viewer.next')}><Icon name="chevron_right" size={28} /></button>
   </div>
 
-  <aside class="viewer__info">
-    <div class="info__head">
+  <div class="viewer__dots" data-dots aria-hidden="true"></div>
+  <p class="viewer__hint-m md-body-small">{t('viewer.hintMobile')}</p>
+
+  <aside class="viewer__info" data-info>
+    <button type="button" class="info__handle" data-info-toggle aria-label={t('viewer.details')} aria-expanded="false"></button>
+    <div class="info__head" data-info-head>
       <h2 class="md-headline-small" data-title></h2>
       <p class="md-body-large info__caption" data-caption></p>
     </div>
@@ -131,6 +135,10 @@ const t = useTranslations(lang);
         return `<button type="button" class="thumb${i === current ? ' is-current' : ''}" data-go="${i}" aria-label="${esc(x.title)}">${media(x, true)}</button>`;
       })
       .join('');
+    // Точки-пагинация на телефоне: до 5 штук вокруг текущего
+    const dFrom = Math.max(0, Math.min(current - 2, order.length - 5));
+    const dTo = Math.min(order.length, dFrom + 5);
+    $('[data-dots]')!.innerHTML = order.length > 1 ? Array.from({ length: dTo - dFrom }, (_, k) => `<i${dFrom + k === current ? ' class="on"' : ''}></i>`).join('') : '';
     ($('[data-prev]') as HTMLButtonElement).disabled = current === 0;
     ($('[data-next]') as HTMLButtonElement).disabled = current === order.length - 1;
     const url = new URL(location.href);
@@ -194,15 +202,40 @@ const t = useTranslations(lang);
     if (e.key === 'ArrowRight') go(current + 1);
   });
 
-  // Свайп на телефоне
+  // Свайп на телефоне: вбок - листать, вниз - закрыть
   let x0: number | null = null;
-  $('[data-media]')?.addEventListener('touchstart', (e) => (x0 = e.touches[0].clientX), { passive: true });
-  $('[data-media]')?.addEventListener('touchend', (e) => {
+  let y0 = 0;
+  const stage = $('.viewer__stage');
+  stage?.addEventListener('touchstart', (e) => ((x0 = e.touches[0].clientX), (y0 = e.touches[0].clientY)), { passive: true });
+  stage?.addEventListener('touchend', (e) => {
     if (x0 === null) return;
     const dx = e.changedTouches[0].clientX - x0;
-    if (Math.abs(dx) > 50) go(current + (dx < 0 ? 1 : -1));
+    const dy = e.changedTouches[0].clientY - y0;
     x0 = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) go(current + (dx < 0 ? 1 : -1));
+    else if (dy > 90 && d) closeDialog(d);
   });
+
+  // Шторка с подробностями: свёрнута до заголовка, по тапу/свайпу вверх раскрывается
+  const info = $('[data-info]');
+  const toggleInfo = (open?: boolean) => {
+    if (!info) return;
+    const on = open ?? !info.classList.contains('is-expanded');
+    info.classList.toggle('is-expanded', on);
+    $('[data-info-toggle]')?.setAttribute('aria-expanded', String(on));
+  };
+  $('[data-info-toggle]')?.addEventListener('click', () => toggleInfo());
+  $('[data-info-head]')?.addEventListener('click', () => matchMedia('(max-width: 600px)').matches && toggleInfo());
+  let iy: number | null = null;
+  info?.addEventListener('touchstart', (e) => (iy = e.touches[0].clientY), { passive: true });
+  info?.addEventListener('touchend', (e) => {
+    if (iy === null) return;
+    const dy = e.changedTouches[0].clientY - iy;
+    iy = null;
+    if (dy < -40) toggleInfo(true);
+    else if (dy > 40 && info.scrollTop <= 0) toggleInfo(false);
+  });
+  d?.addEventListener('close', () => toggleInfo(false));
 
   // Скопировать ссылку / поделиться
   const toast = (msg: string) => {
@@ -385,5 +418,44 @@ const t = useTranslations(lang);
     }
     .viewer__info { max-height: none; overflow: visible; }
     .viewer__hint { display: none; }
+  }
+  .viewer__dots, .viewer__hint-m, .info__handle { display: none; }
+
+  /* Телефон: фото на всю ширину, свайпы, подробности - шторкой снизу (макет «Просмотр фото · Mobile») */
+  @media (max-width: 600px) {
+    .viewer { padding: 12px 0 132px; overflow: hidden; }
+    .viewer[open] {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto minmax(0, 1fr) auto auto;
+      grid-template-areas: 'top' 'stage' 'dots' 'hintm';
+      gap: 12px;
+    }
+    .viewer__top { padding-inline: 12px; }
+    .viewer__strip, .arrow { display: none; }
+    .viewer__media :global(.frame) { border-radius: 0; }
+    .viewer__dots { grid-area: dots; display: flex; justify-content: center; align-items: center; gap: 6px; min-height: 8px; }
+    .viewer__dots :global(i) { width: 6px; height: 6px; border-radius: 50%; background: #fff; opacity: 0.4; transition: all 0.2s; }
+    .viewer__dots :global(i.on) { width: 8px; height: 8px; opacity: 1; }
+    .viewer__hint-m { grid-area: hintm; display: block; margin: 0; text-align: center; opacity: 0.6; }
+    .viewer__info {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 2;
+      gap: 16px;
+      max-height: 78dvh;
+      overflow: auto;
+      padding: 8px 20px calc(24px + env(safe-area-inset-bottom));
+      border-radius: 28px 28px 0 0;
+      transition: max-height 0.3s var(--ease);
+    }
+    .viewer__info:not(.is-expanded) { max-height: 124px; overflow: hidden; }
+    .viewer__info:not(.is-expanded) > :not(.info__head, .info__handle) { display: none; }
+    .viewer__info:not(.is-expanded) .info__caption { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+    .info__head { cursor: pointer; }
+    .info__handle { display: block; justify-self: center; width: 48px; height: 20px; margin-bottom: -8px; padding: 0; border: 0; background: none; cursor: pointer; }
+    .info__handle::before { content: ''; display: block; width: 32px; height: 4px; margin: 8px auto; border-radius: 2px; background: var(--md-on-surface-variant); opacity: 0.4; }
+    .info__actions :global(.md-btn) { flex: 1; justify-content: center; }
   }
 </style>

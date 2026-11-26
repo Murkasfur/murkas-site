@@ -219,6 +219,60 @@ $$('[data-compare]').forEach((c) => {
   });
 });
 
+/* ---------------- Меню-шторка (телефон и планшет) ---------------- */
+const menu = $<HTMLDialogElement>('[data-menu]');
+$$('[data-menu-open]').forEach((b) => b.addEventListener('click', () => openModal(menu, menu)));
+$$('[data-menu-link]').forEach((a) => a.addEventListener('click', () => closeModal(menu)));
+// Свайп шторки вниз закрывает её
+if (menu) {
+  let y0: number | null = null;
+  menu.addEventListener('touchstart', (e) => (y0 = e.touches[0].clientY), { passive: true });
+  menu.addEventListener('touchmove', (e) => {
+    if (y0 === null) return;
+    const dy = Math.max(0, e.touches[0].clientY - y0);
+    menu.style.translate = `0 ${dy}px`;
+  }, { passive: true });
+  menu.addEventListener('touchend', (e) => {
+    if (y0 === null) return;
+    const dy = e.changedTouches[0].clientY - y0;
+    menu.style.translate = '';
+    y0 = null;
+    if (dy > 80) closeModal(menu);
+  });
+}
+
+/* ---------------- Work with me: Freelance / Hire me на телефоне ---------------- */
+$$('[data-withme]').forEach((sec) => {
+  const box = $('[data-wm-show]', sec);
+  $$<HTMLButtonElement>('[data-wm]', sec).forEach((b) =>
+    b.addEventListener('click', () => {
+      $$('[data-wm]', sec).forEach((x) => x.setAttribute('aria-selected', String(x === b)));
+      if (box) box.dataset.wmShow = b.dataset.wm!;
+    }),
+  );
+});
+
+/* ---------------- Design ↔ Code на телефоне: переключатель вместо ползунка ---------------- */
+$$<HTMLButtonElement>('[data-compare-set]').forEach((b) =>
+  b.addEventListener('click', () => {
+    const c = $('[data-compare]');
+    if (!c) return;
+    c.dataset.touched = '1';
+    c.classList.add('is-switch');
+    c.style.setProperty('--x', `${b.dataset.compareSet}%`);
+    $$('[data-compare-set]').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
+  }),
+);
+// На узком экране сразу показываем живую карточку
+if (matchMedia('(max-width: 600px)').matches) $('[data-compare]')?.style.setProperty('--x', '0%');
+
+/* ---------------- Окно «Все условия» ---------------- */
+const terms = $<HTMLDialogElement>('[data-terms]');
+$$('[data-terms-open]').forEach((b) => b.addEventListener('click', () => openModal(terms)));
+terms?.addEventListener('click', (e) => {
+  if ((e.target as Element).closest('[data-close]')) closeModal(terms);
+});
+
 /* ---------------- Окна (учёба) ---------------- */
 const learning = $<HTMLDialogElement>('[data-learning]');
 $$('[data-learning-open]').forEach((b) => b.addEventListener('click', () => openModal(learning)));
@@ -572,7 +626,7 @@ if (!reduce() && 'IntersectionObserver' in window) {
   const groups = [
     '.pf-hero__text > *', '.pf-compare', '.pf-about__text > *', '.pf-learn',
     '.pf-section > .pf-h2', '.pf-section > .pf-sub', '.pf-skills__group', '.pf-work__head', '.pf-slides', '.pf-strip__item',
-    '.pf-step', '.pf-hire__head', '.pf-service', '.pf-prices__head', '.pf-pricelist li', '.pf-terms', '.pf-finder', '.pf-contact', '.pf-footer__cols > *',
+    '.pf-step', '.pf-hire__head', '.pf-service', '.pf-prices__head', '.pf-pricelist li', '.pf-terms', '.pf-howcard', '.pf-freelance', '.pf-hirecard', '.pf-finder', '.pf-contact', '.pf-footer__cols > *',
     '.pf-all > *:not(.pf-grid)', '.pf-card', '.pf-case__head > *', '.pf-gal', '.pf-block', '.pf-more__head', '.pf-results li', '.pf-proc li',
   ];
   const els = $$(groups.join(','));
@@ -618,6 +672,7 @@ if (!reduce() && 'IntersectionObserver' in window) {
 
   // Слайдер «Figma ↔ код» сам один раз показывает, что его можно тянуть
   $$('[data-compare]').forEach((c) => {
+    if (matchMedia('(max-width: 600px)').matches) return;
     const range = $<HTMLInputElement>('[data-compare-range]', c);
     const sio = new IntersectionObserver((entries) => {
       if (!entries[0].isIntersecting) return;
@@ -649,7 +704,18 @@ if (finderEl) {
     results: Record<string, R>; when: Record<string, string>;
     labels: Record<string, { q: string; o: Record<string, string> }>;
     msg: Record<string, string>; tg: string; email: string;
+    launch: { percent: number; left: number };
   } = JSON.parse(finderEl.dataset.finder!);
+  // Цена со скидкой на запуск: «$1,000» -> «$700» (тот же разделитель тысяч)
+  const discount = (from: string) => {
+    const m = from.match(/^(\D*)([\d,\s\u00a0]+)(.*)$/);
+    if (!m) return null;
+    const n = Number(m[2].replace(/[^\d]/g, ''));
+    if (!n) return null;
+    const v = Math.round((n * (100 - F.launch.percent)) / 100 / 10) * 10;
+    const sep = /\d[\s\u00a0]\d{3}/.test(m[2]) ? ' ' : ',';
+    return `${m[1]}${String(v).replace(/\B(?=(\d{3})+(?!\d))/g, sep)}${m[3]}`;
+  };
   const answers = () => Object.fromEntries($$<HTMLInputElement>('input[data-q]:checked', finderEl).map((i) => [i.dataset.q!, i.value]));
   const pick = (a: Record<string, string>) =>
     a.design === 'figma' ? 'frontend' : a.need === 'app' ? 'screens' : a.need === 'one' ? (a.edit === 'self' ? 'landing-cms' : 'landing') : a.edit === 'self' ? 'site-cms' : 'website';
@@ -666,7 +732,12 @@ if (finderEl) {
     box.classList.add('is-swap');
     set('[data-f-title]', r.title);
     set('[data-f-why]', r.why);
-    set('[data-f-from]', `${F.msg.from} ${r.from}`);
+    const off = F.launch.left > 0 && a.when !== 'rush' ? discount(r.from) : null;
+    set('[data-f-from]', `${F.msg.from} ${off ?? r.from}`);
+    const old = $('[data-f-old]', finderEl)!;
+    old.textContent = r.from;
+    old.hidden = !off;
+    $('[data-f-off]', finderEl)!.hidden = !off;
     set('[data-f-range]', r.range);
     const when = $('[data-f-when]', finderEl)!;
     when.textContent = F.when[a.when] ?? '';
@@ -678,7 +749,7 @@ if (finderEl) {
     inc.querySelectorAll('span').forEach((s, i) => (s.textContent = r.includes[i]));
     // Сообщение с ответами - для Telegram и почты
     const lines = Object.entries(a).map(([k, v]) => `- ${F.labels[k].q} ${F.labels[k].o[v]}`);
-    const text = `${F.msg.hello}\n${F.msg.pick}: ${r.title} (${F.msg.from} ${r.from}).\n${F.msg.answers}:\n${lines.join('\n')}`;
+    const text = `${F.msg.hello}\n${F.msg.pick}: ${r.title} (${F.msg.from} ${off ?? r.from}${off ? `, −${F.launch.percent}%` : ''}).\n${F.msg.answers}:\n${lines.join('\n')}`;
     $<HTMLAnchorElement>('[data-f-tg]', finderEl)!.href = `${F.tg}?text=${encodeURIComponent(text)}`;
     $<HTMLAnchorElement>('[data-f-mail]', finderEl)!.href = `mailto:${F.email}?subject=${encodeURIComponent(`${F.msg.subject}: ${r.title}`)}&body=${encodeURIComponent(text)}`;
   };

@@ -194,6 +194,30 @@ const tiles = await homeTiles((Astro.locals.settings ?? defaultSettings()).home,
 </Page>
 
 <script>
+  // Телефон (вариант «Профиль»): «Сейчас», «Мой вайб» и «Где встретить» - лента со свайпом под шапкой.
+  // Карточки переносим, а не копируем: обработчики (часы, звук) остаются на месте.
+  {
+    const bento = document.querySelector<HTMLElement>('.bento');
+    const hero = bento?.querySelector<HTMLElement>('.hero');
+    const cards = ['.now', '.vibe', '.meet'].map((sel) => bento?.querySelector<HTMLElement>(sel)).filter((el): el is HTMLElement => !!el);
+    if (bento && hero && cards.length) {
+      const homes = cards.map((el) => ({ el, parent: el.parentElement!, next: el.nextElementSibling }));
+      const rail = document.createElement('div');
+      rail.className = 'rail';
+      const mq = matchMedia('(max-width: 600px)');
+      const place = () => {
+        if (mq.matches) {
+          hero.after(rail);
+          rail.append(...cards);
+        } else if (rail.isConnected) {
+          for (const h of [...homes].reverse()) h.parent.insertBefore(h.el, h.next && h.next.parentElement === h.parent ? h.next : null);
+          rail.remove();
+        }
+      };
+      place();
+      mq.addEventListener('change', place);
+    }
+  }
   // Винил: клик - играет и крутится, ещё клик - пауза.
   // Если трек не поставлен в боте - диск просто крутится без звука.
   const disc = document.querySelector<HTMLButtonElement>('.disc');
@@ -693,5 +717,35 @@ const tiles = await homeTiles((Astro.locals.settings ?? defaultSettings()).home,
     .hero__name { font-size: 48px; line-height: 52px; }
     .fursuits__photos { grid-template-columns: 1fr 1fr; }
     .fursuits__photos .suit:last-child { grid-column: 1 / -1; min-height: 140px; }
+  }
+
+  /* Телефон, вариант «Профиль»: компактная шапка, лента карточек со свайпом, дальше фурсьюты и соцсети */
+  @media (max-width: 600px) {
+    .bento { gap: 16px; }
+    .row { display: contents; }
+    .hero { order: 0; display: grid; grid-template-columns: 88px minmax(0, 1fr); align-items: center; gap: 16px; padding: 20px; border-width: 4px; border-radius: 28px; }
+    .hero__avatar { flex: none; width: 88px; height: 88px; min-width: 0; border-radius: 50%; }
+    .hero__text, .hero__info { display: contents; }
+    .hero__greet { grid-column: 2; gap: 2px; }
+    .hero__hello { font-size: 15px; line-height: 20px; }
+    .hero__name { font-size: 40px; line-height: 44px; }
+    .hero__about { grid-column: 1 / -1; font-size: 15px; line-height: 22px; }
+    .hero__actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; }
+    .hero-btn { justify-content: center; }
+    :global(.rail) {
+      order: 1;
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      margin-inline: calc(var(--page-pad) * -1);
+      padding-inline: var(--page-pad);
+      scroll-padding-inline: var(--page-pad);
+      scrollbar-width: none;
+    }
+    :global(.rail::-webkit-scrollbar) { display: none; }
+    :global(.rail) > :global(*) { flex: 0 0 min(300px, 82%); scroll-snap-align: start; }
+    .row--2 .fursuits { order: 2; }
+    .socials-slot { order: 3; }
   }
 </style>

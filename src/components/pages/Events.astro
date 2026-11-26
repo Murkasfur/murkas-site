@@ -332,4 +332,15 @@ const suitTotal = suits.reduce((a, x) => a + x.n, 0);
     .layout { grid-template-columns: 1fr; }
     .sidebar { position: static; order: -1; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
   }
+  /* Телефон: сверху ближайший ивент, потом таймлайн, статистика - в самом конце */
+  @media (max-width: 600px) {
+    .layout { gap: 24px; }
+    .sidebar { display: contents; }
+    .next { order: -1; }
+    .stats { order: 1; }
+    .kinds { flex-wrap: nowrap; overflow-x: auto; margin-inline: calc(var(--page-pad) * -1); padding-inline: var(--page-pad); scrollbar-width: none; }
+    .kinds::-webkit-scrollbar { display: none; }
+    .kind { flex: none; }
+    .toolbar__search { flex-basis: 100%; min-width: 0; }
+  }
 </style>

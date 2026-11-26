@@ -36,12 +36,13 @@ const shownHere = Astro.originPathname ?? Astro.url.pathname;
 const swap = (p: string) => (p.startsWith('/ru') ? p.replace(/^\/ru/, '') || '/' : p === '/' ? '/ru' : `/ru${p}`);
 const langHref = shownHere !== Astro.url.pathname ? swap(shownHere) : otherHref;
 
+const path = Astro.url.pathname;
 const nav = [
-  { id: 'about', label: t.about },
-  { id: 'skills', label: t.skills },
-  { id: 'work', label: t.work },
-  { id: 'process', label: t.process },
-];
+  { id: 'work', label: t.work, href: href('/projects'), icon: 'work', current: path.endsWith('/projects') },
+  { id: 'about', label: t.about, href: anchor('about'), icon: 'person', current: false },
+  { id: 'prices', label: t.pricing, href: href('/pricing'), icon: 'sell', current: path.endsWith('/pricing') },
+  { id: 'contact', label: t.contact, href: anchor('contact'), icon: 'send', current: false },
+] as const;
 // Темы: тёмный и светлый арбуз (красная панда пока убрана)
 const themes = ['watermelon', 'light'] as const;
 ---
@@ -83,13 +84,16 @@ const themes = ['watermelon', 'light'] as const;
           <a class="pf-skip" href="#main">Skip to content</a>
           <header class="pf-nav" data-nav>
             <div class="pf-wrap pf-nav__in">
+              <button type="button" class="pf-menu-btn" data-menu-open aria-label={t.menu} aria-haspopup="dialog">
+                <Icon name="menu" />
+              </button>
               <a class="pf-brand" href={href()} data-inspect-skip>
                 <span class="pf-brand__dot" aria-hidden="true" />
                 {profile.name}
               </a>
               <nav class="pf-nav__links" aria-label="Sections">
                 {nav.map((n) => (
-                  <a href={n.id === 'work' ? href('/projects') : anchor(n.id)} data-spy={n.id} aria-current={n.id === 'work' && !home && Astro.url.pathname.endsWith('/projects') ? 'page' : undefined}>
+                  <a href={n.href} data-spy={n.id} aria-current={n.current ? 'page' : undefined}>
                     {n.label}
                   </a>
                 ))}
@@ -138,9 +142,9 @@ const themes = ['watermelon', 'light'] as const;
               <div class="pf-footer__col">
                 <p class="pf-footer__h">{t.navigate}</p>
                 {nav.map((n) => (
-                  <a href={anchor(n.id)}>{n.label}</a>
+                  <a href={n.href}>{n.label}</a>
                 ))}
-                <a href={href('/projects')}>{t.allProjects}</a>
+                <a href={anchor('skills')}>{t.skills}</a>
               </div>
               <div class="pf-footer__col">
                 <p class="pf-footer__h">{t.contact}</p>
@@ -205,6 +209,31 @@ const themes = ['watermelon', 'light'] as const;
             </div>
           </footer>
 
+          <dialog class="pf-dialog pf-sheet" data-menu aria-label={t.menu} tabindex="-1">
+            <span class="pf-sheet__handle" aria-hidden="true"></span>
+            <nav class="pf-sheet__nav" aria-label={t.menu}>
+              {nav.map((n) => (
+                <a href={n.href} class:list={['pf-sheet__item', { on: n.current }]} aria-current={n.current ? 'page' : undefined} data-menu-link>
+                  <Icon name={n.icon} />{n.label}
+                </a>
+              ))}
+              <a href={href('/projects')} class="pf-sheet__item" data-menu-link><Icon name="grid_view" />{t.allProjects}</a>
+            </nav>
+            <hr />
+            <div class="pf-sheet__prefs">
+              <div class="pf-seg" role="radiogroup" aria-label={t.switchTheme}>
+                {themes.map((th) => (
+                  <button type="button" role="radio" aria-checked="false" data-theme-set={th}>{t.themes[th]}</button>
+                ))}
+              </div>
+              <div class="pf-seg" role="group">
+                <a href={lang === 'en' ? undefined : langHref} aria-current={lang === 'en' ? 'true' : undefined}>EN</a>
+                <a href={lang === 'ru' ? undefined : langHref} aria-current={lang === 'ru' ? 'true' : undefined}>RU</a>
+              </div>
+            </div>
+            <a class="pf-btn pf-btn--filled" href={anchor('contact')} data-menu-link><Icon name="send" size={20} />{t.contact}</a>
+          </dialog>
+
           <dialog class="pf-cmd" data-cmd aria-label={t.cmdHint}>
             <div class="pf-cmd__search">
               <Icon name="search" size={20} />
@@ -224,8 +253,8 @@ const themes = ['watermelon', 'light'] as const;
                 <span class="muted">→</span>
               </a>
               <p class="pf-cmd__group">{t.cmdSections}</p>
-              {[...nav, { id: 'prices', label: t.prices }, { id: 'contact', label: t.contact }].map((n) => (
-                <a class="pf-cmd__item" href={anchor(n.id)} data-cmd-item data-key={`${n.id} ${n.label}`}>
+              {[...nav, { id: 'skills', label: t.skills, href: anchor('skills') }, { id: 'hire', label: t.hireMe, href: anchor('hire') }].map((n) => (
+                <a class="pf-cmd__item" href={n.href} data-cmd-item data-key={`${n.id} ${n.label}`}>
                   <span>{n.label}</span>
                   <span class="muted">#</span>
                 </a>

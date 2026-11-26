@@ -19,7 +19,7 @@ export function initGallery(root: HTMLElement) {
 
   const columnCount = () => {
     const w = grid.clientWidth;
-    return w >= 900 ? 4 : w >= 640 ? 3 : w >= 400 ? 2 : 1;
+    return w >= 900 ? 4 : w >= 640 ? 3 : w >= 300 ? 2 : 1;
   };
 
   const matches = (el: HTMLElement) => {
@@ -172,6 +172,28 @@ export function initGallery(root: HTMLElement) {
   }).observe(grid);
 
   root.querySelectorAll<HTMLSelectElement>('.select select').forEach(enhanceSelect);
+
+  // Телефон: фотограф/год/сброс живут в шторке «Фильтры»
+  const sheet = root.querySelector<HTMLElement>('[data-filters-sheet]');
+  const scrim = root.querySelector<HTMLElement>('[data-filters-scrim]');
+  const badge = root.querySelector<HTMLElement>('[data-filters-count]');
+  const setSheet = (open: boolean) => {
+    sheet?.classList.toggle('is-open', open);
+    if (scrim) scrim.hidden = !open;
+    document.documentElement.classList.toggle('sheet-open', open);
+  };
+  root.querySelector('[data-filters-open]')?.addEventListener('click', () => setSheet(true));
+  root.querySelector('[data-filters-done]')?.addEventListener('click', () => setSheet(false));
+  scrim?.addEventListener('click', () => setSheet(false));
+  document.addEventListener('keydown', (e) => e.key === 'Escape' && sheet?.classList.contains('is-open') && setSheet(false));
+  const syncBadge = () => {
+    if (!badge) return;
+    const n = (state.person !== 'all' ? 1 : 0) + (state.year !== 'all' ? 1 : 0);
+    badge.textContent = String(n);
+    badge.hidden = n === 0;
+  };
+  root.addEventListener('change', syncBadge);
+  root.querySelector('[data-reset]')?.addEventListener('click', () => setTimeout(syncBadge));
 
   // ?q=... в адресе (ссылка «12 фото →» со страницы ивентов) - сразу ищем
   const q0 = new URLSearchParams(location.search).get('q');

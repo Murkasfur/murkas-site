@@ -785,3 +785,150 @@ html.is-inspecting .site-cursor { display: none !important; }
   .pf-finder { padding: 20px; border-radius: 24px; }
   .pf-finder__result { padding: 20px; }
 }
+
+/* ---------- Work with me: Freelance + Hire me ---------- */
+.pf-seg button[aria-selected='true'], .pf-seg a[aria-current] { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+.pf-seg a { display: inline-flex; align-items: center; height: 36px; padding: 0 16px; border-left: 1px solid var(--md-outline); font: 500 14px/20px var(--font-plain); }
+.pf-seg a:first-child { border-left: 0; }
+.pf-withme { gap: 24px; }
+.pf-withme__seg, .pf-compare__seg, .pf-menu-btn { display: none; }
+.pf-withme__cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: stretch; }
+.pf-withme__cards:has(> :only-child) { grid-template-columns: 1fr; }
+.pf-freelance, .pf-hirecard { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; padding: 28px; border-radius: 28px; background: var(--chip); font-size: 15px; line-height: 22px; }
+.pf-freelance__top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; width: 100%; }
+.pf-freelance .pf-rate { padding: 0; background: none; }
+.pf-freelance .pf-tag, .pf-hirecard .pf-tag { background: var(--chip-2); }
+.pf-status--sm { min-height: 28px; padding: 4px 12px 4px 10px; gap: 8px; font-size: 13px; line-height: 18px; background: var(--chip-2); }
+.pf-freelance__actions, .pf-hirecard__actions { display: flex; align-items: center; gap: 12px 14px; flex-wrap: wrap; margin-top: auto; padding-top: 4px; }
+.pf-launch-line { color: var(--md-primary); font: 500 13px/18px var(--font-plain); }
+.pf-hirecard__rows { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; width: 100%; }
+.pf-hirecard__rows dt { font: 500 12px/16px var(--font-plain); }
+.pf-hirecard__rows dd { margin: 2px 0 0; font-size: 14px; line-height: 20px; }
+
+/* ---------- Страница цен ---------- */
+.pf-h1 { font: 400 48px/56px var(--font-brand); letter-spacing: -0.5px; }
+.pf-launch { border: 1px solid color-mix(in srgb, var(--md-primary) 45%, transparent); background: color-mix(in srgb, var(--md-primary) 8%, var(--chip)); }
+.pf-launch h3 { color: var(--md-primary); }
+.pf-launch__big { font: 500 44px/48px var(--font-brand); color: var(--md-primary); }
+.pf-launch__spots { display: flex; align-items: center; gap: 10px; font: 500 13px/18px var(--font-plain); }
+.pf-launch__dots { display: inline-flex; gap: 6px; }
+.pf-launch__dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--md-outline-variant); }
+.pf-launch__dots i.on { background: var(--md-primary); }
+.pf-howrow { display: grid; gap: 16px; }
+.pf-howrow__head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.pf-howrow__head .pf-link { border: 0; background: none; padding: 0; cursor: pointer; font: 500 14px/20px var(--font-plain); color: var(--md-primary); }
+.pf-howcards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.pf-howcard { display: grid; gap: 12px; align-content: start; padding: 24px; border-radius: 24px; background: var(--chip); font-size: 14px; line-height: 20px; }
+.pf-howcard h4 { font: 400 20px/26px var(--font-brand); }
+.pf-howcard--0 h4 { color: var(--md-primary); }
+.pf-howcard--1 h4 { color: var(--md-tertiary); }
+.pf-howcard--2 h4 { color: var(--md-secondary); }
+.pf-howcard ul { display: grid; gap: 8px; }
+.pf-howcard li { position: relative; padding-left: 16px; }
+.pf-howcard li::before { content: ''; position: absolute; left: 2px; top: 8px; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: 0.5; }
+.pf-finder__old { color: var(--md-on-surface-variant); font: 400 18px/24px var(--font-plain); }
+.pf-finder__off { padding: 2px 8px; border-radius: 6px; background: color-mix(in srgb, var(--md-primary) 18%, transparent); color: var(--md-primary); font: 500 12px/18px var(--font-plain); }
+.pf-finder__range { flex-basis: 100%; }
+.pf-allterms { width: min(880px, calc(100vw - 32px)); overflow: auto; }
+.pf-allterms__groups { display: grid; grid-template-columns: 1fr 1fr; gap: 24px 32px; }
+.pf-allterms h3 { margin-bottom: 10px; font: 400 20px/26px var(--font-brand); color: var(--md-primary); }
+.pf-allterms ul { display: grid; gap: 8px; }
+.pf-allterms li { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; line-height: 20px; }
+.pf-allterms li .icon { flex: none; margin-top: 2px; color: var(--md-tertiary); }
+@media (max-width: 1100px) {
+  .pf-howcards { grid-template-columns: 1fr; }
+  .pf-menu-btn { display: inline-grid; place-items: center; width: 40px; height: 40px; margin-left: -8px; border: 0; border-radius: 50%; background: none; color: var(--md-on-surface); cursor: pointer; }
+  .pf-menu-btn:hover { background: var(--chip); }
+}
+@media (max-width: 760px) {
+  .pf-withme__cards, .pf-allterms__groups, .pf-hirecard__rows { grid-template-columns: 1fr; }
+  .pf-h1 { font-size: 36px; line-height: 44px; }
+}
+
+/* ---------- Меню-шторка ---------- */
+.pf dialog.pf-sheet.is-modal[open] {
+  inset: auto 0 0 0; width: 100%; max-width: 560px; height: auto; max-height: 90dvh; margin: 0 auto;
+  display: grid; gap: 16px; padding: 12px 24px 28px !important; border-radius: 28px 28px 0 0;
+  background: var(--md-surface-container-low); animation: pf-sheet-in 0.28s var(--ease); transition: translate 0.2s;
+}
+@keyframes pf-sheet-in { from { transform: translateY(100%); } }
+.pf-sheet__handle { justify-self: center; width: 32px; height: 4px; border-radius: 2px; background: var(--md-on-surface-variant); opacity: 0.4; }
+.pf-sheet__nav { display: grid; }
+.pf-sheet__item { display: flex; align-items: center; gap: 16px; height: 56px; padding: 0 16px; border-radius: 999px; font: 500 16px/24px var(--font-plain); color: var(--md-on-surface-variant); }
+.pf-sheet__item .icon { color: var(--md-on-surface-variant); }
+.pf-sheet__item.on { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+.pf-sheet__item.on .icon { color: inherit; }
+.pf-sheet hr { margin: 0; border: 0; border-top: 1px solid var(--line); }
+.pf-sheet__prefs { display: grid; gap: 12px; }
+.pf-sheet__prefs .pf-seg { justify-self: stretch; flex-wrap: nowrap; }
+.pf-sheet__prefs .pf-seg > * { flex: 1; justify-content: center; text-align: center; height: 40px; }
+.pf-sheet > .pf-btn { justify-content: center; }
+
+/* ---------- Телефон (макеты «Mobile» в Figma, ширина 390) ---------- */
+@media (max-width: 600px) {
+  .pf { --pad: 16px; }
+  .pf-main { gap: 56px; padding-top: 12px; padding-bottom: 56px; }
+  .pf-nav__in { height: 64px; gap: 8px; }
+  .pf-nav .pf-lang, .pf-nav__cta { display: none; }
+  .pf-brand { font-size: 18px; }
+
+  /* Hero */
+  .pf-hero { gap: 24px; }
+  .pf-hero__title { font-size: 40px; line-height: 44px; }
+  .pf-hero__actions { flex-direction: column; align-items: stretch; }
+  .pf-hero__actions > .pf-btn { justify-content: center; width: 100%; align-self: stretch; }
+  .pf-hero__icons { align-self: center; margin: 0; }
+  .pf-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .pf-stats dt { font-size: 28px; line-height: 36px; }
+  .pf-compare__seg { display: flex; justify-self: stretch; flex-wrap: nowrap; }
+  .pf-compare__seg button { flex: 1; height: 40px; }
+  .pf-compare { height: 360px; border-radius: 28px; }
+  .pf-compare__tag, .pf-compare__line, .pf-compare__range { display: none; }
+  .pf-compare.is-switch .pf-compare__figma { transition: clip-path 0.45s var(--ease); }
+
+  /* Selected work */
+  .pf-slide__thumbs { display: none; }
+  .pf-slide__main { aspect-ratio: 4 / 3; border-radius: 20px; }
+  .pf-metrics { grid-template-columns: 1fr 1fr; }
+  .pf-strip { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; margin-inline: calc(var(--pad) * -1); padding-inline: var(--pad); scrollbar-width: none; }
+  .pf-strip::-webkit-scrollbar { display: none; }
+  .pf-strip__item { flex: 0 0 220px; scroll-snap-align: start; }
+  .pf-work__controls .pf-round, .pf-work__count { display: none; }
+
+  /* About */
+  .pf-facts { flex-direction: column; align-items: flex-start; }
+
+  /* Навык: окошко превращается в шторку снизу */
+  .pf-pop:not([hidden]) {
+    position: fixed; inset: auto 0 0 0; z-index: 900; width: auto; max-height: 80dvh; overflow: auto;
+    padding: 28px 24px 32px; border: 0; border-radius: 28px 28px 0 0; background: var(--md-surface-container-low);
+    box-shadow: 0 0 0 100vmax rgb(0 0 0 / 0.5); animation: pf-sheet-in 0.28s var(--ease);
+  }
+  .pf-pop::before { top: 10px; left: 50%; width: 32px; height: 4px; margin-left: -16px; border: 0; border-radius: 2px; background: var(--md-on-surface-variant); opacity: 0.4; transform: none; }
+  .pf-pop.is-right::before { left: 50%; right: auto; }
+
+  /* Work with me */
+  .pf-withme__seg { display: flex; justify-self: stretch; flex-wrap: nowrap; }
+  .pf-withme__seg button { flex: 1; height: 40px; }
+  .pf-withme__cards[data-wm-show='freelance'] > [data-wm-card='hire'],
+  .pf-withme__cards[data-wm-show='hire'] > [data-wm-card='freelance'] { display: none; }
+  .pf-freelance, .pf-hirecard { padding: 20px; }
+  .pf-freelance__top { flex-direction: column; }
+  .pf-freelance__actions { flex-direction: column; align-items: flex-start; }
+  .pf-hirecard__actions { width: 100%; }
+  .pf-hirecard__actions .pf-btn { flex: 1; justify-content: center; }
+  .pf-hirecard__rows { grid-template-columns: 1fr 1fr; }
+
+  /* Контакты и подвал */
+  .pf-contact { padding: 28px 20px; gap: 28px; }
+  .pf-footer__cols { grid-template-columns: 1fr 1fr; gap: 28px 16px; }
+  .pf-footer__brand, .pf-footer__cols > .pf-footer__col:nth-child(3) { grid-column: 1 / -1; }
+  .pf-footer__cols > .pf-footer__col:nth-child(3) { order: 3; }
+  .pf-footer__bottom { flex-direction: column; align-items: flex-start; gap: 12px; }
+
+  /* Цены */
+  .pf-prices__head { align-items: flex-start; }
+  .pf-pricelist li { flex-direction: column; gap: 6px; }
+  .pf-pricelist__price { justify-items: start; text-align: left; }
+  .pf-finder__price b { font-size: 28px; }
+}

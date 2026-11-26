@@ -6,7 +6,6 @@ import PfGlyph from './PfGlyph.astro';
 import PfViewer from './PfViewer.astro';
 import PfContact from './PfContact.astro';
 import PfVibe from './PfVibe.astro';
-import PfPricing from './PfPricing.astro';
 import Icon from '../Icon.astro';
 import { getPortfolio, pfPath, roleLabel, tx, ui, visibleRoles, type Lang } from '../../lib/portfolio';
 
@@ -74,6 +73,10 @@ const learningKinds = [
     </div>
 
     <!-- Design ↔ Code: тянешь ручку - слева макет, справа живая карточка -->
+    <div class="pf-seg pf-compare__seg" role="tablist" aria-label={t.designCode}>
+      <button type="button" role="tab" aria-selected="false" data-compare-set="100">{t.figmaL}</button>
+      <button type="button" role="tab" aria-selected="true" data-compare-set="0">{t.liveCode}</button>
+    </div>
     <div class="pf-compare" data-compare style="--x:50%">
       <span class="pf-compare__tag is-left">{t.figmaL}</span>
       <span class="pf-compare__tag is-right">{t.liveCode}</span>
@@ -263,50 +266,54 @@ const learningKinds = [
     </p>
   </section>
 
-  <!-- ============ How I work ============ -->
-  <section id="process" class="pf-section" aria-labelledby="process-title">
-    <h2 id="process-title" class="pf-h2">{t.howTitle}</h2>
-    <p class="pf-sub muted">{t.howSub}</p>
-    <ol class="pf-steps">
-      {pf.process.map((s, i) => (
-        <li class={`pf-step pf-step--${i % 3}`}>
-          <span class="pf-step__n">{pad(i + 1)}</span>
-          <h3>{tx(s.title, lang)}</h3>
-          <p class="muted">{tx(s.text, lang)}</p>
-        </li>
-      ))}
-    </ol>
-  </section>
-
-  <!-- ============ Work with me ============ -->
-  <section class="pf-section" aria-labelledby="hire-title">
-    <div class="pf-hire__head">
-      <div>
-        <h2 id="hire-title" class="pf-h2">{t.withMe}</h2>
-        <p class="pf-sub muted">{t.withMeSub}</p>
+  <!-- ============ Work with me: фриланс и найм ============ -->
+  <section id="hire" class="pf-section pf-withme" aria-labelledby="hire-title" data-withme>
+    <div>
+      <h2 id="hire-title" class="pf-h2">{t.withMe}</h2>
+      <p class="pf-sub muted">{t.withMeSub}</p>
+    </div>
+    {pf.hiring.open && (
+      <div class="pf-seg pf-withme__seg" role="tablist" aria-label={t.withMe}>
+        <button type="button" role="tab" aria-selected="true" data-wm="freelance">{t.freelance}</button>
+        <button type="button" role="tab" aria-selected="false" data-wm="hire">{t.hireMe}</button>
       </div>
-      <p class="pf-rate">
-        <span class="pf-rate__price"><b>${profile.rate.from}–{profile.rate.to}</b> <span class="muted">{t.perHour}</span></span>
-        <span class="muted">{profile.rate.currency} · {t.rateNote}</span>
-      </p>
-    </div>
-    <div class="pf-services">
-      {pf.services.map((s, i) => (
-        <article class:list={['pf-service', `pf-service--${i % 3}`, { 'is-best': s.best }]}>
-          <div class="pf-service__top">
-            <h3>{tx(s.title, lang)}</h3>
-            {s.best && <span class="pf-badge">{t.bestFit}</span>}
-          </div>
-          <p class="muted">{tx(s.text, lang)}</p>
-          <p class="pf-tags">{s.tags.map((tg) => <span class="pf-tag">{tg}</span>)}</p>
+    )}
+    <div class="pf-withme__cards" data-wm-show="freelance">
+      <article class="pf-freelance" data-wm-card="freelance">
+        <div class="pf-freelance__top">
+          <p class="pf-status pf-status--sm"><span class="pf-status__dot" aria-hidden="true"></span>{t.takingProjects}</p>
+          <p class="pf-rate">
+            <span class="pf-rate__price"><b>${profile.rate.from}–{profile.rate.to}</b> <span class="muted">{t.perHour}</span></span>
+            <span class="muted">{profile.rate.currency} · {t.rateNote}</span>
+          </p>
+        </div>
+        <h3 class="pf-h3">{t.freelance}</h3>
+        <p class="muted">{tx(pf.freelance.text, lang)}</p>
+        <p class="pf-tags">{pf.freelance.tags.map((tg) => <span class="pf-tag">{tg}</span>)}</p>
+        <p class="pf-freelance__actions">
+          <a class="pf-btn pf-btn--outlined" href={href('/pricing')}>{t.pricesTerms} →</a>
+          {pf.pricing.launch.spots - pf.pricing.launch.taken > 0 && <span class="pf-launch-line">{t.launchLine(pf.pricing.launch.percent, pf.pricing.launch.spots)}</span>}
+        </p>
+      </article>
+      {pf.hiring.open && (
+        <article class="pf-hirecard" data-wm-card="hire">
+          <p class="pf-status pf-status--sm"><span class="pf-status__dot" aria-hidden="true"></span>{t.openRoles}</p>
+          <h3 class="pf-h3">{t.hireMe}</h3>
+          <p class="muted">{tx(pf.hiring.text, lang)}</p>
+          <p class="pf-tags" aria-label={t.hireRoles}>{pf.hiring.roles.map((r) => <span class="pf-tag">{r}</span>)}</p>
+          <dl class="pf-hirecard__rows">
+            {pf.hiring.rows.map((r) => (
+              <div><dt class="muted">{tx(r.label, lang)}</dt><dd>{tx(r.value, lang)}</dd></div>
+            ))}
+          </dl>
+          <p class="pf-hirecard__actions">
+            <a class="pf-btn pf-btn--filled" href={`mailto:${profile.email}`}><Icon name="send" size={20} />{t.emailMe}</a>
+            {profile.cv && <a class="pf-btn pf-btn--outlined" href={profile.cv} download><Icon name="download" size={20} />{t.cv}</a>}
+          </p>
         </article>
-      ))}
+      )}
     </div>
-    <p class="pf-note-line muted">{t.noBackend}</p>
   </section>
-
-  <!-- ============ Цены и подборщик ============ -->
-  <PfPricing lang={lang} />
 
   <PfContact lang={lang} />
 

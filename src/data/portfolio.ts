@@ -103,8 +103,8 @@ export const profile = {
   fursona: 'https://murkas.net',
   rate: { from: 25, to: 35, currency: 'USD' },
   status: {
-    en: 'Open to part-time & freelance · Design · Frontend · Full projects',
-    ru: 'Открыт к part-time и фрилансу · Дизайн · Фронтенд · Проекты целиком',
+    en: 'Open to freelance & part-time roles',
+    ru: 'Открыт к фрилансу и part-time работе',
   } as L,
   stats: [
     { value: '3 yrs', label: { en: 'designing in Figma', ru: 'дизайню в Figma' } },
@@ -218,6 +218,32 @@ export const services = [
   },
 ] as { key: string; best?: boolean; title: L; text: L; tags: string[] }[];
 
+/* ---------------- Work with me: фриланс и найм ---------------- */
+/** Карточка «Freelance» на главной */
+export const freelance = {
+  text: {
+    en: 'Design, frontend or the whole project - custom code, Webflow or WordPress. Clear estimate up front, 3 rounds of edits after the prototype.',
+    ru: 'Дизайн, фронтенд или проект целиком - свой код, Webflow или WordPress. Понятная оценка до старта, 3 круга правок после прототипа.',
+  } as L,
+  tags: ['Design', 'Frontend', 'Full project', 'Webflow', 'WordPress'],
+};
+
+/** Карточка «Hire me». open: false - карточка скрыта (например, когда уже нашёл работу) */
+export const hiring = {
+  open: true,
+  text: {
+    en: 'Open to a part-time role as a UI/UX designer or frontend developer, in a team where I can design and build. Full-time on study breaks.',
+    ru: 'Ищу part-time работу UI/UX дизайнером или фронтенд-разработчиком - в команде, где можно и рисовать, и верстать. На каникулах - полный день.',
+  } as L,
+  roles: ['UI/UX Designer', 'Frontend Developer', 'Design + Frontend'],
+  rows: [
+    { label: { en: 'Format', ru: 'Формат' }, value: { en: 'Remote or hybrid · Toronto, EST', ru: 'Удалённо или гибрид · Торонто, EST' } },
+    { label: { en: 'Hours', ru: 'Занятость' }, value: { en: 'Part-time during studies, full-time on breaks', ru: 'Part-time во время учёбы, полный день на каникулах' } },
+    { label: { en: 'Level', ru: 'Уровень' }, value: { en: 'Junior+ · 3 years in UI/UX', ru: 'Junior+ · 3 года в UI/UX' } },
+    { label: { en: 'Start', ru: 'Старт' }, value: { en: 'Available now', ru: 'Могу начать сейчас' } },
+  ] as { label: L; value: L }[],
+};
+
 /* ---------------- Цены и условия (блок «What I do & prices») ---------------- */
 // from - крупная цена, range - вилка и обычный срок под ней
 export type PriceRow = { key: string; title: L; note: L; from: string; range: L };
@@ -246,16 +272,75 @@ export const pricing = {
     { title: { en: 'SEO, ads, social media', ru: 'SEO, реклама, соцсети' } },
     { title: 'Tilda' },
   ] as { title: L; note?: L }[],
-  howItWorks: [
-    { en: '30–50% upfront, the rest by milestones', ru: '30–50% предоплата, остальное по этапам' },
-    { en: 'While the design is in Figma, big changes within the agreed scope are free - that’s what this stage is for', ru: 'Пока дизайн в Figma, крупные изменения в рамках согласованного объёма бесплатны - этот этап для того и нужен' },
-    { en: 'Once the prototype is approved, 3 rounds of small and medium edits are included. Big changes get a new estimate, extra rounds from $20/h', ru: 'После утверждения прототипа включены 3 круга мелких и средних правок. Крупные изменения - новая оценка, дополнительные круги от $20/ч' },
-    { en: 'Other people’s sites - after a quick look at the code and design, so I can say honestly if I can build on it', ru: 'Чужие сайты - после быстрого просмотра кода и дизайна, чтобы честно сказать, смогу ли с ними работать' },
-    { en: 'Source files and rights after full payment', ru: 'Исходники и права - после полной оплаты' },
-    { en: 'I reply within 24 hours whenever I can', ru: 'Отвечаю в течение 24 часов, когда могу' },
-    { en: 'Rush jobs are possible at 2–3× the usual rate', ru: 'Срочные заказы - по ставке ×2–3' },
-    { en: 'Web3 only with established companies, paid in USD - never in tokens', ru: 'Web3 - только с состоявшимися компаниями и оплатой в USD, не токенами' },
-  ] as L[],
+  /** Скидка на запуск: percent% первым spots клиентам. taken - сколько мест уже занято */
+  launch: { percent: 30, spots: 3, taken: 0 },
+  /** Три коротких карточки «Как я работаю с заказами» */
+  terms: [
+    {
+      title: { en: 'Payment', ru: 'Оплата' },
+      items: [
+        { en: '30–50% upfront, the rest by milestones', ru: '30–50% предоплата, остальное по этапам' },
+        { en: 'Hosting, domain, fonts and plugins are paid by the client', ru: 'Хостинг, домен, шрифты и плагины оплачивает клиент' },
+        { en: 'Rush jobs at 2–3× the rate', ru: 'Срочные заказы - по ставке ×2–3' },
+      ],
+    },
+    {
+      title: { en: 'Edits', ru: 'Правки' },
+      items: [
+        { en: 'Big changes are free while we’re still in Figma', ru: 'Пока всё в Figma, крупные изменения бесплатны' },
+        { en: '3 rounds of small and medium edits after the prototype', ru: '3 круга мелких и средних правок после прототипа' },
+        { en: 'After that - hourly, from $20/h', ru: 'Дальше - почасово, от $20/ч' },
+      ],
+    },
+    {
+      title: { en: 'Working together', ru: 'Как работаем' },
+      items: [
+        { en: 'I reply within 24 hours whenever I can · Toronto, EST', ru: 'Отвечаю в течение 24 часов, когда могу · Торонто, EST' },
+        { en: '30 days of free fixes for my own bugs after launch', ru: '30 дней после запуска бесплатно чиню свои баги' },
+        { en: 'The project goes into my portfolio (opt-out +20%)', ru: 'Проект попадает в портфолио (без показа +20%)' },
+      ],
+    },
+  ] as { title: L; items: L[] }[],
+  /** Полные условия - окно «All terms» */
+  allTerms: [
+    {
+      title: { en: 'Payment', ru: 'Оплата' },
+      items: [
+        { en: '30–50% upfront, the rest by milestones. Source files and rights after full payment', ru: '30–50% предоплата, остальное по этапам. Исходники и права - после полной оплаты' },
+        { en: 'Third-party costs (hosting, domain, fonts, plugins) are paid by the client', ru: 'Сторонние расходы (хостинг, домен, шрифты, плагины) оплачивает клиент' },
+        { en: 'Rush jobs are possible at 2–3× the usual rate', ru: 'Срочные заказы возможны по ставке ×2–3' },
+        { en: 'Launch offer: −30% for my first 3 clients. Projects only - not hourly work, changes or rush jobs', ru: 'Скидка на запуск: −30% первым 3 клиентам. Только на проекты - не на почасовую работу, правки и срочные заказы' },
+        { en: 'Returning clients get −10% from the 3rd project', ru: 'Постоянным клиентам - −10% с 3-го проекта' },
+        { en: 'If prices go up, your discount % stays. I can change or end discount offers at any time - projects already agreed keep their price', ru: 'Если цены вырастут, процент скидки сохранится. Скидки я могу менять или отменять в любой момент - уже согласованные проекты остаются по своей цене' },
+      ],
+    },
+    {
+      title: { en: 'Edits', ru: 'Правки' },
+      items: [
+        { en: 'While the design is in Figma, big changes within the agreed scope are free - that’s what this stage is for', ru: 'Пока дизайн в Figma, крупные изменения в рамках согласованного объёма бесплатны - этот этап для того и нужен' },
+        { en: 'After the prototype is approved, 3 rounds of small and medium edits are included', ru: 'После утверждения прототипа включены 3 круга мелких и средних правок' },
+        { en: 'Big changes after the prototype get a new estimate. Extra rounds - hourly, from $20/h', ru: 'Крупные изменения после прототипа - новая оценка. Дополнительные круги - почасово, от $20/ч' },
+      ],
+    },
+    {
+      title: { en: 'Working together', ru: 'Как работаем' },
+      items: [
+        { en: 'I reply within 24 hours whenever I can. Time zone: Toronto, EST', ru: 'Отвечаю в течение 24 часов, когда могу. Часовой пояс: Торонто, EST' },
+        { en: 'If the client is silent for 30 days, the project is paused', ru: 'Если клиент молчит 30 дней, проект ставится на паузу' },
+        { en: '30 days of free fixes for my own bugs after launch', ru: '30 дней после запуска бесплатно чиню свои баги' },
+        { en: 'Other people’s sites - after a quick look at the code and design, so I can say honestly if I can build on it', ru: 'Чужие сайты - после быстрого просмотра кода и дизайна, чтобы честно сказать, смогу ли с ними работать' },
+        { en: 'Web3 only with established companies, paid in USD - never in tokens', ru: 'Web3 - только с состоявшимися компаниями и оплатой в USD, не токенами' },
+      ],
+    },
+    {
+      title: { en: 'Portfolio & credit', ru: 'Портфолио и подпись' },
+      items: [
+        { en: 'Every project goes into my portfolio. Opting out costs +20% and must be agreed before we start', ru: 'Каждый проект попадает в портфолио. Без показа - +20% к цене, договариваемся до старта' },
+        { en: 'Sites I build have a small “Site by Roma Stirmanov” link in the footer', ru: 'На сайтах, которые я делаю, в подвале есть небольшая ссылка «Site by Roma Stirmanov»' },
+        { en: 'It can be removed for free by agreement. If it’s removed without asking, your personal discount on future projects is $20 smaller', ru: 'Её можно убрать бесплатно по договорённости. Если убрать без спроса, персональная скидка на будущие проекты станет на $20 меньше' },
+      ],
+    },
+  ] as { title: L; items: L[] }[],
 };
 
 /* ---------------- Подборщик «Not sure what you need?» ---------------- */

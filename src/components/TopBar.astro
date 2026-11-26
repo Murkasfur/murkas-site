@@ -9,13 +9,19 @@ interface Props {
 }
 const { lang, active } = Astro.props;
 const t = useTranslations(lang);
+// Иконки пунктов в меню-шторке на телефоне
+const icons = { home: 'home', characters: 'person', fursuits: 'pets', events: 'place', photos: 'photo_camera', arts: 'palette', portfolio: 'work' } as const;
 ---
 
 <header class="container topbar-wrap">
   <nav class="topbar" aria-label={t('nav.menu')}>
+    <button type="button" class="icon-btn menu-toggle menu-toggle--lead" aria-controls="site-menu" aria-expanded="false" aria-label={t('nav.menu')}>
+      <Icon name="menu" />
+    </button>
     <a href={localizePath('/', lang)} class="brand md-title-large">Murkas</a>
 
     <ul class="menu" id="site-menu">
+      <li class="menu__handle" aria-hidden="true"></li>
       {
         pages.map((p) => (
           <li>
@@ -25,6 +31,7 @@ const t = useTranslations(lang);
               aria-current={p.key === active ? 'page' : undefined}
             >
               {p.key === active && <span class="menu__pill" aria-hidden="true" />}
+              <Icon name={icons[p.key]} class="menu__icon" />
               {t(`nav.${p.key}` as UiKey)}
             </a>
           </li>
@@ -33,7 +40,7 @@ const t = useTranslations(lang);
     </ul>
 
     <div class="actions">
-      <button type="button" class="icon-btn menu-toggle" aria-controls="site-menu" aria-expanded="false" aria-label={t('nav.menu')}>
+      <button type="button" class="icon-btn menu-toggle menu-toggle--tail" aria-controls="site-menu" aria-expanded="false" aria-label={t('nav.menu')}>
         <Icon name="menu" />
       </button>
       <button type="button" class="icon-btn" data-open-settings aria-label={t('nav.settings')}>
@@ -41,6 +48,7 @@ const t = useTranslations(lang);
       </button>
     </div>
   </nav>
+  <div class="menu-scrim" data-menu-scrim hidden></div>
 </header>
 
 <script>
@@ -55,12 +63,31 @@ const t = useTranslations(lang);
     window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   });
 
-  const toggle = document.querySelector<HTMLButtonElement>('.menu-toggle');
+  const toggles = document.querySelectorAll<HTMLButtonElement>('.menu-toggle');
   const menu = document.getElementById('site-menu');
-  toggle?.addEventListener('click', () => {
-    const open = toggle.getAttribute('aria-expanded') !== 'true';
-    toggle.setAttribute('aria-expanded', String(open));
+  const scrim = document.querySelector<HTMLElement>('[data-menu-scrim]');
+  const setOpen = (open: boolean) => {
+    toggles.forEach((b) => b.setAttribute('aria-expanded', String(open)));
     menu?.classList.toggle('is-open', open);
+    if (scrim) scrim.hidden = !open;
+    document.documentElement.classList.toggle('menu-open', open && matchMedia('(max-width: 600px)').matches);
+  };
+  toggles.forEach((b) => b.addEventListener('click', () => setOpen(b.getAttribute('aria-expanded') !== 'true')));
+  scrim?.addEventListener('click', () => setOpen(false));
+  document.addEventListener('keydown', (e) => e.key === 'Escape' && menu?.classList.contains('is-open') && setOpen(false));
+  menu?.addEventListener('click', (e) => (e.target as Element).closest('a') && setOpen(false));
+  // Свайп шторки вниз закрывает её
+  let y0: number | null = null;
+  menu?.addEventListener('touchstart', (e) => (y0 = e.touches[0].clientY), { passive: true });
+  menu?.addEventListener('touchmove', (e) => {
+    if (y0 !== null && menu) menu.style.translate = `0 ${Math.max(0, e.touches[0].clientY - y0)}px`;
+  }, { passive: true });
+  menu?.addEventListener('touchend', (e) => {
+    if (y0 === null || !menu) return;
+    const dy = e.changedTouches[0].clientY - y0;
+    menu.style.translate = '';
+    y0 = null;
+    if (dy > 80) setOpen(false);
   });
 </script>
 
@@ -111,7 +138,7 @@ const t = useTranslations(lang);
     view-transition-name: nav-pill;
   }
   .actions { display: flex; justify-content: flex-end; gap: 4px; }
-  .menu-toggle { display: none; }
+  .menu-toggle, .menu__handle, .menu-scrim, .menu :global(.menu__icon) { display: none; }
 
   @media (max-width: 1000px) {
     .topbar { grid-template-columns: 1fr auto; }
@@ -131,5 +158,43 @@ const t = useTranslations(lang);
     }
     .menu.is-open { display: flex; }
     .menu__item { width: 100%; }
+    .menu-toggle--lead { display: none; }
   }
+
+  /* Телефон: шапка как M3 App bar, меню - шторка снизу (макет «Главная · Mobile · Меню») */
+  @media (max-width: 600px) {
+    .topbar-wrap { padding-top: 8px; }
+    .topbar { grid-template-columns: auto 1fr auto; gap: 4px; min-height: 56px; padding: 4px 0; border: 0; border-radius: 0; background: none; }
+    .brand { font-size: 22px; }
+    .menu-toggle--lead { display: inline-grid; margin-left: -8px; }
+    .menu-toggle--tail { display: none; }
+    .menu {
+      position: fixed;
+      top: auto;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 960;
+      gap: 0;
+      max-height: 85dvh;
+      overflow: auto;
+      padding: 12px 16px calc(24px + env(safe-area-inset-bottom));
+      border: 0;
+      border-radius: 28px 28px 0 0;
+      background: var(--md-surface-container-low);
+      animation: sheet-in 0.28s var(--ease);
+      transition: translate 0.2s;
+    }
+    .menu__handle { display: block; align-self: center; width: 32px; height: 4px; margin-bottom: 12px; border-radius: 2px; background: var(--md-on-surface-variant); opacity: 0.4; }
+    .menu__item { gap: 16px; height: 56px; padding: 0 16px; font-size: 16px; color: var(--md-on-surface-variant); }
+    .menu__item.is-active { color: var(--md-on-secondary-container); }
+    .menu__item.is-active .menu__pill { background: var(--md-secondary-container); }
+    .menu :global(.menu__icon) { display: block; flex: none; }
+    .menu-scrim:not([hidden]) { display: block; position: fixed; inset: 0; z-index: 950; background: rgb(0 0 0 / 0.4); animation: fade-in 0.2s; }
+    :global(html.menu-open) { overflow: hidden; }
+    /* шапка - отдельный слой (view-transition), поднимаем её над страницей, пока открыта шторка */
+    :global(html.menu-open) .topbar-wrap { position: relative; z-index: 1000; }
+  }
+  @keyframes sheet-in { from { transform: translateY(100%); } }
+  @keyframes fade-in { from { opacity: 0; } }
 </style>

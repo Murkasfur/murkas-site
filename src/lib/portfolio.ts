@@ -13,6 +13,8 @@ export type Portfolio = {
   learning: typeof data.learning;
   process: typeof data.process;
   services: typeof data.services;
+  freelance: typeof data.freelance;
+  hiring: typeof data.hiring;
   stackFilters: string[];
   pricing: typeof data.pricing;
   finder: typeof data.finder;
@@ -27,6 +29,8 @@ export async function getPortfolio(): Promise<Portfolio> {
     learning: data.learning,
     process: data.process,
     services: data.services,
+    freelance: data.freelance,
+    hiring: data.hiring,
     stackFilters: data.stackFilters,
     pricing: data.pricing,
     finder: data.finder,
@@ -79,7 +83,7 @@ export const ui = {
     selected: 'Selected work', selectedSub: 'Projects I designed and built end to end',
     allProjects: 'All projects', fullSize: 'View full size', projectPage: 'Project page', liveSite: 'Live site',
     howTitle: 'How I work', howSub: 'One person from the first sketch to production',
-    withMe: 'Work with me', withMeSub: 'Pick what you need - I can join at any stage',
+    withMe: 'Work with me', withMeSub: 'A freelance project or a part-time role in your team',
     perHour: '/ hour', rateNote: 'design, code or both', bestFit: 'Best fit',
     noBackend: 'Backend comes as part of a full project - I don’t take backend-only work.',
     talkA: 'Got a project?', talkB: 'Let’s talk.',
@@ -112,6 +116,14 @@ export const ui = {
     answersNote: 'Your answers are added to the message, so you don’t have to explain twice',
     fallbackA: 'Didn’t find your case?', fallbackB: 'Just write me - I’ll figure it out with you →',
     msgHello: 'Hi Roma! I found you on your portfolio.', msgPick: 'Your finder suggested', msgAnswers: 'My answers', mailSubject: 'Project request',
+    pricing: 'Pricing', freelance: 'Freelance', takingProjects: 'Taking projects', hireMe: 'Hire me', openRoles: 'Open to roles',
+    pricesTerms: 'Prices & terms', emailMe: 'Email me', allTerms: 'All terms', termsTitle: 'How it works', menu: 'Menu',
+    launchTitle: 'Launch offer', launchShort: 'launch offer',
+    launchLine: (p: number, n: number) => `−${p}% for the first ${n} clients`,
+    launchText: (p: number, n: number) => `−${p}% on any project for my first ${n} clients. Not for hourly work, changes or rush jobs.`,
+    spotsLeft: (l: number, n: number) => (l > 0 ? `${l} of ${n} spots left` : 'All spots are taken'),
+    pricingPageSub: 'Starting prices, what I don’t take, how we work - and a quick finder if you’re not sure',
+    hireRoles: 'Roles', designCode: 'Design ↔ Code',
   },
   ru: {
     about: 'Обо мне', skills: 'Навыки', work: 'Работы', process: 'Процесс', contact: 'Связаться',
@@ -132,7 +144,7 @@ export const ui = {
     selected: 'Избранные работы', selectedSub: 'Проекты, которые я спроектировал и сделал целиком',
     allProjects: 'Все проекты', fullSize: 'Открыть целиком', projectPage: 'О проекте', liveSite: 'Открыть сайт',
     howTitle: 'Как я работаю', howSub: 'Один человек от первого наброска до продакшена',
-    withMe: 'Работа со мной', withMeSub: 'Выбери, что нужно, - могу подключиться на любом этапе',
+    withMe: 'Работа со мной', withMeSub: 'Проект на фрилансе или part-time работа в вашей команде',
     perHour: '/ час', rateNote: 'дизайн, код или всё вместе', bestFit: 'Лучше всего',
     noBackend: 'Бэкенд делаю только в составе проекта целиком - отдельно бэкенд не беру.',
     talkA: 'Есть проект?', talkB: 'Давай обсудим.',
@@ -165,6 +177,14 @@ export const ui = {
     answersNote: 'Ваши ответы сразу попадут в сообщение - не нужно объяснять заново',
     fallbackA: 'Не нашли свой случай?', fallbackB: 'Просто напишите - разберёмся вместе →',
     msgHello: 'Привет, Рома! Нашёл тебя через портфолио.', msgPick: 'Подборщик предложил', msgAnswers: 'Мои ответы', mailSubject: 'Заявка на проект',
+    pricing: 'Цены', freelance: 'Фриланс', takingProjects: 'Беру проекты', hireMe: 'Наймите меня', openRoles: 'Ищу работу',
+    pricesTerms: 'Цены и условия', emailMe: 'Написать на почту', allTerms: 'Все условия', termsTitle: 'Как я работаю с заказами', menu: 'Меню',
+    launchTitle: 'Скидка на запуск', launchShort: 'скидка на запуск',
+    launchLine: (p: number, n: number) => `−${p}% первым ${n} клиентам`,
+    launchText: (p: number, n: number) => `−${p}% на любой проект первым ${n} клиентам. Не действует на почасовую работу, правки и срочные заказы.`,
+    spotsLeft: (l: number, n: number) => (l > 0 ? `Осталось ${l} из ${n} мест` : 'Все места заняты'),
+    pricingPageSub: 'Стартовые цены, что я не беру, как работаю с заказами - и подборщик, если не уверены',
+    hireRoles: 'Роли', designCode: 'Design ↔ Code',
   },
 };
 export type UI = (typeof ui)['en'];

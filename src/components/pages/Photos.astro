@@ -72,7 +72,7 @@ const viewer: ViewerItem[] = photos.map((p) => ({
       </div>
     </div>
 
-    <div class="chip-row" role="group">
+    <div class="chip-row chip-row--scroll" role="group">
       <button type="button" class="chip" data-cat-btn data-value="all" aria-pressed="true">
         {t('common.all')} <span class="count">{photos.length}</span>
       </button>
@@ -86,6 +86,13 @@ const viewer: ViewerItem[] = photos.map((p) => ({
     </div>
 
     <div class="filters-row">
+      <button type="button" class="chip filters-btn" data-filters-open aria-haspopup="dialog"><Icon name="tune" size={18} />{t('common.filters')}<span class="filters-btn__n" data-filters-count hidden></span></button>
+      <div class="filters-sheet" data-filters-sheet>
+        <span class="filters-sheet__handle" aria-hidden="true"></span>
+        <div class="filters-sheet__head">
+          <span class="md-title-large">{t('common.filters')}</span>
+          <button type="button" class="md-btn md-btn--filled" data-filters-done>{t('common.done')}</button>
+        </div>
       <div class="chip-row">
         <label class="select">
           <span class="visually-hidden">{t('photos.photographer')}</span>
@@ -105,6 +112,8 @@ const viewer: ViewerItem[] = photos.map((p) => ({
         </label>
         <button type="button" class="link-btn" data-reset>{t('common.reset')}</button>
       </div>
+      </div>
+      <div class="filters-scrim" data-filters-scrim hidden></div>
       <label class="select">
         <span class="visually-hidden">{t('sort.label')}</span>
         <select data-sort>
