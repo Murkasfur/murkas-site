@@ -316,6 +316,29 @@ export async function charCallback(env: Env, cb: CallbackQuery) {
       await answer(env, cb, 'Удалило');
       return showCard(env, chat, 'c', l.character_id, `Образ «${esc(l.name_ru)}» удалён.\n\n`, msg);
     }
+    case 'ev':
+    case 'et': {
+      // образы ивента: ch:ev:<ивент> - экран, ch:et:<ивент>:<номер образа> - отметить / снять
+      const ev = await env.DB.prepare(`SELECT id, title_ru FROM events WHERE id = ?`).bind(a).first<{ id: string; title_ru: string }>();
+      if (!ev) return answer(env, cb, 'Ивент не найден');
+      const { results: looks } = await env.DB.prepare(
+        `SELECT l.id, l.name_ru, c.name_ru AS char FROM looks l JOIN characters c ON c.id = l.character_id ORDER BY c.position, l.position`,
+      ).all<{ id: string; name_ru: string; char: string }>();
+      if (op === 'et') {
+        const l = looks[Number(b)];
+        if (l) {
+          const had = await env.DB.prepare(`DELETE FROM event_looks WHERE event_id = ? AND look_id = ?`).bind(a, l.id).run();
+          if (!had.meta.changes) await env.DB.prepare(`INSERT INTO event_looks (event_id, look_id) VALUES (?, ?)`).bind(a, l.id).run();
+        }
+      }
+      await answer(env, cb);
+      const { results: on } = await env.DB.prepare(`SELECT look_id FROM event_looks WHERE event_id = ?`).bind(a).all<{ look_id: string }>();
+      const set = new Set(on.map((r) => r.look_id));
+      return edit(env, msg, `<b>${esc(ev.title_ru)}</b>\nВ каких образах был? Можно отметить несколько.\nНа странице фурсьюта считаются только отмеченные ивенты.`, [
+        ...looks.map((l, i) => [{ text: `${set.has(l.id) ? '✅' : '▫️'} ${l.char} · ${l.name_ru}`, callback_data: `ch:et:${a}:${i}` }]),
+        [{ text: '◀ К ивенту', callback_data: `ev:${a}` }],
+      ]);
+    }
     case 'nc': {
       await answer(env, cb);
       await setState(env, chat, { flow: 'charNew' });

@@ -19,7 +19,7 @@ export const LIMITS = {
 };
 
 export const CHARACTERS = ['arbyss', 'murkas', 'both'] as const;
-export const PHOTO_CATEGORIES = ['group', 'full', 'partial', 'walks', 'backstage', 'parties'] as const;
+export const PHOTO_CATEGORIES = ['group', 'full', 'partial', 'walks', 'backstage', 'parties', 'kigurumi'] as const;
 export const ART_TYPES = ['full', 'sketch', 'ref', 'stickers', 'comic', 'ych'] as const;
 export const REJECT_REASONS = ['off_topic', 'quality', 'duplicate', 'not_theirs', 'other'] as const;
 

@@ -47,11 +47,16 @@ export const rowToEvent = (r: EventRow): EventItem => ({
 
 /** Все ивенты по дате + число опубликованных фото у каждого + до 3 превью */
 export async function listEvents(db: D1Database): Promise<EventItem[]> {
-  const [events, previews] = await db.batch([
+  const [events, looks, previews] = await db.batch([
     db.prepare(
       `SELECT e.*, (SELECT count(*) FROM media m WHERE m.event_id = e.id AND m.kind = 'photo' AND m.status = 'published') AS photos
        FROM events e
        ORDER BY coalesce(e.start_date, e.sort_key)`,
+    ),
+    db.prepare(
+      `SELECT el.event_id, l.name_ru, l.name_en, c.name_ru AS c_ru, c.name_en AS c_en
+       FROM event_looks el JOIN looks l ON l.id = el.look_id JOIN characters c ON c.id = l.character_id
+       ORDER BY c.position, l.position`,
     ),
     db.prepare(
       `SELECT event_id, r2_key FROM (
@@ -64,8 +69,15 @@ export async function listEvents(db: D1Database): Promise<EventItem[]> {
   for (const p of previews.results as { event_id: string; r2_key: string }[]) {
     byEvent.set(p.event_id, [...(byEvent.get(p.event_id) ?? []), `/media/${p.r2_key.split('/').pop()}?w=400`]);
   }
+  // образы: «Arbyss · кигуруми»
+  const lookBy = new Map<string, L[]>();
+  for (const x of looks.results as { event_id: string; name_ru: string; name_en: string | null; c_ru: string; c_en: string | null }[]) {
+    const ru = `${x.c_ru} · ${x.name_ru.toLowerCase()}`;
+    const en = `${x.c_en ?? x.c_ru} · ${(x.name_en ?? x.name_ru).toLowerCase()}`;
+    lookBy.set(x.event_id, [...(lookBy.get(x.event_id) ?? []), { ru, en }]);
+  }
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Toronto' });
-  return (events.results as EventRow[]).map((r) => attended({ ...rowToEvent(r), previews: byEvent.get(r.id) }, today));
+  return (events.results as EventRow[]).map((r) => attended({ ...rowToEvent(r), previews: byEvent.get(r.id), looks: lookBy.get(r.id) }, today));
 }
 
 const GOING = new Set(['full', 'partial', 'nosuit']);

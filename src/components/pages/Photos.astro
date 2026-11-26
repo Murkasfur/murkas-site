@@ -11,7 +11,7 @@ const { lang } = Astro.props as { lang: Lang };
 const t = useTranslations(lang);
 const photos = await listPhotos();
 
-const cats: PhotoCategory[] = ['group', 'full', 'partial', 'walks', 'backstage', 'parties'];
+const cats: PhotoCategory[] = ['group', 'full', 'partial', 'kigurumi', 'walks', 'backstage', 'parties'];
 const count = (c: PhotoCategory) => photos.filter((p) => photoCats(p).includes(c)).length;
 const photographers = [...new Set(photos.flatMap((p) => (p.photographer ? [p.photographer.name] : [])))];
 const years = [...new Set(photos.map((p) => p.date.slice(0, 4)))].sort().reverse();

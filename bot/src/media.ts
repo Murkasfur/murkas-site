@@ -16,7 +16,7 @@ type Row = {
 type Batch = { id: string; kind: 'photo' | 'art'; status: string; tg_chat_id: number | null; tg_message_id: number | null };
 
 const CHAR_RU: Record<string, string> = { arbyss: 'Arbyss', murkas: 'Муркас', both: 'Оба' };
-const CAT_RU: Record<string, string> = { group: 'Общее фото', full: 'Фулл', partial: 'Партиал', walks: 'Прогулки', backstage: 'Бэкстейдж', parties: 'Вечеринки' };
+const CAT_RU: Record<string, string> = { group: 'Общее фото', full: 'Фулл', partial: 'Партиал', walks: 'Прогулки', backstage: 'Бэкстейдж', parties: 'Вечеринки', kigurumi: 'Кигуруми' };
 const ART_RU: Record<string, string> = { full: 'Полноцвет', sketch: 'Скетч', ref: 'Рефшит', stickers: 'Стикеры', comic: 'Комикс', ych: 'YCH' };
 const REASON_RU: Record<string, string> = { off_topic: 'Не по теме', quality: 'Плохое качество', duplicate: 'Дубль', not_theirs: 'Чужое / без разрешения', other: 'Другое' };
 const STATUS_RU: Record<string, string> = { pending: '⏳ ждёт', published: '✅ на сайте', rejected: '❌ отклонено', deleted: '🗑 удалено', uploading: '… грузится' };

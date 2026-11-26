@@ -61,9 +61,6 @@ export const charArts = (id: string, limit = 8) =>
 
 /** Категория фото, по которой подбирать снимки образа, пока они не привязаны к нему напрямую */
 const CATEGORY: Partial<Record<LookKind, string>> = { fullsuit: 'full', partial: 'partial' };
-/** «В чём был» у ивента -> образ того же типа */
-const SUIT: Partial<Record<LookKind, string>> = { fullsuit: 'full', partial: 'partial' };
-
 /** Фото образа: привязанные к нему + (если таких нет) по персонажу и категории */
 export const lookPhotos = (look: LookRow, limit = 12) =>
   safe('lookPhotos', async () => {
@@ -78,19 +75,22 @@ export const lookPhotos = (look: LookRow, limit = 12) =>
     return results.map(thumb);
   }, [] as MediaThumb[]);
 
-/** Ивенты образа: где был (с учётом «прошёл, значит был») и ближайшие */
+/** Ивенты образа: только явно отмеченные в боте (таблица event_looks), прошедшие и ближайшие */
 export const lookEvents = (look: LookRow, char: CharacterRow) =>
   safe('lookEvents', async () => {
-    const { results } = await env.DB.prepare(
-      `SELECT id, title_ru, title_en, city_ru, city_en, start_date, end_date, approx_ru, approx_en, sort_key, status, suit, look_id
-       FROM events ORDER BY coalesce(start_date, sort_key)`,
-    ).all<EventLite>();
+    const [all, marked] = await env.DB.batch([
+      env.DB.prepare(
+        `SELECT id, title_ru, title_en, city_ru, city_en, start_date, end_date, approx_ru, approx_en, sort_key, status, suit, look_id
+         FROM events ORDER BY coalesce(start_date, sort_key)`,
+      ),
+      env.DB.prepare(`SELECT event_id FROM event_looks WHERE look_id = ?`).bind(look.id),
+    ]);
+    const mine = new Set((marked.results as { event_id: string }[]).map((r) => r.event_id));
     const now = today();
-    const suit = SUIT[look.kind];
-    const mine = (e: EventLite) => e.look_id === look.id || (!e.look_id && !!suit && (e.suit === suit || e.status === suit));
     const ended = (e: EventLite) => (e.end_date ?? e.start_date ?? '9999') < now;
-    const went = results.filter((e) => mine(e) && ended(e) && (e.status === 'went' || ['full', 'partial', 'nosuit'].includes(e.status)));
-    const upcoming = results.filter((e) => !ended(e) && !['cant', 'missed'].includes(e.status));
+    const rows = all.results as EventLite[];
+    const went = rows.filter((e) => mine.has(e.id) && ended(e) && !['cant', 'missed'].includes(e.status));
+    const upcoming = rows.filter((e) => !ended(e) && !['cant', 'missed'].includes(e.status));
     return { went: went.reverse(), upcoming, character: char.id };
   }, { went: [] as EventLite[], upcoming: [] as EventLite[], character: char.id });
 

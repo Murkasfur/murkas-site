@@ -36,6 +36,8 @@ export type EventItem = {
   venue?: L;
   /** В чём был (или собираюсь) - для статистики */
   suit?: Suit;
+  /** В каких образах был (отмечается в боте) */
+  looks?: L[];
   /** Превью фото с ивента (для прошедших) */
   previews?: string[];
 };
@@ -56,7 +58,7 @@ export const events: EventItem[] = [
 ];
 
 export type Character = 'arbyss' | 'murkas';
-export type PhotoCategory = 'group' | 'full' | 'partial' | 'walks' | 'backstage' | 'parties';
+export type PhotoCategory = 'group' | 'full' | 'partial' | 'walks' | 'backstage' | 'parties' | 'kigurumi';
 
 export type Photo = {
   id: string;

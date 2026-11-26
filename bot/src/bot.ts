@@ -119,6 +119,7 @@ const eventKb = (id: string): Keyboard => [
   [{ text: '✏️ Название', callback_data: `ef:${id}:title` }, { text: '✏️ Город', callback_data: `ef:${id}:city` }],
   [{ text: '✏️ Дата', callback_data: `ef:${id}:date` }, { text: '✏️ Ссылка', callback_data: `ef:${id}:url` }],
   [{ text: '✏️ Тип', callback_data: `ek:${id}` }, { text: '✏️ Место', callback_data: `ef:${id}:venue` }],
+  [{ text: '👗 В каких образах был', callback_data: `ch:ev:${id}` }],
   ...statusRows(`es:${id}:`),
   [{ text: '🗑 Удалить', callback_data: `ed:${id}` }, { text: '← К списку', callback_data: 'el' }],
 ];
